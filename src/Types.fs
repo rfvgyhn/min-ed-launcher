@@ -16,13 +16,15 @@ type AutoRun = bool
 type AutoQuit = bool
 type WatchForCrashes = bool
 type RemoteLogging = bool
+type ForceLocal = bool
 type LauncherSettings =
     { Platform: Platform
       ProductMode: ProductMode
       AutoRun: AutoRun
       AutoQuit: AutoQuit
       WatchForCrashes: WatchForCrashes
-      RemoteLogging: RemoteLogging }
+      RemoteLogging: RemoteLogging
+      ForceLocal: ForceLocal }
 type ServerStatus = Healthy
 type LocalVersion = Version
 type LauncherStatus =

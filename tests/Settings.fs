@@ -1,4 +1,4 @@
-module Tests
+module Tests.Settings
 
 open Expecto
 open Settings
@@ -14,6 +14,7 @@ let tests =
         test "Matches /steamid id" {
             let settings = parse [| "/steamid"; "123" |]
             Expect.equal settings.Platform (Steam "123") ""
+            Expect.equal settings.ForceLocal true ""
         }
         test "Ignores /steamid without id as next arg" {
             let settings = parse [| "/steamid"; "/123" |]
@@ -22,6 +23,7 @@ let tests =
         test "Matches /oculus nonce" {
             let settings = parse [| "/oculus"; "123" |]
             Expect.equal settings.Platform (Oculus "123") ""
+            Expect.equal settings.ForceLocal true ""
         }
         test "Ignores /oculus without nonce as next arg" {
             let settings = parse [| "/oculus"; "/123" |]
@@ -46,6 +48,10 @@ let tests =
         test "Matches /autoquit" {
             let settings = parse [| "/autoquit" |]
             Expect.equal settings.AutoQuit true ""
+        }
+        test "Matches /forcelocal" {
+            let settings = parse [| "/forcelocal" |]
+            Expect.equal settings.ForceLocal true ""
         }
         testProperty "Unknown arg doesn't change any values" <|
             fun (args:string[]) -> parse args = Settings.defaults

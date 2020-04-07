@@ -9,7 +9,8 @@ let defaults =
       AutoRun = true
       AutoQuit = true
       WatchForCrashes = true
-      RemoteLogging = false }
+      RemoteLogging = false
+      ForceLocal = false }
     
 let parseArgs log defaults (args: string[]) =
     let getArg (flag:string) i =
@@ -22,13 +23,14 @@ let parseArgs log defaults (args: string[]) =
     |> Array.filter (fun (_, arg) -> not (String.IsNullOrEmpty(arg)))
     |> Array.fold (fun s (i, arg) ->
         match getArg arg i with
-        | "/steamid", Some id   -> { s with Platform = Steam id }
-        | "/oculus", Some nonce -> { s with Platform = Oculus nonce }
+        | "/steamid", Some id   -> { s with Platform = Steam id; ForceLocal = true }
+        | "/oculus", Some nonce -> { s with Platform = Oculus nonce; ForceLocal = true }
         | "/noremotelogs", _    -> { s with RemoteLogging = false }
         | "/nowatchdog", _      -> { s with WatchForCrashes = false }
         | "/vr", _              -> { s with ProductMode = Vr }
         | "/autorun", _         -> { s with AutoRun = true }
         | "/autoquit", _        -> { s with AutoQuit = true }
+        | "/forcelocal", _      -> { s with ForceLocal = true }
         | _ ->
             log.Warn <| sprintf "Ignoring argument '%s'" arg
             s

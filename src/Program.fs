@@ -1,6 +1,7 @@
 ﻿open System
 open System.IO
 open System.Runtime.InteropServices
+open FileIO
 open Steam
 open Types
 open Settings
@@ -40,8 +41,16 @@ let getUserDetails = function
     | Steam _ ->
         use steam = new Steam(log)
         steam.Login()
-
-let printInfo platform user =
+        
+let getProductsDir fallbackPath hasWriteAccess (forceLocal:ForceLocal) launcherDir =
+    let productsPath = "Products"
+    let localPath = Path.Combine(launcherDir, productsPath)
+    
+    if forceLocal then localPath
+    elif hasWriteAccess launcherDir then localPath
+    else Path.Combine(fallbackPath, productsPath)
+    
+let printInfo platform user productsDir =
     printfn "Elite: Dangerous Launcher"
     printfn "Platform: %A" platform
     printfn "OS: %s" (getOsIdent())
@@ -50,12 +59,20 @@ let printInfo platform user =
     | Ok user ->
         printfn "User: %u" user.UserId
         printfn "Session Token: %s" user.SessionToken
+    match productsDir with
+    | Error msg -> printfn "Products Dir: Unable to access - %s" msg
+    | Ok p -> printfn "Products Dir: %s" p
 
 [<EntryPoint>]
 let main argv =
-    let settings = parseArgs log Settings.defaults [| |] //argv
+    let settings = parseArgs log Settings.defaults [|"/forcelocal" |] //argv
     let user = getUserDetails settings.Platform
+    let launcherDir = AppContext.BaseDirectory// Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName)
+    let appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Frontier_Developments")
+    let productsDir =
+        getProductsDir appDataDir hasWriteAccess settings.ForceLocal launcherDir
+        |> ensureDirExists
     
-    printInfo settings.Platform user
+    printInfo settings.Platform user productsDir
     
     0

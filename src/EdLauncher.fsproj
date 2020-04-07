@@ -7,9 +7,14 @@
 
   <ItemGroup>
     <Compile Include="Types.fs" />
+    <Compile Include="FileIO.fs" />
     <Compile Include="Steam.fs" />
     <Compile Include="Settings.fs" />
     <Compile Include="Program.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Security.Permissions" Version="4.7.0" />
   </ItemGroup>
 
 </Project>
