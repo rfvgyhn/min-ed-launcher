@@ -1,4 +1,5 @@
 ﻿open System
+open System.Diagnostics
 open System.IO
 open System.Runtime.InteropServices
 open FileIO
@@ -50,10 +51,26 @@ let getProductsDir fallbackPath hasWriteAccess (forceLocal:ForceLocal) launcherD
     elif hasWriteAccess launcherDir then localPath
     else Path.Combine(fallbackPath, productsPath)
     
-let printInfo platform user productsDir =
+let getVersion launcherDir =
+    let cobraPath = Path.Combine(launcherDir, "CBViewModel.dll")
+    
+    if not (File.Exists cobraPath) then
+        Error <| sprintf "Unable to find CBViewModel.dll in directory %s" launcherDir
+    else
+        let cobraVersion =
+            let version = FileVersionInfo.GetVersionInfo(cobraPath)
+            if String.IsNullOrEmpty(version.FileVersion) then version.ProductVersion else version.FileVersion
+        let launcherVersion = typeof<Steam>.Assembly.GetName().Version
+        
+        Ok (cobraVersion, launcherVersion)
+    
+let printInfo platform user productsDir cobraVersion launcherVersion =
     printfn "Elite: Dangerous Launcher"
     printfn "Platform: %A" platform
     printfn "OS: %s" (getOsIdent())
+    printfn "CobraBay Version: %s" cobraVersion
+    printfn "Launcher Version: %A" launcherVersion
+    
     match user with
     | Error msg -> printfn "User: Error - %s" msg
     | Ok user ->
@@ -62,6 +79,7 @@ let printInfo platform user productsDir =
     match productsDir with
     | Error msg -> printfn "Products Dir: Unable to access - %s" msg
     | Ok p -> printfn "Products Dir: %s" p
+    ()
 
 [<EntryPoint>]
 let main argv =
@@ -72,7 +90,12 @@ let main argv =
     let productsDir =
         getProductsDir appDataDir hasWriteAccess settings.ForceLocal launcherDir
         |> ensureDirExists
-    
-    printInfo settings.Platform user productsDir
-    
-    0
+    let version = getVersion launcherDir
+    match version with
+    | Error msg ->
+        log.Error <| sprintf "Unable to get version: %s" msg
+        1
+    | Ok (cobraVersion, launcherVersion) ->
+        printInfo settings.Platform user productsDir cobraVersion launcherVersion
+        
+        0
