@@ -1,8 +1,9 @@
 module Tests.Settings
 
 open Expecto
-open Settings
-open Types
+open EdLauncher
+open EdLauncher.Settings
+open EdLauncher.Types
 
 
 
@@ -39,7 +40,7 @@ let tests =
         }
         test "Matches /vr" {
             let settings = parse [| "/vr" |]
-            Expect.equal settings.ProductMode Vr ""
+            Expect.equal settings.DisplayMode Vr ""
         }
         test "Matches /autorun" {
             let settings = parse [| "/autorun" |]
@@ -52,6 +53,18 @@ let tests =
         test "Matches /forcelocal" {
             let settings = parse [| "/forcelocal" |]
             Expect.equal settings.ForceLocal true ""
+        }
+        test "Matches /ed" {
+            let settings = parse [| "/ed" |]
+            Expect.equal (settings.ProductWhitelist.Contains "ed") true ""
+        }
+        test "Matches /edh" {
+            let settings = parse [| "/edh" |]
+            Expect.equal (settings.ProductWhitelist.Contains "edh") true ""
+        }
+        test "Matches /eda" {
+            let settings = parse [| "/eda" |]
+            Expect.equal (settings.ProductWhitelist.Contains "eda") true ""
         }
         testProperty "Unknown arg doesn't change any values" <|
             fun (args:string[]) -> parse args = Settings.defaults

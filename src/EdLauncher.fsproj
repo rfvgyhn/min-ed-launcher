@@ -7,13 +7,18 @@
 
   <ItemGroup>
     <Compile Include="Types.fs" />
-    <Compile Include="FileIO.fs" />
+    <Compile Include="Extensions.fs" />
+    <Compile Include="EventLog.fs" />
+    <Compile Include="Api.fs" />
+    <Compile Include="MachineId.fs" />
+    <Compile Include="Server.fs" />
     <Compile Include="Steam.fs" />
     <Compile Include="Settings.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Win32.Registry" Version="4.7.0" />
     <PackageReference Include="System.Security.Permissions" Version="4.7.0" />
   </ItemGroup>
 

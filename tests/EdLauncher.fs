@@ -2,7 +2,7 @@ module Tests.EdLauncher
 
 open System.IO
 open Expecto
-open Program
+open EdLauncher.Program
 
 [<Tests>]
 let tests =

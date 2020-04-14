@@ -9,6 +9,8 @@
   <ItemGroup>
     <Compile Include="Settings.fs" />
     <Compile Include="EdLauncher.fs" />
+    <Compile Include="EventLog.fs" />
+    <Compile Include="MachineId.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
 
