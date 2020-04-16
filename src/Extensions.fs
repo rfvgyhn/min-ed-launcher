@@ -74,6 +74,30 @@ module Uri =
         
     let addQueryParam kvp uri = addQueryParams [ kvp ] uri
     
+module SHA1 =
+    open System.Text
+    open System.Security.Cryptography
+    open System.IO
+    
+    let hashString (str:string) =
+        let bytes = Encoding.ASCII.GetBytes(str)
+        use crypto = new SHA1CryptoServiceProvider()
+        crypto.ComputeHash(bytes)
+        
+    let hashFile (filePath:string) =
+        try
+            use file = File.OpenRead(filePath)
+            use crypto = new SHA1CryptoServiceProvider()
+            crypto.ComputeHash(file) |> Ok
+        with
+        | e -> Error e
+
+module Hex =
+    open System
+    
+    let toString bytes = BitConverter.ToString(bytes).Replace("-","")
+    let toStringTrunc length bytes = BitConverter.ToString(bytes).Replace("-","").Substring(0, length)
+
 module FileIO =
     open System
     open System.IO

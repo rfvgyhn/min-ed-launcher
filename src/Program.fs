@@ -117,16 +117,16 @@ module Program =
     let getProductsDir fallbackPath hasWriteAccess (forceLocal:ForceLocal) launcherDir =
         let productsPath = "Products"
         let localPath = Path.Combine(launcherDir, productsPath)
-        let localPath = "/mnt/games/Steam/Linux/steamapps/common/Elite Dangerous/Products"
+        //let localPath = "/mnt/games/Steam/Linux/steamapps/common/Elite Dangerous/Products"
         if forceLocal then localPath
         elif hasWriteAccess launcherDir then localPath
         else Path.Combine(fallbackPath, productsPath)
         
-    let getVersion launcherDir =
-        let cobraPath = Path.Combine(launcherDir, "CBViewModel.dll")
+    let getVersion cbLauncherDir =
+        let cobraPath = Path.Combine(cbLauncherDir, "CBViewModel.dll")
         
         if not (File.Exists cobraPath) then
-            Error <| sprintf "Unable to find CBViewModel.dll in directory %s" launcherDir
+            Error <| sprintf "Unable to find CBViewModel.dll in directory %s" cbLauncherDir
         else
             let cobraVersion =
                 let version = FileVersionInfo.GetVersionInfo(cobraPath)
@@ -181,6 +181,10 @@ module Program =
             | _ -> VersionInfoStatus.Failed "Unexpected VersionInfo json document"
     
     let mapProduct productsDir (product:AuthorizedProduct) =
+        let serverArgs = String.Join(" ", [
+                if product.TestApi then "/Test"
+                if not (String.IsNullOrEmpty(product.ServerArgs)) then product.ServerArgs
+            ])
         match readVersionInfo (Path.Combine(productsDir, product.Directory)) with
         | Found v ->
             Some { Sku = product.Sku
@@ -191,8 +195,10 @@ module Program =
                    SteamAware = v.SteamAware
                    Version = Some v.Version
                    Mode = v.Mode
-                   Directory = product.Directory
-                   Action = ReadyToPlay }
+                   Directory = Path.Combine(productsDir, product.Directory)
+                   Action = ReadyToPlay
+                   GameArgs = product.GameArgs
+                   ServerArgs = serverArgs }
         | NotFound (useWd64, steamAware, mode, file) ->
             log.Info <| sprintf "Disabling '%s'. Unable to find product at '%s'" product.Name file
             Some { Sku = product.Sku
@@ -203,20 +209,23 @@ module Program =
                    SteamAware = steamAware
                    Version = None
                    Mode = mode
-                   Directory = product.Directory
-                   Action = Disabled }
+                   Directory = Path.Combine(productsDir, product.Directory)
+                   Action = Disabled
+                   GameArgs = product.GameArgs
+                   ServerArgs = serverArgs }
         | Failed msg ->
             log.Error <| sprintf "Unable to parse product %s: %s" product.Name msg
             None
     
     let private run args = async {
-        let settings = parseArgs log Settings.defaults [| "/forcelocal"; "/noremotelogs"; "/steamid"; "441340" |] //args ; "/steamid"; "441340"
+        let settings = parseArgs log Settings.defaults [| "/forcelocal"; "/noremotelogs"; "/nowatchdog"; "/steamid"; "441340" |] //args ; "/steamid"; "441340"
         let launcherDir = AppContext.BaseDirectory// Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName)
+        let cbLauncherDir = "/mnt/games/Steam/Linux/steamapps/common/Elite Dangerous"
         let appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Frontier_Developments")
         let productsDir =
-            getProductsDir appDataDir hasWriteAccess settings.ForceLocal launcherDir
+            getProductsDir appDataDir hasWriteAccess settings.ForceLocal cbLauncherDir
             |> ensureDirExists
-        let version = getVersion launcherDir
+        let version = getVersion cbLauncherDir
         return!
             match productsDir, version with 
             | _, Error msg -> async {
@@ -225,20 +234,21 @@ module Program =
             | Error msg, _ -> async { 
                 log.Error <| sprintf "Unable to get products directory: %s" msg
                 return 1 }
-            | Ok productsDir, Ok (cobraVersion, launcherVersion) -> async {
+            | Ok productsDir, Ok (cbVersion, launcherVersion) -> async {
                 let apiUri = Uri("https://api.zaonce.net")
                 //let apiUri = Uri("http://localhost:8080")
-                let launcherName = System.Reflection.AssemblyName.GetAssemblyName("/mnt/games/Steam/Linux/steamapps/common/Elite Dangerous/EDLaunch.exe").Name
-                use httpClient = createZaonceClient apiUri launcherName cobraVersion (getOsIdent())
+                let cbLauncherName = System.Reflection.AssemblyName.GetAssemblyName(Path.Combine(cbLauncherDir, "EDLaunch.exe")).Name
+                use httpClient = createZaonceClient apiUri cbLauncherName cbVersion (getOsIdent())
                 let serverRequest = Server.request httpClient 
                 let localTime = DateTime.UtcNow
-                let! remoteTime = async { 
-                    match! Api.getTime localTime (serverRequest (fun () -> (double)1)) with
+                let getRemoteTime runningTime = async { 
+                    match! Api.getTime localTime (serverRequest runningTime) with
                     | Ok timestamp -> return timestamp
                     | Error (localTimestamp, msg) ->
                         log.Warn <| sprintf "Couldn't get remote time: %s. Using local system time instead" msg
                         return localTimestamp
                     }
+                let! remoteTime = getRemoteTime (fun () -> (double)1)
                 let runningTime = fun () ->
                         let runningTime = DateTime.UtcNow.Subtract(localTime);
                         ((double)remoteTime + runningTime.TotalSeconds)
@@ -256,7 +266,7 @@ module Program =
                 do! logEvents [ EventLog.LogStarted; EventLog.ClientVersion ("app", "path", DateTime.Now) ] // TODO: Check if .Now is correct
                 // TODO: Check if launcher version is compatible with current ED version
                 
-                printInfo settings.Platform productsDir cobraVersion launcherVersion remoteTime machineId
+                printInfo settings.Platform productsDir cbVersion launcherVersion remoteTime machineId
                 
                 match! login serverRequest machineId settings.Platform with
                 | Success user ->
@@ -273,6 +283,23 @@ module Program =
                                                |> List.filter (fun p -> p.Action = ReadyToPlay && ( settings.ProductWhitelist.Count = 0 || p.Filters |> Set.union settings.ProductWhitelist |> Set.count > 0 ))
                                                |> List.tryHead
                          printfn "Selected Product: %A" selectedProduct
+                         
+                         match selectedProduct, settings.AutoRun with
+                         | Some product, true ->
+                             let processArgs = Product.createArgString settings.DisplayMode (Some @"English\\UK") user.MachineToken user.SessionToken machineId (runningTime()) settings.WatchForCrashes settings.Platform SHA1.hashFile product
+                             let run = product
+                                       |> Product.validateForRun cbLauncherDir settings.WatchForCrashes
+                                       >>= Product.run processArgs
+                                             
+                             match run with
+                             | Ok p ->
+                                 use p = p
+                                 p.WaitForExit()
+                                 printfn "Err: %s" (p.StandardError.ReadToEnd())
+                                 printfn "Out: %s" (p.StandardOutput.ReadToEnd())
+                             | Error msg -> log.Error <| sprintf "Couldn't start selected product: %s" msg
+                         | None, true -> log.Error "No selected project"
+                         | _, _ -> ()
                     | Error msg ->
                         log.Error <| sprintf "Couldn't get available products: %s" msg
                 | ActionRequired msg ->

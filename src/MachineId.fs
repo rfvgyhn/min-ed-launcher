@@ -71,13 +71,10 @@ module MachineId =
         }
         
     let getId (machineId:string) (frontierId:string) =
-        let bytes = Encoding.ASCII.GetBytes(machineId.Trim() + frontierId.Trim())
-        use crypto = new SHA1CryptoServiceProvider()
-        let hash = crypto.ComputeHash(bytes)
-        BitConverter.ToString(hash)
-                    .Replace("-","")
-                    .Substring(0, 16)
-                    .ToLowerInvariant()
+        machineId.Trim() + frontierId.Trim()
+        |> SHA1.hashString
+        |> Hex.toStringTrunc 16
+        |> fun s -> s.ToLowerInvariant()
     
     let getWindowsId() =
         match WindowsRegistry.getIds() with

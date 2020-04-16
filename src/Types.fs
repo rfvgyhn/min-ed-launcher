@@ -48,9 +48,11 @@ module Types =
         { Name: string
           Filter: string
           Directory: string
+          ServerArgs: string
           GameArgs: string
           SortKey: int
-          Sku: string }
+          Sku: string
+          TestApi: bool }
     type ProductAction =
         | Install
         | ReadyToPlay
@@ -74,4 +76,6 @@ module Types =
           Version: Version option
           Mode: ProductMode
           Directory: string
-          Action: ProductAction }
+          Action: ProductAction
+          GameArgs: string
+          ServerArgs: string }

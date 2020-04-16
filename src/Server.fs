@@ -118,20 +118,24 @@ module Server =
                            >>= Json.rootElement
                            >>= Json.parseProp "purchases"
                            >>= Json.mapArray (fun (element) ->
-                                   let filter = element |> Json.parseProp "filter" >>= Json.toString
+                                   let filter = element |> Json.parseProp "filter" >>= Json.toString |> Result.defaultValue ""
                                    let directory = element |> Json.parseProp "directory" >>= Json.toString
-                                   let gameArgs = element |> Json.parseProp "gameargs" >>= Json.toString
+                                   let gameArgs = element |> Json.parseProp "gameargs" >>= Json.toString |> Result.defaultValue ""
+                                   let serverArgs = element |> Json.parseProp "serverargs" >>= Json.toString |> Result.defaultValue ""
                                    let sortKey = element |> Json.parseProp "sortkey" >>= Json.toInt 
                                    let name = element |> Json.parseProp "product_name" >>= Json.toString
                                    let sku = element |> Json.parseProp "product_sku" >>= Json.toString
-                                   match filter, directory, gameArgs, sortKey, name, sku with
-                                   | Ok filter, Ok directory, Ok gameArgs, Ok sortKey, Ok name, Ok sku ->
+                                   let testApi = element |> Json.parseProp "testapi" >>= Json.asBool |> Result.defaultValue false
+                                   match directory, sortKey, name, sku with
+                                   | Ok directory, Ok sortKey, Ok name, Ok sku ->
                                        Ok { Name = name
                                             Filter = filter
                                             Directory = directory
                                             GameArgs = gameArgs
+                                            ServerArgs = serverArgs
                                             SortKey = sortKey
-                                            Sku = sku }
+                                            Sku = sku
+                                            TestApi = testApi }
                                    | _ ->
                                        printfn "Unexpected json object %s" (element.ToString()) // TODO: log invalid json objects
                                        sprintf "Unexpected json object %s" (element.ToString()) |> Error)
