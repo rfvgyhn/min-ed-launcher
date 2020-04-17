@@ -33,6 +33,68 @@ module MachineId =
                 Ok (machineId, frontierId)
             | Error msg -> Error msg
         
+    module WineRegistry =
+        open System.IO
+        
+        let private machineFilePath registryPath = Path.Combine(registryPath, "system.reg")
+        let private frontierFilePath registryPath = Path.Combine(registryPath, "user.reg")
+        let private machineEntry = @"[Software\\Microsoft\\Cryptography]"
+        let private frontierEntry = @"[Software\\Frontier Developments\\Cryptography]"
+        
+        let ensureIdsExist registryPath = async {
+            try
+                let system = FileInfo(machineFilePath registryPath)
+                let user = FileInfo(frontierFilePath registryPath)
+                
+                if not (system.Exists || user.Exists) then
+                    return Error <| sprintf "Unable to find registry file(s) at '%s' and/or '%s'" user.FullName system.FullName
+                else
+                
+                let keyExists =
+                    File.ReadLines(user.FullName)
+                    |> Seq.skipWhile (fun l -> not (l.StartsWith(frontierEntry)))
+                    |> Seq.take 1
+                    |> Seq.length > 0
+                    
+                if not keyExists then
+                    let entry = String.Join(Environment.NewLine, [
+                        ""
+                        sprintf"%s 1585703162" frontierEntry
+                        sprintf "#time=%s" ""
+                        sprintf "\"MachineGuid\"=\"%s\"" (Guid.NewGuid().ToString())
+                    ])
+                    use sw = user.AppendText()
+                    do! sw.WriteLineAsync(entry) |> Async.AwaitTask
+                
+                return Ok ()
+            with
+            | e -> return Error e.Message
+        }
+        
+        let private readEntry file (path:string) =
+            let split (token:string) (str:string) = str.Split(token, StringSplitOptions.RemoveEmptyEntries)
+            
+            // [Software\\Microsoft\\Cryptography] 1561645031
+            // #time=1d52cf302f944a0
+            // "MachineGuid"="Guid"
+            File.ReadLines(file)
+            |> Seq.skipWhile (fun l -> not (l.StartsWith(path)))
+            |> Seq.skip 2
+            |> Seq.take 1
+            |> Seq.head
+            |> split "\""
+            |> Array.last
+            
+        let getIds registryPath = async {
+            match! ensureIdsExist registryPath with
+            | Ok _ ->
+                let machineId = readEntry (machineFilePath registryPath) machineEntry
+                let frontierId = readEntry (frontierFilePath registryPath) frontierEntry
+                printfn "Ids: %s - %s" machineId frontierId
+                return Ok (machineId, frontierId)
+            | Error msg -> return Error msg
+        }
+        
     module Filesystem =
         open System.IO
         open System.Linq
@@ -80,7 +142,12 @@ module MachineId =
         match WindowsRegistry.getIds() with
         | Ok (machineId, frontierId) -> Ok <| getId machineId frontierId
         | Error msg -> Error msg
-        
+    
+    let getWineId registryPath = async {
+        match! WineRegistry.getIds registryPath with
+        | Ok (machineId, frontierId) -> return Ok <| getId machineId frontierId
+        | Error msg -> return Error msg
+    }
     let getFilesystemId() = async {
         match! Filesystem.getIds() with
         | Ok (machineId, frontierId) -> return Ok <| getId machineId frontierId

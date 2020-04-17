@@ -40,7 +40,7 @@ module Server =
             let uri = buildUri httpClient.BaseAddress "/3.0/user/steam/auth"
                       |> Uri.addQueryParams [
                           "steamTicket", sessionToken
-                          "machineId", machineId |> Option.defaultValue "null"
+                          "machineId", machineId
                           "fTime", runningTime().ToString() ]
             // TODO: set allow redirect to false
             use! response = httpClient.GetAsync(uri) |> Async.AwaitTask

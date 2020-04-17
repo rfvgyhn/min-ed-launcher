@@ -5,7 +5,7 @@ module Api =
     open Types
 
     type AuthDetails =
-    | Steam of sessionToken:string * machineId:string option
+    | Steam of sessionToken:string * machineId:string
 
     type AuthResult =
     | Authorized of sessionToken:string * authToken:string * registeredName:string

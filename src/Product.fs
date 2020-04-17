@@ -22,7 +22,6 @@ namespace EdLauncher
             let serverToken = if online then sprintf "ServerToken %s %s %s" machineToken sessionToken product.ServerArgs else ""
             let combined = sprintf "\"%s\" %s" serverToken targetOptions
             let exe = product.Executable |> Option.defaultValue ""
-            let machineId = machineId |> Option.defaultValue ""
             let fullExePath = Path.Combine(product.Directory, exe)
             let exeHash = fullExePath |> hashFile |> Result.map Hex.toString |> Result.map (fun p -> p.ToUpperInvariant()) |> Result.defaultValue ""
             if watchForCrashes && online then

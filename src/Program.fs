@@ -1,7 +1,5 @@
 ﻿namespace EdLauncher
 
-open System.Text.Json
-
 module Program =
     open System
     open System.Diagnostics
@@ -143,7 +141,7 @@ module Program =
         httpClient.DefaultRequestHeaders.ConnectionClose <- Nullable<bool>(false)
         httpClient
         
-    let printInfo platform productsDir cobraVersion launcherVersion remoteTime machineId =
+    let printInfo platform productsDir cobraVersion launcherVersion remoteTime =
         printfn "Elite: Dangerous Launcher"
         printfn "Platform: %A" platform
         printfn "OS: %s" (getOsIdent())
@@ -151,7 +149,6 @@ module Program =
         printfn "Launcher Version: %A" launcherVersion
         printfn "Launcher Name: %A" (System.Reflection.AssemblyName.GetAssemblyName("/mnt/games/Steam/Linux/steamapps/common/Elite Dangerous/EDLaunch.exe").Name)
         printfn "Remote Time: %i" remoteTime
-        printfn "Machine Id: %s" (machineId |> Option.map (fun _ -> "********") |> Option.defaultValue "Not found")
         printfn "Products Dir: %s" productsDir
 
     type VersionInfoStatus = Found of VersionInfo | NotFound of bool * bool * ProductMode * string | Failed of string
@@ -249,57 +246,58 @@ module Program =
                         let runningTime = DateTime.UtcNow.Subtract(localTime);
                         ((double)remoteTime + runningTime.TotalSeconds)
                 let serverRequest = serverRequest runningTime
-                let! machineId = async {
-                    match! MachineId.getFilesystemId() with
-                    | Ok id -> return Some id
-                    | Error msg ->
-                        log.Warn <| sprintf "Couldn't get machine id: %s" msg
-                        return None
-                }
-                
+                let! machineId =
+#if WINDOWS
+                    MachineId.getWindowsId()
+#else
+                    let registryPath = Environment.GetEnvironmentVariable("WINEPREFIX")
+                    MachineId.getWineId registryPath
+#endif
                 let remoteLogHttpClient = if settings.RemoteLogging then Some httpClient else None
                 let logEvents = writeEventLog remoteLogHttpClient
                 do! logEvents [ EventLog.LogStarted; EventLog.ClientVersion ("app", "path", DateTime.Now) ] // TODO: Check if .Now is correct
                 // TODO: Check if launcher version is compatible with current ED version
                 
-                printInfo settings.Platform productsDir cbVersion launcherVersion remoteTime machineId
+                printInfo settings.Platform productsDir cbVersion launcherVersion remoteTime
                 
-                match! login serverRequest machineId settings.Platform with
-                | Success user ->
-                    // TODO: event log Authenticated user.Name
-                    log.Info <| sprintf "Logged in via %A as: %s (%s)" settings.Platform user.Name user.EmailAddress
-                    match! Api.getAuthorizedProducts user.SessionToken None serverRequest with
-                    | Ok authorizedProducts ->
-                         do! logEvents [ EventLog.AvailableProjects (user.EmailAddress, authorizedProducts |> List.map (fun p -> p.Sku)) ]
-                         let products = authorizedProducts
-                                        |> List.map (mapProduct productsDir)
-                                        |> List.choose id
-                         printfn "Products: %A" (products |> List.map (fun p -> p.Name, p.Action, p.Filters))
-                         let selectedProduct = products
-                                               |> List.filter (fun p -> p.Action = ReadyToPlay && ( settings.ProductWhitelist.Count = 0 || p.Filters |> Set.union settings.ProductWhitelist |> Set.count > 0 ))
-                                               |> List.tryHead
-                         printfn "Selected Product: %A" selectedProduct
-                         
-                         match selectedProduct, settings.AutoRun with
-                         | Some product, true ->
-                             let processArgs = Product.createArgString settings.DisplayMode (Some @"English\\UK") user.MachineToken user.SessionToken machineId (runningTime()) settings.WatchForCrashes settings.Platform SHA1.hashFile product
-                             let run = product
-                                       |> Product.validateForRun cbLauncherDir settings.WatchForCrashes
-                                       >>= Product.run proton processArgs
-                                             
-                             match run with
-                             | Ok p ->
-                                 use p = p
-                                 p.WaitForExit()
-                             | Error msg -> log.Error <| sprintf "Couldn't start selected product: %s" msg
-                         | None, true -> log.Error "No selected project"
-                         | _, _ -> ()
-                    | Error msg ->
-                        log.Error <| sprintf "Couldn't get available products: %s" msg
-                | ActionRequired msg ->
-                    log.Error <| sprintf "Unsupported login action required: %s" msg
-                | Failure msg ->
-                    log.Error <| sprintf "Couldn't login: %s" msg
+                match machineId with
+                | Ok machineId ->
+                    match! login serverRequest machineId settings.Platform with
+                    | Success user ->
+                        // TODO: event log Authenticated user.Name
+                        log.Info <| sprintf "Logged in via %A as: %s (%s)" settings.Platform user.Name user.EmailAddress
+                        match! Api.getAuthorizedProducts user.SessionToken None serverRequest with
+                        | Ok authorizedProducts ->
+                             do! logEvents [ EventLog.AvailableProjects (user.EmailAddress, authorizedProducts |> List.map (fun p -> p.Sku)) ]
+                             let selectedProduct =
+                                authorizedProducts
+                                |> List.map (mapProduct productsDir)
+                                |> List.choose id
+                                |> List.filter (fun p -> p.Action = ReadyToPlay && ( settings.ProductWhitelist.Count = 0 || p.Filters |> Set.union settings.ProductWhitelist |> Set.count > 0 ))
+                                |> List.tryHead
+                             
+                             match selectedProduct, settings.AutoRun with
+                             | Some product, true ->
+                                 let processArgs = Product.createArgString settings.DisplayMode (Some @"English\\UK") user.MachineToken user.SessionToken machineId (runningTime()) settings.WatchForCrashes settings.Platform SHA1.hashFile product
+                                 let run = product
+                                           |> Product.validateForRun cbLauncherDir settings.WatchForCrashes
+                                           >>= Product.run proton processArgs
+                                                 
+                                 match run with
+                                 | Ok p ->
+                                     use p = p
+                                     p.WaitForExit()
+                                 | Error msg -> log.Error <| sprintf "Couldn't start selected product: %s" msg
+                             | None, true -> log.Error "No selected project"
+                             | _, _ -> ()
+                        | Error msg ->
+                            log.Error <| sprintf "Couldn't get available products: %s" msg
+                    | ActionRequired msg ->
+                        log.Error <| sprintf "Unsupported login action required: %s" msg
+                    | Failure msg ->
+                        log.Error <| sprintf "Couldn't login: %s" msg
+                | Error msg ->
+                    log.Error <| sprintf "Couldn't get machine id: %s" msg
                 
                 return 0 }
     }    
