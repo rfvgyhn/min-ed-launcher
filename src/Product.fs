@@ -57,23 +57,23 @@ namespace EdLauncher
             | None, _ -> Error "No executable specified"
             | _, None -> Error "No version specified"
             
-        let run args (product:RunnableProduct)  =
+        let run proton args (product:RunnableProduct)  =
+            let fileName, arguments =
+                match proton with
+                | Some (path, action) -> "python3", sprintf "\"%s\" %s \"%s\" %s" path action product.Executable.FullName args
+                | None -> product.Executable.FullName, args
+            
             let startInfo = ProcessStartInfo()
-            //startInfo.FileName <- product.Executable.FullName
-            startInfo.FileName <- "python3"
+            startInfo.FileName <- fileName
             startInfo.WorkingDirectory <- product.Executable.DirectoryName
-            startInfo.Arguments <- sprintf "\"%s\" waitforexitandrun \"%s\" %s" "/home/chris/.local/share/Steam/steamapps/common/Proton 4.2/proton" product.Executable.FullName args
-            //startInfo.CreateNoWindow <- true
+            startInfo.Arguments <- arguments
+            startInfo.CreateNoWindow <- true
             startInfo.UseShellExecute <- false
             startInfo.RedirectStandardOutput <- true
             startInfo.RedirectStandardError <- true
-            startInfo.EnvironmentVariables.Add("STEAM_COMPAT_DATA_PATH", "/home/chris/.local/share/Steam/steamapps/compatdata/359320")
+            //startInfo.EnvironmentVariables.Add("STEAM_COMPAT_DATA_PATH", "/home/chris/.local/share/Steam/steamapps/compatdata/359320")
             
             try
-                printfn "StartInfo: %s" startInfo.FileName
-                printfn "StartInfo: %s" startInfo.WorkingDirectory
-                printfn "StartInfo: %s" startInfo.Arguments
-                //Ok ""
                 Process.Start(startInfo) |> Ok
             with
             | e -> Error e.Message

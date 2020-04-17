@@ -217,10 +217,8 @@ module Program =
             log.Error <| sprintf "Unable to parse product %s: %s" product.Name msg
             None
     
-    let private run args = async {
-        let settings = parseArgs log Settings.defaults [| "/forcelocal"; "/noremotelogs"; "/nowatchdog"; "/steamid"; "441340" |] //args ; "/steamid"; "441340"
-        let launcherDir = AppContext.BaseDirectory// Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName)
-        let cbLauncherDir = "/mnt/games/Steam/Linux/steamapps/common/Elite Dangerous"
+    let private run proton cbLauncherDir apiUri args = async {
+        let settings = parseArgs log Settings.defaults args
         let appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Frontier_Developments")
         let productsDir =
             getProductsDir appDataDir hasWriteAccess settings.ForceLocal cbLauncherDir
@@ -235,8 +233,6 @@ module Program =
                 log.Error <| sprintf "Unable to get products directory: %s" msg
                 return 1 }
             | Ok productsDir, Ok (cbVersion, launcherVersion) -> async {
-                let apiUri = Uri("https://api.zaonce.net")
-                //let apiUri = Uri("http://localhost:8080")
                 let cbLauncherName = System.Reflection.AssemblyName.GetAssemblyName(Path.Combine(cbLauncherDir, "EDLaunch.exe")).Name
                 use httpClient = createZaonceClient apiUri cbLauncherName cbVersion (getOsIdent())
                 let serverRequest = Server.request httpClient 
@@ -289,14 +285,12 @@ module Program =
                              let processArgs = Product.createArgString settings.DisplayMode (Some @"English\\UK") user.MachineToken user.SessionToken machineId (runningTime()) settings.WatchForCrashes settings.Platform SHA1.hashFile product
                              let run = product
                                        |> Product.validateForRun cbLauncherDir settings.WatchForCrashes
-                                       >>= Product.run processArgs
+                                       >>= Product.run proton processArgs
                                              
                              match run with
                              | Ok p ->
                                  use p = p
                                  p.WaitForExit()
-                                 printfn "Err: %s" (p.StandardError.ReadToEnd())
-                                 printfn "Out: %s" (p.StandardOutput.ReadToEnd())
                              | Error msg -> log.Error <| sprintf "Couldn't start selected product: %s" msg
                          | None, true -> log.Error "No selected project"
                          | _, _ -> ()
@@ -312,9 +306,16 @@ module Program =
 
     [<EntryPoint>]
     let main argv =
+        let proton, cbLaunchDir, args =
+            if argv.Length > 2 && argv.[0].Contains("steamapps/common/Proton") then
+                Some (argv.[0], argv.[1]), Path.GetDirectoryName(argv.[2]), argv.[2..]
+            else
+                None, "/mnt/games/Steam/Linux/steamapps/common/Elite Dangerous", argv
+        let apiUri = Uri("https://api.zaonce.net")
+        //let apiUri = Uri("http://localhost:8080")
         async {
             do! Async.SwitchToThreadPool ()
-            return! run argv
+            return! run proton cbLaunchDir apiUri [| "/forcelocal"; "/noremotelogs"; "/nowatchdog"; "/steamid"; "441340" |] //args ; "/steamid"; "441340"
         } |> Async.RunSynchronously
         
         
