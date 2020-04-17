@@ -137,7 +137,6 @@ module Server =
                                             Sku = sku
                                             TestApi = testApi }
                                    | _ ->
-                                       printfn "Unexpected json object %s" (element.ToString()) // TODO: log invalid json objects
                                        sprintf "Unexpected json object %s" (element.ToString()) |> Error)
                            |> Result.map Seq.chooseResult
                            |> Result.map (fun products -> products |> Seq.sortBy (fun p -> p.SortKey)

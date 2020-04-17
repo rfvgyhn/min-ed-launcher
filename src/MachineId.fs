@@ -90,7 +90,7 @@ module MachineId =
             | Ok _ ->
                 let machineId = readEntry (machineFilePath registryPath) machineEntry
                 let frontierId = readEntry (frontierFilePath registryPath) frontierEntry
-                printfn "Ids: %s - %s" machineId frontierId
+                
                 return Ok (machineId, frontierId)
             | Error msg -> return Error msg
         }
