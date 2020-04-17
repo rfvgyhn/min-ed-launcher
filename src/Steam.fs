@@ -84,12 +84,9 @@ module Steam =
             else None
                     
         let bytesToHex (bytes: byte[]) count =
-            let chars = Array.zeroCreate (count * 2)
-            let hexChars = "0123456789ABCDEF";
-            for i in 0..count - 1 do
-                chars.[2 * i] <- hexChars.[(int) bytes.[i] >>> 4];
-                chars.[2 * i + 1] <- hexChars.[(int) bytes.[i] &&& 15];
-            String(chars)
+            bytes
+            |> Array.take count
+            |> Hex.toString
             
         let init() =
             if not <| File.Exists(SteamLib) then
