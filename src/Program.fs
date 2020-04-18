@@ -5,6 +5,8 @@ module Program =
     open System.Diagnostics
     open System.IO
     open System.Net.Http
+    open System.Reflection
+    open System.Resources
     open System.Runtime.InteropServices
     open FileIO
     open Steam
@@ -213,6 +215,14 @@ module Program =
         | Failed msg ->
             log.Error <| sprintf "Unable to parse product %s: %s" product.Name msg
             None
+            
+    let getGameLang cbLauncherDir =
+        let asm = Assembly.LoadFrom(Path.Combine(cbLauncherDir, "LocalResources.dll"))
+        let resManager = ResourceManager("LocalResources.Properties.Resources", asm)
+        try
+            resManager.GetString("GameLanguage") |> Some
+        with
+        | e -> None 
     
     let private run proton cbLauncherDir apiUri args = async {
         let settings = parseArgs log Settings.defaults args
@@ -278,13 +288,15 @@ module Program =
                              
                              match selectedProduct, settings.AutoRun with
                              | Some product, true ->
-                                 let processArgs = Product.createArgString settings.DisplayMode (Some @"English\\UK") user.MachineToken user.SessionToken machineId (runningTime()) settings.WatchForCrashes settings.Platform SHA1.hashFile product
+                                 let gameLanguage = getGameLang cbLauncherDir                                 
+                                 let processArgs = Product.createArgString settings.DisplayMode gameLanguage user.MachineToken user.SessionToken machineId (runningTime()) settings.WatchForCrashes settings.Platform SHA1.hashFile product
                                  let run = product
                                            |> Product.validateForRun cbLauncherDir settings.WatchForCrashes
                                            >>= Product.run proton processArgs
                                                  
                                  match run with
                                  | Ok p ->
+                                     log.Info <| sprintf "Launching %s" product.Name
                                      use p = p
                                      p.WaitForExit()
                                  | Error msg -> log.Error <| sprintf "Couldn't start selected product: %s" msg
