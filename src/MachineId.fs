@@ -2,8 +2,7 @@ namespace EdLauncher
 
 module MachineId =
     open System
-    open System.Security.Cryptography
-    open System.Text
+    open System.IO
 
     module WindowsRegistry =
         open Microsoft.Win32
@@ -34,8 +33,6 @@ module MachineId =
             | Error msg -> Error msg
         
     module WineRegistry =
-        open System.IO
-        
         let private machineFilePath registryPath = Path.Combine(registryPath, "system.reg")
         let private frontierFilePath registryPath = Path.Combine(registryPath, "user.reg")
         let private machineEntry = @"[Software\\Microsoft\\Cryptography]"
@@ -59,7 +56,7 @@ module MachineId =
                     let entry = String.Join(Environment.NewLine, [
                         ""
                         sprintf"%s 1585703162" frontierEntry
-                        sprintf "#time=%s" ""
+                        sprintf "#time=%s" "1d52cf302f944a0" // TODO: figure out how to generate this timestamp
                         sprintf "\"MachineGuid\"=\"%s\"" (Guid.NewGuid().ToString())
                     ])
                     use sw = user.AppendText()
@@ -67,7 +64,7 @@ module MachineId =
                 
                 return Ok ()
             with
-            | e -> return Error e.Message
+            | e -> return Error (e.ToString())
         }
         
         let private readEntry file (path:string) =
@@ -95,7 +92,6 @@ module MachineId =
         }
         
     module Filesystem =
-        open System.IO
         open System.Linq
         
         let private configPath = "Settings"
@@ -142,10 +138,20 @@ module MachineId =
         | Ok (machineId, frontierId) -> Ok <| getId machineId frontierId
         | Error msg -> Error msg
     
-    let getWineId registryPath = async {
-        match! WineRegistry.getIds registryPath with
-        | Ok (machineId, frontierId) -> return Ok <| getId machineId frontierId
-        | Error msg -> return Error msg
+    let getWineId() = async {
+        let registryPath =
+            let steamCompat = Environment.GetEnvironmentVariable("STEAM_COMPAT_DATA_PATH")
+            let winePrefix = Environment.GetEnvironmentVariable("WINEPREFIX")
+            if not (String.IsNullOrEmpty(steamCompat)) then
+                Path.Combine(steamCompat, "pfx")
+            else
+                winePrefix
+        if String.IsNullOrEmpty(registryPath) then
+            return Error "Unable to find wine directory. Make sure either STEAM_COMPAT_DATA_PATH or WINEPREFIX is set"
+        else
+            match! WineRegistry.getIds registryPath with
+            | Ok (machineId, frontierId) -> return Ok <| getId machineId frontierId
+            | Error msg -> return Error msg
     }
     let getFilesystemId() = async {
         match! Filesystem.getIds() with

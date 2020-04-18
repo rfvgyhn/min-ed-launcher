@@ -1,4 +1,4 @@
-﻿namespace EdLauncher
+namespace EdLauncher
 
 module Program =
     open System
@@ -260,8 +260,7 @@ module Program =
 #if WINDOWS
                     MachineId.getWindowsId()
 #else
-                    let registryPath = Environment.GetEnvironmentVariable("WINEPREFIX")
-                    MachineId.getWineId registryPath
+                    MachineId.getWineId()
 #endif
                 let remoteLogHttpClient = if settings.RemoteLogging then Some httpClient else None
                 let logEvents = writeEventLog remoteLogHttpClient
