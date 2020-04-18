@@ -1,4 +1,4 @@
-namespace EdLauncher
+﻿namespace EdLauncher
 
 module Program =
     open System
@@ -303,6 +303,11 @@ module Program =
                                  | Error msg -> log.Error <| sprintf "Couldn't start selected product: %s" msg
                              | None, true -> log.Error "No selected project"
                              | _, _ -> ()
+                             
+                             if not settings.AutoQuit then
+                                 printfn "Press any key to quit..."
+                                 Console.ReadKey() |> ignore
+                             
                         | Error msg ->
                             log.Error <| sprintf "Couldn't get available products: %s" msg
                     | ActionRequired msg ->
