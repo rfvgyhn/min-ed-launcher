@@ -53,7 +53,6 @@ module MachineId =
                 let keyExists =
                     File.ReadLines(user.FullName)
                     |> Seq.skipWhile (fun l -> not (l.StartsWith(frontierEntry)))
-                    |> Seq.take 1
                     |> Seq.length > 0
                     
                 if not keyExists then
