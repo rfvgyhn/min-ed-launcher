@@ -56,23 +56,35 @@ namespace EdLauncher
             | None, _ -> Error "No executable specified"
             | _, None -> Error "No version specified"
             
+        let isRunning (product:RunnableProduct) =
+            let exeName = product.Executable.Name
+            Process.GetProcessesByName(exeName).Length > 0 || // TODO: check that this is true when running on Windows
+            Process.GetProcesses() // When running via wine, process name can be truncated and the main module is wine so check all module names
+            |> Array.exists (fun p ->
+                p.Modules
+                |> Seq.cast<ProcessModule>
+                |> Seq.exists (fun m -> m.ModuleName = exeName))
+            
+        type RunResult = Ok of Process | AlreadyRunning | Error of exn
         let run proton args (product:RunnableProduct)  =
-            let fileName, arguments =
-                match proton with
-                | Some (path, action) -> "python3", sprintf "\"%s\" %s \"%s\" %s" path action product.Executable.FullName args
-                | None -> product.Executable.FullName, args
-            
-            let startInfo = ProcessStartInfo()
-            startInfo.FileName <- fileName
-            startInfo.WorkingDirectory <- product.Executable.DirectoryName
-            startInfo.Arguments <- arguments
-            startInfo.CreateNoWindow <- true
-            startInfo.UseShellExecute <- false
-            startInfo.RedirectStandardOutput <- true
-            startInfo.RedirectStandardError <- true
-            //startInfo.EnvironmentVariables.Add("STEAM_COMPAT_DATA_PATH", "/home/chris/.local/share/Steam/steamapps/compatdata/359320")
-            
-            try
-                Process.Start(startInfo) |> Ok
-            with
-            | e -> Error e.Message
+            if isRunning product then
+                AlreadyRunning
+            else
+                let fileName, arguments =
+                    match proton with
+                    | Some (path, action) -> "python3", sprintf "\"%s\" %s \"%s\" %s" path action product.Executable.FullName args
+                    | None -> product.Executable.FullName, args
+                
+                let startInfo = ProcessStartInfo()
+                startInfo.FileName <- fileName
+                startInfo.WorkingDirectory <- product.Executable.DirectoryName
+                startInfo.Arguments <- arguments
+                startInfo.CreateNoWindow <- true
+                startInfo.UseShellExecute <- false
+                startInfo.RedirectStandardOutput <- true
+                startInfo.RedirectStandardError <- true
+                
+                try
+                    Process.Start(startInfo) |> Ok
+                with
+                | e -> Error e

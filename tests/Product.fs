@@ -27,7 +27,7 @@ open Expecto
               GameArgs = ""
               ServerArgs = "" }
         let getTimestamp = fun () -> (double)1
-        let hashFile = fun str -> Ok Array.empty<byte>
+        let hashFile = fun str -> Result.Ok Array.empty<byte>
             
         testList "Product" [
             testList "Argument String" [
@@ -94,7 +94,7 @@ open Expecto
                     let serverArgs = "/Test"
                     let machineId = "789"
                     let timeStamp = 12345.12345
-                    let hashFile = fun _ -> Ok [|228uy; 20uy; 11uy; 154uy;|]
+                    let hashFile = fun _ -> Result.Ok [|228uy; 20uy; 11uy; 154uy;|]
                     let version = System.Version(1, 2, 3)
                     let product = { product with ServerArgs = serverArgs; Mode = Online; Version = Some version; Directory = Path.Combine("path", "to"); Executable = Some "theExe.exe" }
                     let actual = createArgString Vr None machineToken sessionToken machineId timeStamp true Dev hashFile product

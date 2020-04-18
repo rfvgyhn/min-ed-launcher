@@ -289,15 +289,17 @@ module Program =
                              | Some product, true ->
                                  let gameLanguage = getGameLang cbLauncherDir                                 
                                  let processArgs = Product.createArgString settings.DisplayMode gameLanguage user.MachineToken user.SessionToken machineId (runningTime()) settings.WatchForCrashes settings.Platform SHA1.hashFile product
-                                 let run = product
-                                           |> Product.validateForRun cbLauncherDir settings.WatchForCrashes
-                                           >>= Product.run proton processArgs
-                                                 
-                                 match run with
+                                 
+                                 match Product.validateForRun cbLauncherDir settings.WatchForCrashes product with
                                  | Ok p ->
-                                     log.Info <| sprintf "Launching %s" product.Name
-                                     use p = p
-                                     p.WaitForExit()
+                                     match Product.run proton processArgs p with
+                                     | Product.RunResult.Ok p ->
+                                         log.Info <| sprintf "Launching %s" product.Name
+                                         use p = p
+                                         p.WaitForExit()
+                                         log.Info <| sprintf "Shutdown %s" product.Name
+                                     | Product.RunResult.AlreadyRunning -> log.Info <| sprintf "%s is already running" product.Name
+                                     | Product.RunResult.Error e -> log.Error <| sprintf "Couldn't start selected product: %s" (e.ToString())
                                  | Error msg -> log.Error <| sprintf "Couldn't start selected product: %s" msg
                              | None, true -> log.Error "No selected project"
                              | _, _ -> ()
@@ -324,7 +326,7 @@ module Program =
         //let apiUri = Uri("http://localhost:8080")
         async {
             do! Async.SwitchToThreadPool ()
-            return! run proton cbLaunchDir apiUri [| "/forcelocal"; "/noremotelogs"; "/nowatchdog"; "/steamid"; "441340" |] //args ; "/steamid"; "441340"
+            return! run proton cbLaunchDir apiUri args
         } |> Async.RunSynchronously
         
         
