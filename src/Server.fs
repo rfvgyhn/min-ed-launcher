@@ -146,13 +146,49 @@ module Server =
             return sprintf "%i: %s" ((int)response.StatusCode) response.ReasonPhrase |> Error
     }
         
+    let private checkForUpdates (httpClient:HttpClient) (runningTime: unit -> double) sessionToken machineToken machineId product = async {
+        match product with
+        | Unknown _ -> return Error "Can't check updates for unknown product"
+        | Missing _ -> return Error "Can't check updates for missing product"
+        | RequiresUpdate product
+        | Playable product ->
+            let uri = buildUri httpClient.BaseAddress "/3.0/user/installer"
+                      |> Uri.addQueryParams [
+                          "machineToken", machineToken
+                          "authToken", sessionToken
+                          "machineId", machineId
+                          "sku", product.Sku
+                          "os", "win"
+                          "fTime", runningTime().ToString() ]
+                      
+            use! response = httpClient.GetAsync(uri) |> Async.AwaitTask
+            
+            if response.IsSuccessStatusCode then
+                use! content = response.Content.ReadAsStreamAsync() |> Async.AwaitTask
+                let root = content |> Json.parseStream >>= Json.rootElement
+                let remoteVersion = root >>= Json.parseProp "version" >>= Json.asVersion
+                let result p = p |> UpdatesChecked |> Ok
+                
+                match remoteVersion with
+                | Ok remoteVersion ->
+                    if remoteVersion = product.Version then
+                        return product |> Playable |> result
+                    else
+                        return product |> RequiresUpdate |> result
+                | Error msg -> return Error msg            
+            else
+                return Error <| sprintf "%i: %s" ((int)response.StatusCode) response.ReasonPhrase
+    }
+        
+        
     let request (httpClient:HttpClient) (runningTime: unit -> double) request = async {
         try
             return! match request with
                     | ServerTimestamp -> getTime httpClient
                     | LauncherStatus currentVersion -> async { return Ok <| StatusReceived Current }
                     | Authenticate details -> authenticate httpClient runningTime details
-                    | AuthorizedProjects (sessionToken, lang) -> getAvailableProjects httpClient runningTime sessionToken lang 
+                    | AuthorizedProjects (sessionToken, lang) -> getAvailableProjects httpClient runningTime sessionToken lang
+                    | CheckForUpdates (sessionToken, machineToken, machineId, product) -> checkForUpdates httpClient runningTime sessionToken machineToken machineId product
         with
         | e -> return Error e.Message
     }

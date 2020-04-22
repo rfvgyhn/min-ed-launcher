@@ -17,13 +17,12 @@ open Expecto
             { Sku = ""
               Name = ""
               Filters = Set.empty
-              Executable = None
+              Executable = ""
               UseWatchDog64 = false
               SteamAware = false
-              Version = None
+              Version = System.Version()
               Mode = Offline
               Directory = ""
-              Action = ReadyToPlay
               GameArgs = ""
               ServerArgs = "" }
         let getTimestamp = fun () -> (double)1
@@ -96,7 +95,7 @@ open Expecto
                     let timeStamp = 12345.12345
                     let hashFile = fun _ -> Result.Ok [|228uy; 20uy; 11uy; 154uy;|]
                     let version = System.Version(1, 2, 3)
-                    let product = { product with ServerArgs = serverArgs; Mode = Online; Version = Some version; Directory = Path.Combine("path", "to"); Executable = Some "theExe.exe" }
+                    let product = { product with ServerArgs = serverArgs; Mode = Online; Version = version; Directory = Path.Combine("path", "to"); Executable = "theExe.exe" }
                     let actual = createArgString Vr None machineToken sessionToken machineId timeStamp true Dev hashFile product
                     
                     let expectedExe = sprintf "/Executable \"%s\"" (Path.Combine("path", "to", "theExe.exe"))

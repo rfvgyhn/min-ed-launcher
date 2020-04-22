@@ -153,14 +153,11 @@ module Program =
         printfn "Remote Time: %i" remoteTime
         printfn "Products Dir: %s" productsDir
 
-    type VersionInfoStatus = Found of VersionInfo | NotFound of bool * bool * ProductMode * string | Failed of string
+    type VersionInfoStatus = Found of VersionInfo | NotFound of string | Failed of string
     let readVersionInfo path = 
         let file = Path.Combine(path, "VersionInfo.txt")
-        let defaultWatchDog = false
-        let defaultSteam = true
-        let defaultOffline = false
         let mode offline = if offline then Offline else Online
-        if not (File.Exists(file)) then (defaultWatchDog, defaultSteam, mode defaultOffline, file) |> NotFound
+        if not (File.Exists(file)) then NotFound file
         else
             let json = (FileIO.openRead file) >>= Json.parseStream >>= Json.rootElement
             let version = json >>= Json.parseProp "Version" >>= Json.asVersion
@@ -184,37 +181,30 @@ module Program =
                 if product.TestApi then "/Test"
                 if not (String.IsNullOrEmpty(product.ServerArgs)) then product.ServerArgs
             ])
+        let filters = product.Filter.Split(',', StringSplitOptions.RemoveEmptyEntries) |> Set.ofArray
+        let directory = Path.Combine(productsDir, product.Directory)
         match readVersionInfo (Path.Combine(productsDir, product.Directory)) with
         | Found v ->
-            Some { Sku = product.Sku
-                   Name = product.Name
-                   Filters = product.Filter.Split(',', StringSplitOptions.RemoveEmptyEntries) |> Set.ofArray
-                   Executable = Some v.Executable
-                   UseWatchDog64 = v.UseWatchDog64
-                   SteamAware = v.SteamAware
-                   Version = Some v.Version
-                   Mode = v.Mode
-                   Directory = Path.Combine(productsDir, product.Directory)
-                   Action = ReadyToPlay
-                   GameArgs = product.GameArgs
-                   ServerArgs = serverArgs }
-        | NotFound (useWd64, steamAware, mode, file) ->
+            Playable { Sku = product.Sku
+                       Name = product.Name
+                       Filters = filters
+                       Executable = v.Executable
+                       UseWatchDog64 = v.UseWatchDog64
+                       SteamAware = v.SteamAware
+                       Version = v.Version
+                       Mode = v.Mode
+                       Directory = directory
+                       GameArgs = product.GameArgs
+                       ServerArgs = serverArgs }
+        | NotFound file ->
             log.Info <| sprintf "Disabling '%s'. Unable to find product at '%s'" product.Name file
-            Some { Sku = product.Sku
-                   Name = product.Name
-                   Filters = product.Filter.Split(',', StringSplitOptions.RemoveEmptyEntries) |> Set.ofArray
-                   Executable = None
-                   UseWatchDog64 = useWd64
-                   SteamAware = steamAware
-                   Version = None
-                   Mode = mode
-                   Directory = Path.Combine(productsDir, product.Directory)
-                   Action = Disabled
-                   GameArgs = product.GameArgs
-                   ServerArgs = serverArgs }
+            Missing { Sku = product.Sku
+                      Name = product.Name
+                      Filters = filters
+                      Directory = directory }
         | Failed msg ->
             log.Error <| sprintf "Unable to parse product %s: %s" product.Name msg
-            None
+            Unknown product.Name
             
     let getGameLang cbLauncherDir =
         let asm = Assembly.LoadFrom(Path.Combine(cbLauncherDir, "LocalResources.dll"))
@@ -278,11 +268,25 @@ module Program =
                         match! Api.getAuthorizedProducts user.SessionToken None serverRequest with
                         | Ok authorizedProducts ->
                              do! logEvents [ EventLog.AvailableProjects (user.EmailAddress, authorizedProducts |> List.map (fun p -> p.Sku)) ]
+                             let! products = authorizedProducts
+                                             |> List.map (mapProduct productsDir)
+                                             |> Api.checkForUpdates user.SessionToken user.MachineToken machineId serverRequest
+                             let availableProducts =
+                                 products
+                                 |> Result.defaultValue []
+                                 |> List.map (fun p -> match p with
+                                                       | Playable p -> Some (p.Name, "Up to date")
+                                                       | RequiresUpdate p -> Some (p.Name, "Requires Update")
+                                                       | Missing _ -> None
+                                                       | Unknown _ -> None)
+                                 |> List.choose id
+                             log.Info <| sprintf "Available Products:%s\t%s" Environment.NewLine (String.Join(Environment.NewLine + "\t", availableProducts))
                              let selectedProduct =
-                                authorizedProducts
-                                |> List.map (mapProduct productsDir)
-                                |> List.choose id
-                                |> List.filter (fun p -> p.Action = ReadyToPlay && ( settings.ProductWhitelist.Count = 0 || p.Filters |> Set.union settings.ProductWhitelist |> Set.count > 0 ))
+                                products
+                                |> Result.defaultValue []
+                                |> List.choose (fun p -> match p with | Playable p -> Some p | _ -> None)
+                                |> List.filter (fun p -> settings.ProductWhitelist.Count = 0
+                                                         || p.Filters |> Set.union settings.ProductWhitelist |> Set.count > 0)
                                 |> List.tryHead
                              
                              match selectedProduct, settings.AutoRun with

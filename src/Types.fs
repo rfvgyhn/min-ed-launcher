@@ -53,11 +53,6 @@ module Types =
           SortKey: int
           Sku: string
           TestApi: bool }
-    type ProductAction =
-        | Install
-        | ReadyToPlay
-        | RequiresUpdate
-        | Disabled
     type ProductMode = Online | Offline
     type VersionInfo =
         { Name: string
@@ -66,16 +61,25 @@ module Types =
           SteamAware: bool
           Version: Version
           Mode: ProductMode }
-    type Product =
+    type ProductDetails =
         { Sku: string
           Name: string
           Filters: Set<string>
-          Executable: string option
+          Executable: string
           UseWatchDog64: bool
           SteamAware: bool
-          Version: Version option
+          Version: Version
           Mode: ProductMode
           Directory: string
-          Action: ProductAction
           GameArgs: string
           ServerArgs: string }
+    type MissingProductDetails =
+        { Sku: string
+          Name: string
+          Filters: Set<string>
+          Directory: string }
+    type Product =
+        | Playable of ProductDetails
+        | RequiresUpdate of ProductDetails
+        | Missing of MissingProductDetails
+        | Unknown of name:string

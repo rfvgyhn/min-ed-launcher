@@ -19,12 +19,14 @@ module Api =
     | LauncherStatus of string
     | Authenticate of AuthDetails
     | AuthorizedProjects of sessionToken:string * language:string option
+    | CheckForUpdates of sessionToken:string * machineToken:string * machineId:string * Product
 
     type Response =
     | TimestampReceived of int64
     | StatusReceived of LauncherStatus
     | Authenticated of AuthResult
     | ProductsReceived of AuthorizedProduct list
+    | UpdatesChecked of Product
         
     let getTime (now:DateTime) serverRequest = async {
         match! serverRequest ServerTimestamp with
@@ -47,6 +49,22 @@ module Api =
         | Ok (ProductsReceived projects) -> return Ok projects
         | Error msg -> return Error msg
         | Ok _ -> return failwith "Invalid return type"
+    }
+    
+    let checkForUpdates sessionToken machineToken machineId serverRequest (products: Product list) : Async<Result<Product list, string>> = async {
+        let! result =
+            products
+            |> List.map (fun p -> serverRequest (CheckForUpdates (sessionToken, machineToken, machineId, p)))
+            |> Async.Parallel
+        return result
+            |> List.ofArray
+            |> List.map (fun r ->
+                match r with
+                | Ok (UpdatesChecked product) -> Some product
+                | Error msg -> None
+                | Ok _ -> failwith "Invalid return type")
+            |> List.choose id
+            |> Ok
     }
         
 
