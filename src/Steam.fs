@@ -45,7 +45,7 @@ module Steam =
         { UserId: UInt64
           SessionToken: string }
 
-    type Steam(log : ILog) =
+    type Steam() =
         let mutable disposed = false
         let mutable initialized = false
         let mutable userHandle = IntPtr.Zero
@@ -53,30 +53,30 @@ module Steam =
         
         let cleanup disposing =
             if not disposed then
-                log.Debug "Disposing Steam resources"
+                Log.debug "Disposing Steam resources"
                 disposed <- true
                 
                 if userHandle <> IntPtr.Zero then
-                    log.Debug "Cancelling auth ticket"
+                    Log.debug "Cancelling auth ticket"
                     SteamAPI_ISteamUser_CancelAuthTicket(userHandle, sessionToken)
                     
                 if initialized then
-                    log.Debug "closing steam"
+                    Log.debug "closing steam"
                     SteamAPI_Shutdown()
                     
         let getCurrentUserHandle() =
             let client = SteamClient()
             if client <> IntPtr.Zero then
-                log.Debug "Got steam client"
+                Log.debug "Got steam client"
                 let pipe = SteamAPI_GetHSteamPipe()
                 if pipe <> 0 then
-                    log.Debug "Got steam pipe"
+                    Log.debug "Got steam pipe"
                     let globalUser = SteamAPI_ISteamClient_ConnectToGlobalUser(client, pipe)
                     if globalUser <> 0 then
-                        log.Debug "Got steam global user"
+                        Log.debug "Got steam global user"
                         userHandle <- SteamAPI_ISteamClient_GetISteamUser(client, globalUser, pipe, "SteamUser019")
                         if userHandle <> IntPtr.Zero then
-                            log.Debug "Got steam user"
+                            Log.debug "Got steam user"
                             Some userHandle
                         else None
                     else None
@@ -110,11 +110,11 @@ module Steam =
                     if userId <> 0UL then
                         let rawToken = Array.zeroCreate<byte> 1024
                         let mutable count = 0u
-                        log.Debug("Requesting steam auth ticket")
+                        Log.debug "Requesting steam auth ticket"
                         sessionToken <- SteamAPI_ISteamUser_GetAuthSessionTicket(handle, rawToken, 1024u, &count)
 
                         if sessionToken <> 0u then
-                            log.Debug("Got steam auth ticket")
+                            Log.debug "Got steam auth ticket"
                             Ok { UserId = userId; SessionToken = bytesToHex rawToken ((int)count) }
                         else errorResult
                     else errorResult

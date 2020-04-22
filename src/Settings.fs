@@ -14,7 +14,7 @@ module Settings =
           ProductWhitelist = Set.empty
           ForceLocal = false }
         
-    let parseArgs log defaults (args: string[]) =
+    let parseArgs defaults (args: string[]) =
         let getArg (flag:string) i =
             if i + 1 < args.Length && not (String.IsNullOrEmpty args.[i + 1]) && not (args.[i + 1].StartsWith '/') then
                 flag.ToLowerInvariant(), Some args.[i + 1]
@@ -36,7 +36,5 @@ module Settings =
             | "/ed", _              -> { s with ProductWhitelist = s.ProductWhitelist.Add "ed" }
             | "/edh", _             -> { s with ProductWhitelist = s.ProductWhitelist.Add "edh" }
             | "/eda", _             -> { s with ProductWhitelist = s.ProductWhitelist.Add "eda" }
-            | _ ->
-                log.Warn <| sprintf "Ignoring argument '%s'" arg
-                s
+            | _ -> s
             ) defaults

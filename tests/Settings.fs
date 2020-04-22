@@ -9,7 +9,7 @@ open EdLauncher.Types
 
 [<Tests>]
 let tests =
-    let parse = parseArgs ILog.Noop Settings.defaults
+    let parse = parseArgs Settings.defaults
       
     testList "Parings command line arguments" [
         test "Matches /steamid id" {

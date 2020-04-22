@@ -13,13 +13,6 @@ module Program =
     open Types
     open Settings
     open Rop
-
-    let log =
-        let write level msg = printfn "[%s] - %s" level msg
-        { Debug = fun msg -> write "DBG" msg
-          Info = fun msg -> write "INF" msg
-          Warn = fun msg -> write "WRN" msg
-          Error = fun msg -> write "ERR" msg }
         
     let getOsIdent() =
         let platToStr plat =
@@ -48,13 +41,13 @@ module Program =
             match result with
             | Ok file -> Some file
             | Error msg ->
-                log.Error msg
+                Log.error msg
                 None
         let remote =
             let url = "http://localhost:8080" // https://api.zaonce.net/1.1/
             match httpClient, Uri.TryCreate(url, UriKind.Absolute) with
             | None, _ ->
-                log.Info "Remote logging disabled via configuration"
+                Log.info "Remote logging disabled via configuration"
                 None
             | Some httpClient, (true, uri) ->
                 Some <| EventLog.RemoteLog (httpClient, { Uri = uri
@@ -63,7 +56,7 @@ module Program =
                                                           MachineId = ""
                                                           RunningTime = fun () -> 1L })
             | Some _, (false, _) ->
-                log.Error <| sprintf "EventLog.RemotePath - Invalid URI %s. Disabling" url
+                Log.errorf "EventLog.RemotePath - Invalid URI %s. Disabling" url
                 None
         return file, remote
     }
@@ -71,7 +64,7 @@ module Program =
         let! file, remote = getEventLogPaths httpClient
         let! result = EventLog.write file remote entry
         result |> Array.iter (fun e -> match e with
-                                       | Error e -> log.Warn e
+                                       | Error e -> Log.warn e
                                        | _ -> ())
     }
 
@@ -85,15 +78,15 @@ module Program =
         | Oculus _ -> return Failure "Oculus not supported"
         | Frontier -> return Failure "Frontier not supported"
         | Steam _ ->
-            use steam = new Steam(log)
+            use steam = new Steam()
             return! match steam.Login() with
                     | Ok steamUser -> async {
                         let authDetails = Api.Steam (steamUser.SessionToken, machineId)
                         // TODO: event log RequestingSteamAuthentication no params
-                        log.Debug "Authenticating via Steam"
+                        Log.debug "Authenticating via Steam"
                         match! Api.authenticate authDetails serverRequest with
                         | Api.Authorized (authToken, machineToken, name) ->
-                            log.Debug "Successfully authenticated"
+                            Log.debug "Successfully authenticated"
                             // TODO: event log SteamAuthenticated no params
                             return Success { Name = name
                                              EmailAddress = ""
@@ -197,13 +190,13 @@ module Program =
                        GameArgs = product.GameArgs
                        ServerArgs = serverArgs }
         | NotFound file ->
-            log.Info <| sprintf "Disabling '%s'. Unable to find product at '%s'" product.Name file
+            Log.infof "Disabling '%s'. Unable to find product at '%s'" product.Name file
             Missing { Sku = product.Sku
                       Name = product.Name
                       Filters = filters
                       Directory = directory }
         | Failed msg ->
-            log.Error <| sprintf "Unable to parse product %s: %s" product.Name msg
+            Log.errorf "Unable to parse product %s: %s" product.Name msg
             Unknown product.Name
             
     let getGameLang cbLauncherDir =
@@ -215,7 +208,7 @@ module Program =
         | e -> None 
     
     let private run proton cbLauncherDir apiUri args = async {
-        let settings = parseArgs log Settings.defaults args
+        let settings = parseArgs Settings.defaults args
         let appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Frontier_Developments")
         let productsDir =
             getProductsDir appDataDir hasWriteAccess settings.ForceLocal cbLauncherDir
@@ -224,10 +217,10 @@ module Program =
         return!
             match productsDir, version with 
             | _, Error msg -> async {
-                log.Error <| sprintf "Unable to get version: %s" msg
+                Log.errorf "Unable to get version: %s" msg
                 return 1 }
             | Error msg, _ -> async { 
-                log.Error <| sprintf "Unable to get products directory: %s" msg
+                Log.errorf "Unable to get products directory: %s" msg
                 return 1 }
             | Ok productsDir, Ok (cbVersion, launcherVersion) -> async {
                 let cbLauncherName = System.Reflection.AssemblyName.GetAssemblyName(Path.Combine(cbLauncherDir, "EDLaunch.exe")).Name
@@ -238,7 +231,7 @@ module Program =
                     match! Api.getTime localTime (serverRequest runningTime) with
                     | Ok timestamp -> return timestamp
                     | Error (localTimestamp, msg) ->
-                        log.Warn <| sprintf "Couldn't get remote time: %s. Using local system time instead" msg
+                        Log.warnf "Couldn't get remote time: %s. Using local system time instead" msg
                         return localTimestamp
                     }
                 let! remoteTime = getRemoteTime (fun () -> (double)1)
@@ -264,7 +257,7 @@ module Program =
                     match! login serverRequest machineId settings.Platform with
                     | Success user ->
                         // TODO: event log Authenticated user.Name
-                        log.Info <| sprintf "Logged in via %A as: %s (%s)" settings.Platform user.Name user.EmailAddress
+                        Log.infof "Logged in via %A as: %s (%s)" settings.Platform user.Name user.EmailAddress
                         match! Api.getAuthorizedProducts user.SessionToken None serverRequest with
                         | Ok authorizedProducts ->
                              do! logEvents [ EventLog.AvailableProjects (user.EmailAddress, authorizedProducts |> List.map (fun p -> p.Sku)) ]
@@ -280,7 +273,7 @@ module Program =
                                                        | Missing _ -> None
                                                        | Unknown _ -> None)
                                  |> List.choose id
-                             log.Info <| sprintf "Available Products:%s\t%s" Environment.NewLine (String.Join(Environment.NewLine + "\t", availableProducts))
+                             Log.infof "Available Products:%s\t%s" Environment.NewLine (String.Join(Environment.NewLine + "\t", availableProducts))
                              let selectedProduct =
                                 products
                                 |> Result.defaultValue []
@@ -298,14 +291,14 @@ module Program =
                                  | Ok p ->
                                      match Product.run proton processArgs p with
                                      | Product.RunResult.Ok p ->
-                                         log.Info <| sprintf "Launching %s" product.Name
+                                         Log.infof "Launching %s" product.Name
                                          use p = p
                                          p.WaitForExit()
-                                         log.Info <| sprintf "Shutdown %s" product.Name
-                                     | Product.RunResult.AlreadyRunning -> log.Info <| sprintf "%s is already running" product.Name
-                                     | Product.RunResult.Error e -> log.Error <| sprintf "Couldn't start selected product: %s" (e.ToString())
-                                 | Error msg -> log.Error <| sprintf "Couldn't start selected product: %s" msg
-                             | None, true -> log.Error "No selected project"
+                                         Log.infof "Shutdown %s" product.Name
+                                     | Product.RunResult.AlreadyRunning -> Log.infof "%s is already running" product.Name
+                                     | Product.RunResult.Error e -> Log.errorf "Couldn't start selected product: %s" (e.ToString())
+                                 | Error msg -> Log.errorf "Couldn't start selected product: %s" msg
+                             | None, true -> Log.error "No selected project"
                              | _, _ -> ()
                              
                              if not settings.AutoQuit then
@@ -313,13 +306,13 @@ module Program =
                                  Console.ReadKey() |> ignore
                              
                         | Error msg ->
-                            log.Error <| sprintf "Couldn't get available products: %s" msg
+                            Log.errorf "Couldn't get available products: %s" msg
                     | ActionRequired msg ->
-                        log.Error <| sprintf "Unsupported login action required: %s" msg
+                        Log.errorf "Unsupported login action required: %s" msg
                     | Failure msg ->
-                        log.Error <| sprintf "Couldn't login: %s" msg
+                        Log.errorf "Couldn't login: %s" msg
                 | Error msg ->
-                    log.Error <| sprintf "Couldn't get machine id: %s" msg
+                    Log.errorf "Couldn't get machine id: %s" msg
                 
                 return 0 }
     }    
