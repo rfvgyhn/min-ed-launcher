@@ -61,6 +61,16 @@ module Json =
         | true, value -> Ok value
         | false, _ -> Error <| sprintf "Unable to parse '%s' as boolean" (prop.ToString())
 
+module Xml =
+    open System.Xml
+    let getValue xpath (file: string) =
+        let doc = XmlDocument()
+        doc.Load file
+        doc.SelectNodes xpath
+            |> Seq.cast<XmlNode>
+            |> Seq.map (fun node -> node.InnerText)
+            |> Seq.tryExactlyOne
+
 module Uri =
     open System
     open System.Web

@@ -14,17 +14,25 @@ module Program =
     open Settings
     open Rop
         
+    type OS = Linux | Windows | OSX | FreeBSD | Unknown
+    let getOs() =
+        let platToOs plat =
+            if   plat = OSPlatform.Linux   then Linux
+            elif plat = OSPlatform.Windows then Windows
+            elif plat = OSPlatform.OSX     then OSX
+            elif plat = OSPlatform.FreeBSD then FreeBSD
+            else Unknown        
+        [ OSPlatform.Linux; OSPlatform.Windows; OSPlatform.OSX; OSPlatform.FreeBSD ]
+        |> List.pick (fun p -> if RuntimeInformation.IsOSPlatform(p) then Some p else None)
+        |> platToOs
+        
     let getOsIdent() =
-        let platToStr plat =
-            if   plat = OSPlatform.Linux   then "Linux"
-            elif plat = OSPlatform.Windows then "Win"
-            elif plat = OSPlatform.OSX     then "Mac"
-            elif plat = OSPlatform.FreeBSD then "FreeBSD"
-            else "Unknown"        
-        let platform =
-            [ OSPlatform.Linux; OSPlatform.Windows; OSPlatform.OSX; OSPlatform.FreeBSD ]
-            |> List.pick (fun p -> if RuntimeInformation.IsOSPlatform(p) then Some p else None)
-            |> platToStr
+        let osToStr = function
+            | Linux -> "Linux"
+            | Windows -> "Win"
+            | OSX -> "Mac"
+            | FreeBSD -> "FreeBSD"
+            | Unknown -> "Unknown"
         let arch =
             match RuntimeInformation.ProcessArchitecture with
             | Architecture.Arm -> "Arm"
@@ -32,8 +40,8 @@ module Program =
             | Architecture.X64 -> "64"
             | Architecture.X86 -> "32"
             | unknownArch -> unknownArch.ToString()
-        
-        platform + arch
+        let os = getOs() |> osToStr
+        os + arch
 
     let getEventLogPaths httpClient = async {
         let! result = EventLog.LocalFile.create "test.txt" // logs/Client.log
@@ -67,17 +75,48 @@ module Program =
                                        | Error e -> Log.warn e
                                        | _ -> ())
     }
+    let getAppSettingsPath cbLauncherVersion =
+#if WINDOWS
+        let appSettingsPath = "" // TODO: get app data path
+#else
+        let steamCompat = Environment.GetEnvironmentVariable("STEAM_COMPAT_DATA_PATH")
+        let appSettingsPath =
+            if not (String.IsNullOrEmpty(steamCompat)) then
+                Path.Combine(steamCompat, "pfx", "drive_c", "users", "steamuser", "Local Settings", "Application Data", "Frontier_Developments")
+            else
+                // TODO: search common locations for steam compat data paths
+                "/mnt/games/Steam/Linux/steamapps/compatdata/359320/pfx/drive_c/users/steamuser/Local Settings/Application Data/Frontier_Developments"
+#endif
+        let path =
+            Directory.EnumerateDirectories(appSettingsPath, "EDLaunch.exe*")
+            |> Seq.tryHead
+            |> Option.map (fun dir -> Path.Combine(dir, cbLauncherVersion, "user.config"))
+        match path with
+        | Some path ->
+            if File.Exists(path) then
+                Ok path
+            else
+                sprintf "Couldn't find user.config in '%s'" path |> Error
+        | None -> sprintf "Couldn't find user.config in '%s'" appSettingsPath |> Error
+        
+    let getUserEmail appSettingsPath =
+        let xpath = "//*[@name='UserName']/value"
+        appSettingsPath
+        |> Xml.getValue xpath
+        |> Option.map (fun v -> if v = null then Error ("Username is null " + xpath) else Ok v)
+        |> Option.defaultValue (sprintf "Couldn't get user name from '%s'" appSettingsPath |> Error)
 
     type LoginResult =
     | Success of User
     | ActionRequired of string
     | Failure of string
-    let login serverRequest machineId platform = async {
-        match platform with
-        | Dev -> return Success { Name = "Dev User"; MachineToken = "DevToken"; EmailAddress = "a@a.com"; SessionToken = "AuthToken" }
-        | Oculus _ -> return Failure "Oculus not supported"
-        | Frontier -> return Failure "Frontier not supported"
-        | Steam _ ->
+    let login appSettingsPath serverRequest machineId platform = async {
+        match platform, (getUserEmail appSettingsPath) with
+        | _, Error msg -> return Failure msg
+        | Dev, Ok userEmail -> return Success { Name = "Dev User"; MachineToken = "DevToken"; EmailAddress = userEmail; SessionToken = "AuthToken" }
+        | Oculus _, _ -> return Failure "Oculus not supported"
+        | Frontier, _ -> return Failure "Frontier not supported"
+        | Steam _, Ok userEmail ->
             use steam = new Steam()
             return! match steam.Login() with
                     | Ok steamUser -> async {
@@ -89,7 +128,7 @@ module Program =
                             Log.debug "Successfully authenticated"
                             // TODO: event log SteamAuthenticated no params
                             return Success { Name = name
-                                             EmailAddress = ""
+                                             EmailAddress = userEmail
                                              SessionToken = authToken
                                              MachineToken = machineToken }
                         | Api.RegistrationRequired uri -> return ActionRequired <| sprintf "Registration is required at %A" uri
@@ -110,7 +149,6 @@ module Program =
     let getProductsDir fallbackPath hasWriteAccess (forceLocal:ForceLocal) launcherDir =
         let productsPath = "Products"
         let localPath = Path.Combine(launcherDir, productsPath)
-        //let localPath = "/mnt/games/Steam/Linux/steamapps/common/Elite Dangerous/Products"
         if forceLocal then localPath
         elif hasWriteAccess launcherDir then localPath
         else Path.Combine(fallbackPath, productsPath)
@@ -197,7 +235,7 @@ module Program =
                       Directory = directory }
         | Failed msg ->
             Log.errorf "Unable to parse product %s: %s" product.Name msg
-            Unknown product.Name
+            Product.Unknown product.Name
             
     let getGameLang cbLauncherDir =
         let asm = Assembly.LoadFrom(Path.Combine(cbLauncherDir, "LocalResources.dll"))
@@ -252,9 +290,9 @@ module Program =
                 
                 printInfo settings.Platform productsDir cbVersion launcherVersion remoteTime
                 
-                match machineId with
-                | Ok machineId ->
-                    match! login serverRequest machineId settings.Platform with
+                match machineId, (getAppSettingsPath cbVersion) with
+                | Ok machineId, Ok appSettingsPath ->
+                    match! login appSettingsPath serverRequest machineId settings.Platform with
                     | Success user ->
                         // TODO: event log Authenticated user.Name
                         Log.infof "Logged in via %A as: %s (%s)" settings.Platform user.Name user.EmailAddress
@@ -271,7 +309,7 @@ module Program =
                                                        | Playable p -> Some (p.Name, "Up to date")
                                                        | RequiresUpdate p -> Some (p.Name, "Requires Update")
                                                        | Missing _ -> None
-                                                       | Unknown _ -> None)
+                                                       | Product.Unknown _ -> None)
                                  |> List.choose id
                              Log.infof "Available Products:%s\t%s" Environment.NewLine (String.Join(Environment.NewLine + "\t", availableProducts))
                              let selectedProduct =
@@ -311,9 +349,10 @@ module Program =
                         Log.errorf "Unsupported login action required: %s" msg
                     | Failure msg ->
                         Log.errorf "Couldn't login: %s" msg
-                | Error msg ->
+                | Error msg, _ ->
                     Log.errorf "Couldn't get machine id: %s" msg
-                
+                | _, Error msg ->
+                    Log.error msg
                 return 0 }
     }    
 
