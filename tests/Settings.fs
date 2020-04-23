@@ -44,6 +44,7 @@ let tests =
         test "Matches /vr" {
             let settings = parse [| "/vr" |]
             Expect.equal settings.DisplayMode Vr ""
+            Expect.equal settings.AutoRun true "VR mode should autorun the game"
         }
         test "Matches /autorun" {
             let settings = parse [| "/autorun" |]

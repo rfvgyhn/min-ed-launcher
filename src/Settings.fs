@@ -41,7 +41,7 @@ module Settings =
                 | "/oculus", Some nonce -> { s with Platform = Oculus nonce; ForceLocal = true }
                 | "/noremotelogs", _    -> { s with RemoteLogging = false }
                 | "/nowatchdog", _      -> { s with WatchForCrashes = false }
-                | "/vr", _              -> { s with DisplayMode = Vr }
+                | "/vr", _              -> { s with DisplayMode = Vr; AutoRun = true }
                 | "/autorun", _         -> { s with AutoRun = true }
                 | "/autoquit", _        -> { s with AutoQuit = true }
                 | "/forcelocal", _      -> { s with ForceLocal = true }
