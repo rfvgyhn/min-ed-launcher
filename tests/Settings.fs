@@ -5,13 +5,16 @@ open EdLauncher
 open EdLauncher.Settings
 open EdLauncher.Types
 
-
-
 [<Tests>]
 let tests =
-    let parse = parseArgs Settings.defaults
+    let parseWithFallback fallback args =
+        match parseArgs Settings.defaults fallback args with
+        | Ok settings -> settings
+        | Error _ -> Settings.defaults        
+    let parse args =
+        parseWithFallback (fun () -> Ok ".") args
       
-    testList "Parings command line arguments" [
+    testList "Parsing command line arguments" [
         test "Matches /steamid id" {
             let settings = parse [| "/steamid"; "123" |]
             Expect.equal settings.Platform (Steam "123") ""
@@ -65,6 +68,28 @@ let tests =
         test "Matches /eda" {
             let settings = parse [| "/eda" |]
             Expect.equal (settings.ProductWhitelist.Contains "eda") true ""
+        }
+        test "Matches proton args" {
+            let protonPath = "steamapps/common/Proton"
+            let protonAction = "action"
+            let launcherDir = "launchDir"
+            let launcherPath = launcherDir + "/EDLaunch.exe"
+            let settings = parse [| protonPath; protonAction; launcherPath |]
+            Expect.equal settings.Proton (Some (protonPath, protonAction)) ""
+            Expect.equal settings.CbLauncherDir launcherDir ""
+        }
+        test "Fewer than three args means no Proton" {
+            let settings = parse [| "asdf"; "fdsa" |]
+            Expect.equal settings.Proton None ""
+        }
+        test "First arg doesn't contain steamapps/common/Proton means no Proton" {
+            let settings = parse [| "asdf"; "fdsa"; "launchDir" |]
+            Expect.equal settings.Proton None ""
+        }
+        test "Non Proton uses fallback dir for cobra bay launcher dir" {
+            let expectedDir = "test/dir"
+            let settings = parseWithFallback (fun () -> Ok expectedDir) [||]
+            Expect.equal settings.CbLauncherDir expectedDir ""
         }
         testProperty "Unknown arg doesn't change any values" <|
             fun (args:string[]) -> parse args = Settings.defaults

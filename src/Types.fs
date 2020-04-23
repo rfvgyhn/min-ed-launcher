@@ -29,7 +29,10 @@ module Types =
           WatchForCrashes: WatchForCrashes
           RemoteLogging: RemoteLogging
           ProductWhitelist: Set<string>
-          ForceLocal: ForceLocal }
+          ForceLocal: ForceLocal
+          Proton: (string * string) option
+          CbLauncherDir: string
+          ApiUri: Uri }
     type ServerStatus = Healthy
     type LocalVersion = Version
     type LauncherStatus =

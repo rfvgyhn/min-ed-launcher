@@ -245,13 +245,12 @@ module Program =
         with
         | e -> None 
     
-    let private run proton cbLauncherDir apiUri args = async {
-        let settings = parseArgs Settings.defaults args
+    let private run settings = async {
         let appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Frontier_Developments")
         let productsDir =
-            getProductsDir appDataDir hasWriteAccess settings.ForceLocal cbLauncherDir
+            getProductsDir appDataDir hasWriteAccess settings.ForceLocal settings.CbLauncherDir
             |> ensureDirExists
-        let version = getVersion cbLauncherDir
+        let version = getVersion settings.CbLauncherDir
         return!
             match productsDir, version with 
             | _, Error msg -> async {
@@ -261,8 +260,8 @@ module Program =
                 Log.errorf "Unable to get products directory: %s" msg
                 return 1 }
             | Ok productsDir, Ok (cbVersion, launcherVersion) -> async {
-                let cbLauncherName = System.Reflection.AssemblyName.GetAssemblyName(Path.Combine(cbLauncherDir, "EDLaunch.exe")).Name
-                use httpClient = createZaonceClient apiUri cbLauncherName cbVersion (getOsIdent())
+                let cbLauncherName = System.Reflection.AssemblyName.GetAssemblyName(Path.Combine(settings.CbLauncherDir, "EDLaunch.exe")).Name
+                use httpClient = createZaonceClient settings.ApiUri cbLauncherName cbVersion (getOsIdent())
                 let serverRequest = Server.request httpClient 
                 let localTime = DateTime.UtcNow
                 let getRemoteTime runningTime = async { 
@@ -322,12 +321,12 @@ module Program =
                              
                              match selectedProduct, settings.AutoRun with
                              | Some product, true ->
-                                 let gameLanguage = getGameLang cbLauncherDir                                 
+                                 let gameLanguage = getGameLang settings.CbLauncherDir                                 
                                  let processArgs = Product.createArgString settings.DisplayMode gameLanguage user.MachineToken user.SessionToken machineId (runningTime()) settings.WatchForCrashes settings.Platform SHA1.hashFile product
                                  
-                                 match Product.validateForRun cbLauncherDir settings.WatchForCrashes product with
+                                 match Product.validateForRun settings.CbLauncherDir settings.WatchForCrashes product with
                                  | Ok p ->
-                                     match Product.run proton processArgs p with
+                                     match Product.run settings.Proton processArgs p with
                                      | Product.RunResult.Ok p ->
                                          Log.infof "Launching %s" product.Name
                                          use p = p
@@ -358,16 +357,12 @@ module Program =
 
     [<EntryPoint>]
     let main argv =
-        let proton, cbLaunchDir, args =
-            if argv.Length > 2 && argv.[0].Contains("steamapps/common/Proton") then
-                Some (argv.[0], argv.[1]), Path.GetDirectoryName(argv.[2]), argv.[2..]
-            else
-                None, "/mnt/games/Steam/Linux/steamapps/common/Elite Dangerous", argv
-        let apiUri = Uri("https://api.zaonce.net")
-        //let apiUri = Uri("http://localhost:8080")
         async {
             do! Async.SwitchToThreadPool ()
-            return! run proton cbLaunchDir apiUri args
+            let settings = getSettings argv
+            return! match settings with
+                    | Ok settings -> run settings
+                    | Error msg -> async { Log.error msg; return 1 }
         } |> Async.RunSynchronously
         
         
