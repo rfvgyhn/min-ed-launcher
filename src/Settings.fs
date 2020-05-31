@@ -1,5 +1,7 @@
 namespace EdLauncher
 
+open System.Diagnostics
+
 module Settings =
     open Types
     open System
@@ -16,7 +18,8 @@ module Settings =
           ForceLocal = false
           Proton = None
           CbLauncherDir = "."
-          ApiUri = Uri("http://localhost:8080") }
+          ApiUri = Uri("http://localhost:8080")
+          Processes = List.empty }
     
     let parseArgs defaults (findCbLaunchDir: unit -> Result<string,string>) (argv: string[]) =
         let proton, cbLaunchDir, args =
@@ -55,5 +58,15 @@ module Settings =
         let findCbLaunchDir = fun () -> Ok "/mnt/games/Steam/Linux/steamapps/common/Elite Dangerous" // TODO: search for common paths
         let apiUri = Uri("https://api.zaonce.net") // TODO: read from config
         
+        let ela = ProcessStartInfo()
+        ela.FileName <- "/home/chris/dev/Elite-Log-Agent/EliteLogAgent/bin/Debug/netcoreapp3.1/EliteLogAgent"
+        ela.WorkingDirectory <- Path.GetDirectoryName("/home/chris/dev/Elite-Log-Agent/EliteLogAgent/bin/Debug/netcoreapp3.1/EliteLogAgent")
+        ela.UseShellExecute <- false
+        ela.RedirectStandardOutput <- true
+        ela.RedirectStandardError <- true
+        ela.WindowStyle <- ProcessWindowStyle.Minimized
+        let processes =
+            [ ela ]
+        
         parseArgs defaults findCbLaunchDir args
-        |> Result.map (fun settings -> { settings with ApiUri = apiUri })
+        |> Result.map (fun settings -> { settings with ApiUri = apiUri; Processes = processes })

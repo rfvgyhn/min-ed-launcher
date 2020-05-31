@@ -1,6 +1,7 @@
 namespace EdLauncher
 
 open System
+open System.Diagnostics
 open System.IO
 
 module Types =
@@ -32,7 +33,8 @@ module Types =
           ForceLocal: ForceLocal
           Proton: (string * string) option
           CbLauncherDir: string
-          ApiUri: Uri }
+          ApiUri: Uri
+          Processes: ProcessStartInfo list }
     type ServerStatus = Healthy
     type LocalVersion = Version
     type LauncherStatus =

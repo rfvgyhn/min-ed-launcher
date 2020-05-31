@@ -9,6 +9,7 @@
     <Compile Include="Types.fs" />
     <Compile Include="Log.fs" />
     <Compile Include="Extensions.fs" />
+    <Compile Include="Interop.fs" />
     <Compile Include="Product.fs" />
     <Compile Include="EventLog.fs" />
     <Compile Include="Api.fs" />

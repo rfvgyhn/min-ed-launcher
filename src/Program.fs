@@ -243,7 +243,29 @@ module Program =
         try
             resManager.GetString("GameLanguage") |> Some
         with
-        | e -> None 
+        | e -> None
+        
+    let launchProcesses (processes:ProcessStartInfo list) =
+        processes
+        |> List.choose (fun p ->
+            try
+                Log.infof "Starting process %s" p.FileName
+                Process.Start(p) |> Some
+            with
+            | e ->
+                Log.exnf e "Unable to start pre-launch process %s" p.FileName
+                None)
+    
+    let stopProcesses (processes: Process list) =
+        processes
+        |> List.iter (fun p ->
+            Log.debugf "Stopping process %s" p.ProcessName
+            match Interop.termProcess p with
+            | Ok () ->
+                p.StandardOutput.ReadToEnd() |> ignore
+                p.StandardError.ReadToEnd() |> ignore
+                Log.infof "Stopped process %s" p.ProcessName
+            | Error msg -> Log.warn msg)
     
     let private run settings = async {
         let appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Frontier_Developments")
@@ -319,21 +341,25 @@ module Program =
                                                          || p.Filters |> Set.union settings.ProductWhitelist |> Set.count > 0)
                                 |> List.tryHead
                              
-                             match selectedProduct, settings.AutoRun with
+                             match selectedProduct, true with
                              | Some product, true ->
                                  let gameLanguage = getGameLang settings.CbLauncherDir                                 
                                  let processArgs = Product.createArgString settings.DisplayMode gameLanguage user.MachineToken user.SessionToken machineId (runningTime()) settings.WatchForCrashes settings.Platform SHA1.hashFile product
                                  
                                  match Product.validateForRun settings.CbLauncherDir settings.WatchForCrashes product with
                                  | Ok p ->
+                                     let processes = launchProcesses settings.Processes
                                      match Product.run settings.Proton processArgs p with
                                      | Product.RunResult.Ok p ->
                                          Log.infof "Launching %s" product.Name
                                          use p = p
                                          p.WaitForExit()
                                          Log.infof "Shutdown %s" product.Name
+                                         stopProcesses processes
                                      | Product.RunResult.AlreadyRunning -> Log.infof "%s is already running" product.Name
-                                     | Product.RunResult.Error e -> Log.errorf "Couldn't start selected product: %s" (e.ToString())
+                                     | Product.RunResult.Error e ->
+                                         Log.errorf "Couldn't start selected product: %s" (e.ToString())
+                                         stopProcesses processes
                                  | Error msg -> Log.errorf "Couldn't start selected product: %s" msg
                              | None, true -> Log.error "No selected project"
                              | _, _ -> ()
