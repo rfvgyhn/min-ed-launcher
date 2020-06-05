@@ -266,7 +266,43 @@ module Program =
                 p.StandardError.ReadToEnd() |> ignore
                 Log.infof "Stopped process %s" p.ProcessName
             | Error msg -> Log.warn msg)
-    
+        
+    let rec launchProduct proton processArgs restart productName product =
+        match Product.run proton processArgs product with
+        | Product.RunResult.Ok p ->
+            let shouldRestart = restart |> fst
+            let timeout = restart |> snd
+            let cancelRestart() =
+                let interval = 250
+                let stopwatch = Stopwatch()
+                stopwatch.Start()
+                while Console.KeyAvailable = false && stopwatch.ElapsedMilliseconds < timeout do
+                    System.Threading.Thread.Sleep interval
+                    let remaining = timeout / 1000L - stopwatch.ElapsedMilliseconds / 1000L
+                    Console.SetCursorPosition(0, Console.CursorTop)
+                    Console.Write(sprintf "Restarting in %i seconds. Press any key to quit." remaining)
+                    
+                let left = Console.CursorLeft
+                Console.SetCursorPosition(0, Console.CursorTop)
+                if Console.KeyAvailable then
+                    Console.ReadKey() |> ignore
+                    Console.WriteLine("Shutting down...".PadRight(left))
+                    true
+                else
+                    Console.WriteLine("Restarting...".PadRight(left))
+                    false
+
+            Log.infof "Launching %s" productName
+            use p = p
+            p.WaitForExit()
+            Log.infof "Shutdown %s" productName
+            
+            
+            if shouldRestart && not (cancelRestart()) then
+                launchProduct proton processArgs restart productName product
+        | Product.RunResult.AlreadyRunning -> Log.infof "%s is already running" productName
+        | Product.RunResult.Error e -> Log.errorf "Couldn't start selected product: %s" (e.ToString())
+        
     let private run settings = async {
         let appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Frontier_Developments")
         let productsDir =
@@ -319,55 +355,46 @@ module Program =
                         Log.infof "Logged in via %A as: %s (%s)" settings.Platform user.Name user.EmailAddress
                         match! Api.getAuthorizedProducts user.SessionToken None serverRequest with
                         | Ok authorizedProducts ->
-                             do! logEvents [ EventLog.AvailableProjects (user.EmailAddress, authorizedProducts |> List.map (fun p -> p.Sku)) ]
-                             let! products = authorizedProducts
-                                             |> List.map (mapProduct productsDir)
-                                             |> Api.checkForUpdates user.SessionToken user.MachineToken machineId serverRequest
-                             let availableProducts =
-                                 products
-                                 |> Result.defaultValue []
-                                 |> List.map (fun p -> match p with
-                                                       | Playable p -> Some (p.Name, "Up to date")
-                                                       | RequiresUpdate p -> Some (p.Name, "Requires Update")
-                                                       | Missing _ -> None
-                                                       | Product.Unknown _ -> None)
-                                 |> List.choose id
-                             Log.infof "Available Products:%s\t%s" Environment.NewLine (String.Join(Environment.NewLine + "\t", availableProducts))
-                             let selectedProduct =
+                            do! logEvents [ EventLog.AvailableProjects (user.EmailAddress, authorizedProducts |> List.map (fun p -> p.Sku)) ]
+                            let! products = authorizedProducts
+                                            |> List.map (mapProduct productsDir)
+                                            |> Api.checkForUpdates user.SessionToken user.MachineToken machineId serverRequest
+                            let availableProducts =
                                 products
                                 |> Result.defaultValue []
-                                |> List.choose (fun p -> match p with | Playable p -> Some p | _ -> None)
-                                |> List.filter (fun p -> settings.ProductWhitelist.Count = 0
-                                                         || p.Filters |> Set.union settings.ProductWhitelist |> Set.count > 0)
-                                |> List.tryHead
-                             
-                             match selectedProduct, true with
-                             | Some product, true ->
-                                 let gameLanguage = getGameLang settings.CbLauncherDir                                 
-                                 let processArgs = Product.createArgString settings.DisplayMode gameLanguage user.MachineToken user.SessionToken machineId (runningTime()) settings.WatchForCrashes settings.Platform SHA1.hashFile product
-                                 
-                                 match Product.validateForRun settings.CbLauncherDir settings.WatchForCrashes product with
-                                 | Ok p ->
-                                     let processes = launchProcesses settings.Processes
-                                     match Product.run settings.Proton processArgs p with
-                                     | Product.RunResult.Ok p ->
-                                         Log.infof "Launching %s" product.Name
-                                         use p = p
-                                         p.WaitForExit()
-                                         Log.infof "Shutdown %s" product.Name
-                                         stopProcesses processes
-                                     | Product.RunResult.AlreadyRunning -> Log.infof "%s is already running" product.Name
-                                     | Product.RunResult.Error e ->
-                                         Log.errorf "Couldn't start selected product: %s" (e.ToString())
-                                         stopProcesses processes
-                                 | Error msg -> Log.errorf "Couldn't start selected product: %s" msg
-                             | None, true -> Log.error "No selected project"
-                             | _, _ -> ()
-                             
-                             if not settings.AutoQuit then
-                                 printfn "Press any key to quit..."
-                                 Console.ReadKey() |> ignore
-                             
+                                |> List.map (fun p -> match p with
+                                                      | Playable p -> Some (p.Name, "Up to date")
+                                                      | RequiresUpdate p -> Some (p.Name, "Requires Update")
+                                                      | Missing _ -> None
+                                                      | Product.Unknown _ -> None)
+                                |> List.choose id
+                            Log.infof "Available Products:%s\t%s" Environment.NewLine (String.Join(Environment.NewLine + "\t", availableProducts))
+                            let selectedProduct =
+                               products
+                               |> Result.defaultValue []
+                               |> List.choose (fun p -> match p with | Playable p -> Some p | _ -> None)
+                               |> List.filter (fun p -> settings.ProductWhitelist.Count = 0
+                                                        || p.Filters |> Set.union settings.ProductWhitelist |> Set.count > 0)
+                               |> List.tryHead
+                            
+                            match selectedProduct, true with
+                            | Some product, true ->
+                                let gameLanguage = getGameLang settings.CbLauncherDir                                 
+                                let processArgs = Product.createArgString settings.DisplayMode gameLanguage user.MachineToken user.SessionToken machineId (runningTime()) settings.WatchForCrashes settings.Platform SHA1.hashFile product
+                                
+                                match Product.validateForRun settings.CbLauncherDir settings.WatchForCrashes product with
+                                | Ok p ->
+                                    let processes = launchProcesses settings.Processes
+                                    launchProduct settings.Proton processArgs settings.Restart product.Name p
+                                    stopProcesses processes
+                                | Error msg -> Log.errorf "Couldn't start selected product: %s" msg
+                            | None, true -> Log.error "No selected project"
+                            | _, _ -> ()
+                            
+                            if not settings.AutoQuit then
+                                printfn "Press any key to quit..."
+                                Console.ReadKey() |> ignore
+                            
                         | Error msg ->
                             Log.errorf "Couldn't get available products: %s" msg
                     | ActionRequired msg ->

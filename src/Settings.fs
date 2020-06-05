@@ -19,6 +19,7 @@ module Settings =
           Proton = None
           CbLauncherDir = "."
           ApiUri = Uri("http://localhost:8080")
+          Restart = false, 0L
           Processes = List.empty }
     
     let parseArgs defaults (findCbLaunchDir: unit -> Result<string,string>) (argv: string[]) =
@@ -57,6 +58,7 @@ module Settings =
     let getSettings args =
         let findCbLaunchDir = fun () -> Ok "/mnt/games/Steam/Linux/steamapps/common/Elite Dangerous" // TODO: search for common paths
         let apiUri = Uri("https://api.zaonce.net") // TODO: read from config
+        let restart = true, 3000L // TODO: read from config
         
         let ela = ProcessStartInfo()
         ela.FileName <- "/home/chris/dev/Elite-Log-Agent/EliteLogAgent/bin/Debug/netcoreapp3.1/EliteLogAgent"
@@ -69,4 +71,4 @@ module Settings =
             [ ela ]
         
         parseArgs defaults findCbLaunchDir args
-        |> Result.map (fun settings -> { settings with ApiUri = apiUri; Processes = processes })
+        |> Result.map (fun settings -> { settings with ApiUri = apiUri; Processes = processes; Restart = restart })

@@ -34,6 +34,7 @@ module Types =
           Proton: (string * string) option
           CbLauncherDir: string
           ApiUri: Uri
+          Restart: (bool * int64)
           Processes: ProcessStartInfo list }
     type ServerStatus = Healthy
     type LocalVersion = Version
