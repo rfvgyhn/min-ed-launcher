@@ -9,6 +9,7 @@ module Program =
     open System.Resources
     open System.Runtime.InteropServices
     open FileIO
+    open FsConfig
     open Steam
     open Types
     open Settings
@@ -412,7 +413,15 @@ module Program =
     let main argv =
         async {
             do! Async.SwitchToThreadPool ()
-            let settings = getSettings argv
+            
+            let settings =
+                parseConfig "settings.json"
+                |> Result.mapError (fun e ->
+                    match e with
+                    | BadValue (key, value) -> sprintf "Bad Value: %s - %s" key value
+                    | ConfigParseError.NotFound key -> sprintf "Key not found: %s" key
+                    | NotSupported key -> sprintf "Key not supported: %s" key)
+                >>= getSettings argv
             return! match settings with
                     | Ok settings -> run settings
                     | Error msg -> async { Log.error msg; return 1 }

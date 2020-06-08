@@ -33,14 +33,6 @@ let tests =
             let settings = parse [| "/oculus"; "/123" |]
             Expect.equal settings.Platform Settings.defaults.Platform ""
         }
-        test "Matches /noremotelogs" {
-            let settings = parse [| "/noremotelogs" |]
-            Expect.equal settings.RemoteLogging false ""
-        }
-        test "Matches /nowatchdog" {
-            let settings = parse [| "/nowatchdog" |]
-            Expect.equal settings.WatchForCrashes false ""
-        }
         test "Matches /vr" {
             let settings = parse [| "/vr" |]
             Expect.equal settings.DisplayMode Vr ""

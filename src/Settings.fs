@@ -1,11 +1,12 @@
 namespace EdLauncher
 
-open System.Diagnostics
-
 module Settings =
     open Types
     open System
     open System.IO
+    open System.Diagnostics
+    open FsConfig
+    open Microsoft.Extensions.Configuration
 
     let defaults =
         { Platform = Dev
@@ -43,8 +44,6 @@ module Settings =
                 match getArg arg i with
                 | "/steamid", Some id   -> { s with Platform = Steam id; ForceLocal = true }
                 | "/oculus", Some nonce -> { s with Platform = Oculus nonce; ForceLocal = true }
-                | "/noremotelogs", _    -> { s with RemoteLogging = false }
-                | "/nowatchdog", _      -> { s with WatchForCrashes = false }
                 | "/vr", _              -> { s with DisplayMode = Vr; AutoRun = true }
                 | "/autorun", _         -> { s with AutoRun = true }
                 | "/autoquit", _        -> { s with AutoQuit = true }
@@ -54,21 +53,62 @@ module Settings =
                 | "/eda", _             -> { s with ProductWhitelist = s.ProductWhitelist.Add "eda" }
                 | _ -> s)
                 { defaults with Proton = proton; CbLauncherDir = cbLaunchDir })
+    [<CLIMutable>]
+    type ProcessConfig =
+        { FileName: string
+          Arguments: string option }
+    [<CLIMutable>]
+    type RestartConfig =
+        { Enabled: bool
+          ShutdownTimeout: int64 }
+    [<CLIMutable>]
+    type Config =
+        { ApiUri: string
+          RemoteLogging: bool
+          WatchForCrashes: bool
+          Restart: RestartConfig
+          Processes: ProcessConfig list }
+    let parseConfig fileName =
+        let configRoot = ConfigurationBuilder()
+                            .AddJsonFile(fileName, false)
+                            .Build()
+        match AppConfig(configRoot).Get<Config>() with
+        | Ok config ->
+            // FsConfig doesn't support list of records so handle it manually
+            let processes =
+                configRoot.GetSection("processes").GetChildren()
+                |> Seq.map (fun section ->
+                    let fileName = section.GetValue<string>("fileName")
+                    let arguments = section.GetValue<string>("arguments")
+                    if fileName = null then
+                        None
+                    else
+                        Some { FileName = fileName; Arguments = if arguments = null then None else Some arguments })
+                |> Seq.choose id
+                |> Seq.toList
+            { config with Processes = processes } |> ConfigParseResult.Ok
+        | Error error -> Error error
         
-    let getSettings args =
+    let getSettings args fileConfig =
         let findCbLaunchDir = fun () -> Ok "/mnt/games/Steam/Linux/steamapps/common/Elite Dangerous" // TODO: search for common paths
-        let apiUri = Uri("https://api.zaonce.net") // TODO: read from config
-        let restart = true, 3000L // TODO: read from config
-        
-        let ela = ProcessStartInfo()
-        ela.FileName <- "/home/chris/dev/Elite-Log-Agent/EliteLogAgent/bin/Debug/netcoreapp3.1/EliteLogAgent"
-        ela.WorkingDirectory <- Path.GetDirectoryName("/home/chris/dev/Elite-Log-Agent/EliteLogAgent/bin/Debug/netcoreapp3.1/EliteLogAgent")
-        ela.UseShellExecute <- false
-        ela.RedirectStandardOutput <- true
-        ela.RedirectStandardError <- true
-        ela.WindowStyle <- ProcessWindowStyle.Minimized
+        let apiUri = Uri(fileConfig.ApiUri)
+        let restart = fileConfig.Restart.Enabled, fileConfig.Restart.ShutdownTimeout * 1000L
         let processes =
-            [ ela ]
+            fileConfig.Processes
+            |> List.map (fun p ->
+                let pInfo = ProcessStartInfo()
+                pInfo.FileName <- p.FileName
+                pInfo.WorkingDirectory <- Path.GetDirectoryName(p.FileName)
+                pInfo.Arguments <- p.Arguments |> Option.defaultValue ""
+                pInfo.UseShellExecute <- false
+                pInfo.RedirectStandardOutput <- true
+                pInfo.RedirectStandardError <- true
+                pInfo.WindowStyle <- ProcessWindowStyle.Minimized
+                pInfo)
         
         parseArgs defaults findCbLaunchDir args
-        |> Result.map (fun settings -> { settings with ApiUri = apiUri; Processes = processes; Restart = restart })
+        |> Result.map (fun settings -> { settings with ApiUri = apiUri
+                                                       Processes = processes
+                                                       Restart = restart
+                                                       RemoteLogging = fileConfig.RemoteLogging
+                                                       WatchForCrashes = fileConfig.WatchForCrashes })
