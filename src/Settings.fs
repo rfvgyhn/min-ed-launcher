@@ -66,6 +66,7 @@ module Settings =
         { ApiUri: string
           RemoteLogging: bool
           WatchForCrashes: bool
+          GameLocation: string option
           Restart: RestartConfig
           Processes: ProcessConfig list }
     let parseConfig fileName =
@@ -90,7 +91,18 @@ module Settings =
         | Error error -> Error error
         
     let getSettings args fileConfig =
-        let findCbLaunchDir = fun () -> Ok "/mnt/games/Steam/Linux/steamapps/common/Elite Dangerous" // TODO: search for common paths
+        let findCbLaunchDir = fun () ->
+            let home = Environment.expandEnvVars("~");
+            [ sprintf "%s\Steam\steamapps\common\Elite Dangerous" (Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86))
+              sprintf "%s/.steam/steam/steamapps/common/Elite Dangerous" home
+              sprintf "%s/.local/share/Steam/steamapps/common/Elite Dangerous" home ]
+            |> List.map (fun path -> Some path)
+            |> List.append [ fileConfig.GameLocation ]
+            |> List.choose id
+            |> List.tryFind (fun dir -> Directory.Exists dir)
+            |> function
+                | None -> Error "Failed to find Elite Dangerous install directory"
+                | Some dir -> Ok dir
         let apiUri = Uri(fileConfig.ApiUri)
         let restart = fileConfig.Restart.Enabled, fileConfig.Restart.ShutdownTimeout * 1000L
         let processes =

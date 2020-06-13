@@ -163,3 +163,29 @@ module FileIO =
         | :? DirectoryNotFoundException -> Error "The specified path is invalid (for example, it is on an unmapped drive)."
         | :? IOException -> Error "The directory specified by path is a file or the network name is not known."
         | :? NotSupportedException -> Error @"Contains a colon character (:) that is not part of a drive label (""C:\"")." 
+
+module Regex =
+    open System.Text.RegularExpressions
+    
+    let replace pattern (replacement: string) input =
+        Regex.Replace(input, pattern, replacement)
+
+module Environment =
+    open System
+    open System.Runtime.InteropServices
+    
+    let expandEnvVars name =
+        if String.IsNullOrEmpty(name) then
+            name
+        else
+            // Platform checks needed until corefx supports platform specific vars
+            // https://github.com/dotnet/corefx/issues/28890
+            let str =
+                if RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX) then
+                    name
+                    |> Regex.replace @"\$(\w+)" "%$1%"
+                    |> Regex.replace "^~" "%HOME%"
+                else
+                    name
+            
+            Environment.ExpandEnvironmentVariables(str);
