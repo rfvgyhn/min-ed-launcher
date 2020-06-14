@@ -415,13 +415,24 @@ module Program =
             do! Async.SwitchToThreadPool ()
             
             let settings =
-                parseConfig "settings.json"
-                |> Result.mapError (fun e ->
-                    match e with
-                    | BadValue (key, value) -> sprintf "Bad Value: %s - %s" key value
-                    | ConfigParseError.NotFound key -> sprintf "Key not found: %s" key
-                    | NotSupported key -> sprintf "Key not supported: %s" key)
-                >>= getSettings argv
+                let path = Path.Combine(Environment.configDir, "elite-dangerous-launcher")
+                match ensureDirExists path with
+                | Error msg -> sprintf "Unable to find/create configuration directory at %s - %s" path msg |> Error
+                | Ok settingsDir ->
+                    let settingsPath = Path.Combine(settingsDir, "settings.json")
+                    if not (File.Exists(settingsPath)) then
+                        use settings = typeof<Steam>.GetTypeInfo().Assembly.GetManifestResourceStream("EdLauncher.settings.json")
+                        use file = File.OpenWrite(settingsPath)
+                        settings.CopyTo(file)
+                    |> ignore
+                        
+                    parseConfig settingsPath
+                    |> Result.mapError (fun e ->
+                        match e with
+                        | BadValue (key, value) -> sprintf "Bad Value: %s - %s" key value
+                        | ConfigParseError.NotFound key -> sprintf "Key not found: %s" key
+                        | NotSupported key -> sprintf "Key not supported: %s" key)
+                    >>= getSettings argv
             return! match settings with
                     | Ok settings -> run settings
                     | Error msg -> async { Log.error msg; return 1 }

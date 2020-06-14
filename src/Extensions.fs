@@ -188,4 +188,15 @@ module Environment =
                 else
                     name
             
-            Environment.ExpandEnvironmentVariables(str);
+            Environment.ExpandEnvironmentVariables(str)
+    let configDir =
+        if RuntimeInformation.IsOSPlatform(OSPlatform.Windows) then
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
+        else
+            let xdgConfig = expandEnvVars("$XDG_CONFIG_HOME")
+            if String.IsNullOrEmpty(xdgConfig) then
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
+            else
+                xdgConfig    
+                
+            

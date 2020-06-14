@@ -18,9 +18,7 @@
     <Compile Include="Steam.fs" />
     <Compile Include="Settings.fs" />
     <Compile Include="Program.fs" />
-    <None Include="settings.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+    <EmbeddedResource Include="settings.json" />
   </ItemGroup>
 
   <ItemGroup>
