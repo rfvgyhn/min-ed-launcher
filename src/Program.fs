@@ -176,14 +176,14 @@ module Program =
         httpClient
         
     let printInfo platform productsDir cobraVersion launcherVersion remoteTime =
-        printfn "Elite: Dangerous Launcher"
-        printfn "Platform: %A" platform
-        printfn "OS: %s" (getOsIdent())
-        printfn "CobraBay Version: %s" cobraVersion
-        printfn "Launcher Version: %A" launcherVersion
-        printfn "Launcher Name: %A" (System.Reflection.AssemblyName.GetAssemblyName("/mnt/games/Steam/Linux/steamapps/common/Elite Dangerous/EDLaunch.exe").Name)
-        printfn "Remote Time: %i" remoteTime
-        printfn "Products Dir: %s" productsDir
+        Log.info "Elite: Dangerous Launcher"
+        Log.infof "Platform: %A" platform
+        Log.infof "OS: %s" (getOsIdent())
+        Log.infof "CobraBay Version: %s" cobraVersion
+        Log.infof "Launcher Version: %A" launcherVersion
+        Log.infof "Launcher Name: %A" (System.Reflection.AssemblyName.GetAssemblyName("/mnt/games/Steam/Linux/steamapps/common/Elite Dangerous/EDLaunch.exe").Name)
+        Log.infof "Remote Time: %i" remoteTime
+        Log.infof "Products Dir: %s" productsDir
 
     type VersionInfoStatus = Found of VersionInfo | NotFound of string | Failed of string
     let readVersionInfo path = 
@@ -413,7 +413,7 @@ module Program =
     let main argv =
         async {
             do! Async.SwitchToThreadPool ()
-            
+            Log.debugf "Args: %A" argv
             let settings =
                 let path = Path.Combine(Environment.configDir, "elite-dangerous-launcher")
                 match ensureDirExists path with
@@ -433,6 +433,7 @@ module Program =
                         | ConfigParseError.NotFound key -> sprintf "Key not found: %s" key
                         | NotSupported key -> sprintf "Key not supported: %s" key)
                     >>= getSettings argv
+            Log.debugf "Settings: %A" settings
             return! match settings with
                     | Ok settings -> run settings
                     | Error msg -> async { Log.error msg; return 1 }
