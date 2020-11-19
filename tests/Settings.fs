@@ -15,14 +15,15 @@ let tests =
         parseWithFallback (fun () -> Ok ".") args
       
     testList "Parsing command line arguments" [
-        test "Matches /steamid id" {
-            let settings = parse [| "/steamid"; "123" |]
-            Expect.equal settings.Platform (Steam "123") ""
+        test "Matches /steamid" {
+            let settings = parse [| "/steamid" |]
+            Expect.equal settings.Platform Steam ""
             Expect.equal settings.ForceLocal true ""
         }
-        test "Ignores /steamid without id as next arg" {
-            let settings = parse [| "/steamid"; "/123" |]
-            Expect.equal settings.Platform Settings.defaults.Platform ""
+        test "Matches /steam" {
+            let settings = parse [| "/steam" |]
+            Expect.equal settings.Platform Steam ""
+            Expect.equal settings.ForceLocal true ""
         }
         test "Matches /oculus nonce" {
             let settings = parse [| "/oculus"; "123" |]

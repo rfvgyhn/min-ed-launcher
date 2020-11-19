@@ -9,7 +9,7 @@ namespace EdLauncher
             let targetOptions = String.Join(" ", [
                 if lang.IsSome then "/language " + lang.Value 
                 match platform, product.SteamAware with
-                    | Steam _, true -> "/steam"
+                    | Steam, true -> "/steam"
                     | _, _ -> ()
                 match vr with
                     | Vr -> "/vr"

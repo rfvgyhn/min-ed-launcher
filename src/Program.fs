@@ -117,7 +117,7 @@ module Program =
         | Dev, Ok userEmail -> return Success { Name = "Dev User"; MachineToken = "DevToken"; EmailAddress = userEmail; SessionToken = "AuthToken" }
         | Oculus _, _ -> return Failure "Oculus not supported"
         | Frontier, _ -> return Failure "Frontier not supported"
-        | Steam _, Ok userEmail ->
+        | Steam, Ok userEmail ->
             use steam = new Steam()
             return! match steam.Login() with
                     | Ok steamUser -> async {
@@ -145,7 +145,7 @@ module Program =
         | Dev -> Ok "logs"
         | Oculus _ -> Error "Oculus not supported"
         | Frontier -> Error "Frontier not supported"
-        | Steam _ -> Ok "logs"
+        | Steam -> Ok "logs"
             
     let getProductsDir fallbackPath hasWriteAccess (forceLocal:ForceLocal) launcherDir =
         let productsPath = "Products"

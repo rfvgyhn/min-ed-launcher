@@ -43,13 +43,13 @@ open Expecto
                 }
                 test "Steam platform and steam aware product" {
                     let product = { product with SteamAware = true }
-                    let actual = createArgString Vr None "" "" "" getTimestamp false (Steam "") hashFile product
+                    let actual = createArgString Vr None "" "" "" getTimestamp false Steam hashFile product
                     
                     Expect.stringContains actual "/steam" ""
                 }
                 test "Steam platform and non steam aware product" {
                     let product = { product with SteamAware = false }
-                    let actual = createArgString Vr None "" "" "" getTimestamp false (Steam "") hashFile product
+                    let actual = createArgString Vr None "" "" "" getTimestamp false Steam hashFile product
                     
                     Expect.notStringContains actual "/steam" ""
                 }

@@ -42,7 +42,8 @@ module Settings =
             |> Array.filter (fun (_, arg) -> not (String.IsNullOrEmpty(arg)))
             |> Array.fold (fun s (i, arg) ->
                 match getArg arg i with
-                | "/steamid", Some id   -> { s with Platform = Steam id; ForceLocal = true }
+                | "/steamid", _         -> { s with Platform = Steam; ForceLocal = true }
+                | "/steam", _           -> { s with Platform = Steam; ForceLocal = true }
                 | "/oculus", Some nonce -> { s with Platform = Oculus nonce; ForceLocal = true }
                 | "/vr", _              -> { s with DisplayMode = Vr; AutoRun = true }
                 | "/autorun", _         -> { s with AutoRun = true }

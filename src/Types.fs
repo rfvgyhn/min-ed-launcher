@@ -12,7 +12,7 @@ module Types =
           Error: string -> unit }
         with static member Noop = { Debug = (fun _ -> ()); Info = (fun _ -> ()); Warn = (fun _ -> ()); Error = (fun _ -> ()) }
     type Platform =
-        | Steam of string
+        | Steam
         | Frontier
         | Oculus of string
         | Dev
