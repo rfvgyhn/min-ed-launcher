@@ -11,8 +11,26 @@ module Types =
           Warn: string -> unit
           Error: string -> unit }
         with static member Noop = { Debug = (fun _ -> ()); Info = (fun _ -> ()); Warn = (fun _ -> ()); Error = (fun _ -> ()) }
+    type EpicDetails =
+        { Password: string
+          Type: string
+          Env: string
+          UserId: string
+          Locale: string
+          RefreshToken: string option
+          Log: bool
+          TokenName: string }
+        with static member Empty = { Password = ""
+                                     Type = ""
+                                     Env = ""
+                                     UserId = ""
+                                     Locale = ""
+                                     RefreshToken = None
+                                     Log = false
+                                     TokenName = "" }
     type Platform =
         | Steam
+        | Epic of EpicDetails
         | Frontier
         | Oculus of string
         | Dev

@@ -22,18 +22,42 @@ module Settings =
           ApiUri = Uri("http://localhost:8080")
           Restart = false, 0L
           Processes = List.empty }
-    
+    type private EpicArg = Password of string | Type of string | Env of string | UserId of string | Locale of string | RefreshToken of string | TokenName of string | Log of bool
     let parseArgs defaults (findCbLaunchDir: unit -> Result<string,string>) (argv: string[]) =
         let proton, cbLaunchDir, args =
             if argv.Length > 2 && argv.[0] <> null && argv.[0].Contains("steamapps/common/Proton") then
                 Some (argv.[0], argv.[1]), Path.GetDirectoryName(argv.[2]) |> Ok, argv.[2..]
             else
                 None, findCbLaunchDir(), argv
-        let getArg (flag:string) i =
-            if i + 1 < args.Length && not (String.IsNullOrEmpty args.[i + 1]) && not (args.[i + 1].StartsWith '/') then
-                flag.ToLowerInvariant(), Some args.[i + 1]
+        let getArg (arg:string) i =
+            if i + 1 < args.Length && not (String.IsNullOrEmpty args.[i + 1]) && (not (args.[i + 1].StartsWith '/') && not (args.[i].StartsWith '-')) then // /arg argValue
+                arg.ToLowerInvariant(), Some args.[i + 1]
+            else if arg.Contains("=") then // -arg=argvalue
+                let parts = arg.Split("=")
+                parts.[0].ToLowerInvariant(), Some parts.[1]
             else
-                flag.ToLowerInvariant(), None
+                arg.ToLowerInvariant(), None
+        
+        let applyEpicArg platform arg =
+            let apply arg details =
+                arg
+                |> Option.map (fun arg ->
+                    match arg with
+                    | Password p     -> { details with Password = p }
+                    | Type t         -> { details with Type = t }
+                    | Env e          -> { details with Env = e }
+                    | UserId id      -> { details with UserId = id }
+                    | Locale l       -> { details with Locale = l }
+                    | RefreshToken t -> { details with RefreshToken = Some t }
+                    | TokenName n    -> { details with TokenName = n }
+                    | Log v      -> { details with Log = v })
+                |> Option.defaultValue details
+                |> Epic
+                
+            match platform with
+            | Epic d -> apply arg d
+            | Dev -> apply arg EpicDetails.Empty
+            | _ -> platform
         
         cbLaunchDir
         |> Result.map (fun cbLaunchDir ->
@@ -41,17 +65,27 @@ module Settings =
             |> Array.mapi (fun index value -> index, value)
             |> Array.filter (fun (_, arg) -> not (String.IsNullOrEmpty(arg)))
             |> Array.fold (fun s (i, arg) ->
+                let epicArg arg = applyEpicArg s.Platform (Some arg)
                 match getArg arg i with
-                | "/steamid", _         -> { s with Platform = Steam; ForceLocal = true }
-                | "/steam", _           -> { s with Platform = Steam; ForceLocal = true }
-                | "/oculus", Some nonce -> { s with Platform = Oculus nonce; ForceLocal = true }
-                | "/vr", _              -> { s with DisplayMode = Vr; AutoRun = true }
-                | "/autorun", _         -> { s with AutoRun = true }
-                | "/autoquit", _        -> { s with AutoQuit = true }
-                | "/forcelocal", _      -> { s with ForceLocal = true }
-                | "/ed", _              -> { s with ProductWhitelist = s.ProductWhitelist.Add "ed" }
-                | "/edh", _             -> { s with ProductWhitelist = s.ProductWhitelist.Add "edh" }
-                | "/eda", _             -> { s with ProductWhitelist = s.ProductWhitelist.Add "eda" }
+                | "/steamid", _                   -> { s with Platform = Steam; ForceLocal = true }
+                | "/steam", _                     -> { s with Platform = Steam; ForceLocal = true }
+                | "/epic", _                      -> { s with Platform = applyEpicArg s.Platform None; ForceLocal = true }
+                | "-auth_password", Some password -> { s with Platform = epicArg (Password password) }
+                | "-auth_type", Some t            -> { s with Platform = epicArg (Type t) }
+                | "-epicenv", Some env            -> { s with Platform = epicArg (Env env) }
+                | "-epicuserid", Some id          -> { s with Platform = epicArg (UserId id) }
+                | "-epiclocale", Some locale      -> { s with Platform = epicArg (Locale locale) }
+                | "/epicrefreshtoken", Some token -> { s with Platform = epicArg (RefreshToken token) }
+                | "/epictokenname", Some name     -> { s with Platform = epicArg (TokenName name) }
+                | "/logepicinfo", _               -> { s with Platform = epicArg (Log true) }
+                | "/oculus", Some nonce           -> { s with Platform = Oculus nonce; ForceLocal = true }
+                | "/vr", _                        -> { s with DisplayMode = Vr; AutoRun = true }
+                | "/autorun", _                   -> { s with AutoRun = true }
+                | "/autoquit", _                  -> { s with AutoQuit = true }
+                | "/forcelocal", _                -> { s with ForceLocal = true }
+                | "/ed", _                        -> { s with ProductWhitelist = s.ProductWhitelist.Add "ed" }
+                | "/edh", _                       -> { s with ProductWhitelist = s.ProductWhitelist.Add "edh" }
+                | "/eda", _                       -> { s with ProductWhitelist = s.ProductWhitelist.Add "eda" }
                 | _ -> s)
                 { defaults with Proton = proton; CbLauncherDir = cbLaunchDir })
     [<CLIMutable>]
