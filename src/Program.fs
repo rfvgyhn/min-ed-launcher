@@ -127,7 +127,7 @@ module Program =
             use steam = new Steam()
             return! match steam.Login() with
                     | Ok steamUser -> async {
-                        let authDetails = Api.Steam (steamUser.SessionToken, machineId)
+                        let authDetails = mapPlatformToAuthDetails steamUser.SessionToken machineId platform
                         // TODO: event log RequestingSteamAuthentication no params
                         Log.debug "Authenticating via Steam"
                         match! Api.authenticate authDetails serverRequest with

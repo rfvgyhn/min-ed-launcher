@@ -34,71 +34,84 @@ module Server =
     }
     
     let private authenticate (httpClient:HttpClient) (runningTime: unit -> double) details = async {
-        match details with
-        | Api.Steam (sessionToken, machineId) ->
-            // TODO: event log entries
-            let uri = buildUri httpClient.BaseAddress "/3.0/user/steam/auth"
-                      |> Uri.addQueryParams [
-                          "steamTicket", sessionToken
-                          "machineId", machineId
-                          "fTime", runningTime().ToString() ]
-            // TODO: set allow redirect to false
-            use! response = httpClient.GetAsync(uri) |> Async.AwaitTask
-            use! content = response.Content.ReadAsStreamAsync() |> Async.AwaitTask
+        // TODO: event log entries
+        let uri, authHeader =
+            let commonParams machineId =
+                [ "machineId", machineId
+                  "fTime", runningTime().ToString() ]
+            match details with
+            | Api.Steam (sessionToken, machineId) ->
+                buildUri httpClient.BaseAddress "/3.0/user/steam/auth"
+                |> Uri.addQueryParam ("steamTicket", sessionToken)
+                |> Uri.addQueryParams (commonParams machineId), None
+            | Api.Epic (accessToken, machineId) ->
+                buildUri httpClient.BaseAddress "/3.0/user/forctoken"
+                |> Uri.addQueryParams (commonParams machineId), Some $"epic %s{accessToken}"
+            | Api.Frontier (sessionToken, machineId) -> raise (NotImplementedException())
+        use request = new HttpRequestMessage()
+        request.Method <- HttpMethod.Get
+        request.RequestUri <- uri
+        match authHeader with
+        | Some header -> request.Headers.Add("Authorization", header)
+        | None -> ()
             
-            let result r = r |> Authenticated |> Ok
-            let mapResult f = function
-                | Ok value -> f value |> result
-                | Error msg -> Failed msg |> result
-            let parseError content =
+        // TODO: set allow redirect to false
+        use! response = httpClient.SendAsync(request) |> Async.AwaitTask
+        use! content = response.Content.ReadAsStreamAsync() |> Async.AwaitTask
+        
+        let result r = r |> Authenticated |> Ok
+        let mapResult f = function
+            | Ok value -> f value |> result
+            | Error msg -> Failed msg |> result
+        let parseError content =
+            let root = content |> Json.parseStream >>= Json.rootElement
+            let errorValue = root >>= Json.parseProp "error_enum" >>= Json.toString |> Result.defaultValue "Unknown"
+            let errorMessage = root >>= Json.parseProp "message" >>= Json.toString |> Result.defaultValue ""
+            errorValue, errorMessage
+        
+        return
+            match response.StatusCode with
+            | code when (int)code < 300 ->
                 let root = content |> Json.parseStream >>= Json.rootElement
-                let errorValue = root >>= Json.parseProp "error_enum" >>= Json.toString |> Result.defaultValue "Unknown"
-                let errorMessage = root >>= Json.parseProp "message" >>= Json.toString |> Result.defaultValue ""
-                errorValue, errorMessage
-            
-            return
-                match response.StatusCode with
-                | code when (int)code < 300 ->
-                    let root = content |> Json.parseStream >>= Json.rootElement
-                    let authToken = root >>= Json.parseProp "authToken" >>= Json.toString
-                    let machineToken = root >>= Json.parseProp "machineToken" >>= Json.toString
-                    let registeredName = root >>= Json.parseProp "registeredName"
-                                             >>= Json.toString
-                                             |> Result.defaultValue "Steam User"
-                    let errorValue = root >>= Json.parseProp "error_enum" >>= Json.toString
-                    let errorMessage = root >>= Json.parseProp "message" >>= Json.toString
-                                         
-                    match authToken, machineToken, errorValue, errorMessage with
-                    | Error _, Error _, Ok value, Ok msg -> Failed <| sprintf "%s - %s" value msg
-                    | Ok auth, Ok machine, _, _ -> Authorized (auth, machine, registeredName)
-                    | Error msg, _, _, _
-                    | _, Error msg, _, _ -> Failed msg
-                    |> result
-                | HttpStatusCode.Found ->
-                    content |> Json.parseStream
-                            >>= Json.rootElement
-                            >>= Json.parseProp "Location"
-                            >>= Json.asUri
-                            |> mapResult (fun uri -> RegistrationRequired uri)
-                | HttpStatusCode.TemporaryRedirect ->
-                    content |> Json.parseStream
-                            >>= Json.rootElement
-                            >>= Json.parseProp "Location"
-                            >>= Json.asUri
-                            |> mapResult (fun uri -> LinkAvailable uri)
-                | HttpStatusCode.BadRequest ->
-                    let errValue, errMessage = content |> parseError
-                    sprintf "Bad Request: %s - %s" errValue errMessage |> Denied |> result
-                | HttpStatusCode.Forbidden ->
-                    let errValue, errMessage = content |> parseError
-                    sprintf "Forbidden: %s - %s" errValue errMessage |> Denied |> result
-                | HttpStatusCode.Unauthorized ->
-                    let errValue, errMessage = content |> parseError
-                    sprintf "Unauthorized: %s - %s" errValue errMessage |> Denied |> result
-                | HttpStatusCode.ServiceUnavailable ->
-                    Failed "Service unavailable" |> result
-                | code ->
-                    sprintf "%i: %s" ((int)code) response.ReasonPhrase |> Error
+                let authToken = root >>= Json.parseProp "authToken" >>= Json.toString
+                let machineToken = root >>= Json.parseProp "machineToken" >>= Json.toString
+                let registeredName = root >>= Json.parseProp "registeredName"
+                                         >>= Json.toString
+                                         |> Result.defaultValue "Steam User"
+                let errorValue = root >>= Json.parseProp "error_enum" >>= Json.toString
+                let errorMessage = root >>= Json.parseProp "message" >>= Json.toString
+                                     
+                match authToken, machineToken, errorValue, errorMessage with
+                | Error _, Error _, Ok value, Ok msg -> Failed <| sprintf "%s - %s" value msg
+                | Ok auth, Ok machine, _, _ -> Authorized (auth, machine, registeredName)
+                | Error msg, _, _, _
+                | _, Error msg, _, _ -> Failed msg
+                |> result
+            | HttpStatusCode.Found ->
+                content |> Json.parseStream
+                        >>= Json.rootElement
+                        >>= Json.parseProp "Location"
+                        >>= Json.asUri
+                        |> mapResult (fun uri -> RegistrationRequired uri)
+            | HttpStatusCode.TemporaryRedirect ->
+                content |> Json.parseStream
+                        >>= Json.rootElement
+                        >>= Json.parseProp "Location"
+                        >>= Json.asUri
+                        |> mapResult (fun uri -> LinkAvailable uri)
+            | HttpStatusCode.BadRequest ->
+                let errValue, errMessage = content |> parseError
+                sprintf "Bad Request: %s - %s" errValue errMessage |> Denied |> result
+            | HttpStatusCode.Forbidden ->
+                let errValue, errMessage = content |> parseError
+                sprintf "Forbidden: %s - %s" errValue errMessage |> Denied |> result
+            | HttpStatusCode.Unauthorized ->
+                let errValue, errMessage = content |> parseError
+                sprintf "Unauthorized: %s - %s" errValue errMessage |> Denied |> result
+            | HttpStatusCode.ServiceUnavailable ->
+                Failed "Service unavailable" |> result
+            | code ->
+                sprintf "%i: %s" ((int)code) response.ReasonPhrase |> Error
     }
     
     let private getAvailableProjects (httpClient:HttpClient) (runningTime: unit -> double) authDetails lang = async {
@@ -195,7 +208,7 @@ module Server =
                     | ServerTimestamp -> getTime httpClient
                     | LauncherStatus currentVersion -> async { return Ok <| StatusReceived Current }
                     | Authenticate details -> authenticate httpClient runningTime details
-                    | AuthorizedProjects (sessionToken, lang) -> getAvailableProjects httpClient runningTime sessionToken lang
+                    | AuthorizedProjects (authDetails, lang) -> getAvailableProjects httpClient runningTime authDetails lang
                     | CheckForUpdates (sessionToken, machineToken, machineId, product) -> checkForUpdates httpClient runningTime sessionToken machineToken machineId product
         with
         | e -> return Error e.Message
