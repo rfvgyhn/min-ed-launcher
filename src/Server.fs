@@ -101,15 +101,23 @@ module Server =
                     sprintf "%i: %s" ((int)code) response.ReasonPhrase |> Error
     }
     
-    let private getAvailableProjects (httpClient:HttpClient) (runningTime: unit -> double) sessionToken lang = async {
-        let uri = buildUri httpClient.BaseAddress "/3.0/user/purchases"
-                  |> Uri.addQueryParams [
-                          if Option.isSome lang then "lang", Option.get lang
-                          "fTime", runningTime().ToString() ]
+    let private getAvailableProjects (httpClient:HttpClient) (runningTime: unit -> double) authDetails lang = async {
+        let authHeader, authParams =
+            match authDetails with
+            | AuthDetails.Steam (sessionToken, _) -> Some $"bearer %s{sessionToken}", []
+            | AuthDetails.Epic (accessToken, _) -> Some $"epic %s{accessToken}", []
+            | AuthDetails.Frontier (sessionToken, machineToken) -> None, [ "authToken", sessionToken; "machineToken", machineToken ]
         use request = new HttpRequestMessage()
-        request.Headers.Add("Authorization", sprintf "bearer %s" sessionToken)
+        match authHeader with
+        | Some header -> request.Headers.Add("Authorization", header)
+        | None -> ()
+        
         request.Method <- HttpMethod.Get
-        request.RequestUri <- uri
+        request.RequestUri <- buildUri httpClient.BaseAddress "/3.0/user/purchases"
+                              |> Uri.addQueryParams [
+                                      if Option.isSome lang then "lang", Option.get lang
+                                      "fTime", runningTime().ToString() ]
+                              |> Uri.addQueryParams authParams
         let! response = httpClient.SendAsync(request) |> Async.AwaitTask
         
         if response.IsSuccessStatusCode then

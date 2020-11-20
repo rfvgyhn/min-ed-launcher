@@ -107,6 +107,12 @@ module Program =
         |> Option.map (fun v -> if v = null then Error ("Username is null " + xpath) else Ok v)
         |> Option.defaultValue (sprintf "Couldn't get user name from '%s'" appSettingsPath |> Error)
 
+    let mapPlatformToAuthDetails sessionToken machineToken = function
+        | Steam -> Api.Steam (sessionToken, machineToken)
+        | Epic _ -> Api.Epic (sessionToken, machineToken)
+        | Frontier -> Api.Frontier (sessionToken, machineToken)
+        | Oculus _ -> raise (NotImplementedException())
+        | Dev -> raise (NotImplementedException())
     type LoginResult =
     | Success of User
     | ActionRequired of string
@@ -354,7 +360,8 @@ module Program =
                     | Success user ->
                         // TODO: event log Authenticated user.Name
                         Log.infof "Logged in via %A as: %s (%s)" settings.Platform user.Name user.EmailAddress
-                        match! Api.getAuthorizedProducts user.SessionToken None serverRequest with
+                        let authDetails = mapPlatformToAuthDetails user.SessionToken machineId settings.Platform
+                        match! Api.getAuthorizedProducts authDetails None serverRequest with
                         | Ok authorizedProducts ->
                             do! logEvents [ EventLog.AvailableProjects (user.EmailAddress, authorizedProducts |> List.map (fun p -> p.Sku)) ]
                             let! products = authorizedProducts

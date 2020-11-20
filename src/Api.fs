@@ -6,6 +6,8 @@ module Api =
 
     type AuthDetails =
     | Steam of sessionToken:string * machineId:string
+    | Epic of accessToken:string * machineId:string
+    | Frontier of sessionToken:string * machineId:string
 
     type AuthResult =
     | Authorized of sessionToken:string * authToken:string * registeredName:string
@@ -18,7 +20,7 @@ module Api =
     | ServerTimestamp
     | LauncherStatus of string
     | Authenticate of AuthDetails
-    | AuthorizedProjects of sessionToken:string * language:string option
+    | AuthorizedProjects of AuthDetails * language:string option
     | CheckForUpdates of sessionToken:string * machineToken:string * machineId:string * Product
 
     type Response =
@@ -44,8 +46,8 @@ module Api =
         | Ok _ -> return failwith "Invalid return type"
     }
     
-    let getAuthorizedProducts sessionToken lang serverRequest = async {
-        match! serverRequest (AuthorizedProjects (sessionToken, lang)) with
+    let getAuthorizedProducts authDetails lang serverRequest = async {
+        match! serverRequest (AuthorizedProjects (authDetails, lang)) with
         | Ok (ProductsReceived projects) -> return Ok projects
         | Error msg -> return Error msg
         | Ok _ -> return failwith "Invalid return type"
