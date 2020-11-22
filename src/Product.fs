@@ -5,11 +5,14 @@ namespace EdLauncher
         open System.IO
         open EdLauncher.Types
         
-        let createArgString vr (lang: string option) machineToken sessionToken machineId timestamp watchForCrashes platform hashFile (product:ProductDetails) =
+        let createArgString vr (lang: string option) machineToken edSession machineId timestamp watchForCrashes platform hashFile (product:ProductDetails) =
             let targetOptions = String.Join(" ", [
                 if lang.IsSome then "/language " + lang.Value 
                 match platform, product.SteamAware with
                     | Steam, true -> "/steam"
+                    | Epic _, _ ->
+                        let refresh = edSession.RefreshToken |> Option.map id |> Option.defaultValue ""
+                        $"\"EpicToken {refresh}\""
                     | _, _ -> ()
                 match vr with
                     | Vr -> "/vr"
@@ -19,14 +22,14 @@ namespace EdLauncher
                 match product.Mode with
                 | Offline -> false
                 | Online -> true
-            let serverToken = if online then sprintf "ServerToken %s %s %s" machineToken sessionToken product.ServerArgs else ""
+            let serverToken = if online then sprintf "ServerToken %s %s %s" machineToken (edSession.Token) product.ServerArgs else ""
             let combined = sprintf "\"%s\" %s" serverToken targetOptions
             let fullExePath = Path.Combine(product.Directory, product.Executable)
             let exeHash = fullExePath |> hashFile |> Result.map Hex.toString |> Result.map (fun p -> p.ToUpperInvariant()) |> Result.defaultValue ""
             if watchForCrashes && online then
                 let version = product.Version.ToString()
                 sprintf "/Executable \"%s\" /ExecutableArgs %s /MachineToken %s /Version %s /AuthToken %s /MachineId %s /Time %s /ExecutableHash %s"
-                    fullExePath combined machineToken version sessionToken machineId (timestamp.ToString()) exeHash
+                    fullExePath combined machineToken version (edSession.Token) machineId (timestamp.ToString()) exeHash
             else
                 combined
                 

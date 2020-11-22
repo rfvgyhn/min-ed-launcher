@@ -32,7 +32,7 @@ let tests =
         }
         test "Matches epic password" {
             let settings = parse [| "-AUTH_PASSWORD=asdf" |]
-            Expect.equal settings.Platform (Epic { EpicDetails.Empty with Password = "asdf" }) ""
+            Expect.equal settings.Platform (Epic { EpicDetails.Empty with ExchangeCode = "asdf" }) ""
         }
         test "Matches epic type" {
             let settings = parse [| "-AUTH_TYPE=asdf" |]
@@ -122,6 +122,6 @@ let tests =
             let settings = parseWithFallback (fun () -> Ok expectedDir) [||]
             Expect.equal settings.CbLauncherDir expectedDir ""
         }
-//        testProperty "Unknown arg doesn't change any values" <|
-//            fun (args:string[]) -> parse args = Settings.defaults
+        testProperty "Unknown arg doesn't change any values" <|
+            fun (args:string[]) -> parse args = Settings.defaults
     ]

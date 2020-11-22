@@ -10,6 +10,10 @@ module Seq =
 module Rop =
     let (>>=) switchFunction twoTrackInput = Result.bind twoTrackInput switchFunction
 
+module Union =
+    open Microsoft.FSharp.Reflection
+    let getCaseName (e:'a) = (FSharpValue.GetUnionFields(e, typeof<'a>) |> fst).Name
+
 module Json =
     open System
     open System.IO

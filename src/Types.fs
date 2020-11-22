@@ -12,7 +12,7 @@ module Types =
           Error: string -> unit }
         with static member Noop = { Debug = (fun _ -> ()); Info = (fun _ -> ()); Warn = (fun _ -> ()); Error = (fun _ -> ()) }
     type EpicDetails =
-        { Password: string
+        { ExchangeCode: string
           Type: string
           Env: string
           UserId: string
@@ -20,7 +20,7 @@ module Types =
           RefreshToken: string option
           Log: bool
           TokenName: string }
-        with static member Empty = { Password = ""
+        with static member Empty = { ExchangeCode = ""
                                      Type = ""
                                      Env = ""
                                      UserId = ""
@@ -63,10 +63,30 @@ module Types =
         | Future
     type ServerInfo =
         { Status: ServerStatus}
+    type RefreshableToken =
+        { Token: string
+          TokenExpiry: DateTime
+          RefreshToken: string
+          RefreshTokenExpiry: DateTime }
+    type AuthToken =
+        | Expires of RefreshableToken
+        | Permanent of string
+        member this.GetAccessToken() =
+               match this with
+               | Expires t -> t.Token
+               | Permanent t -> t
+        member this.GetRefreshToken() =
+               match this with
+               | Expires t -> Some t.RefreshToken
+               | Permanent _ -> None
+    type EdSession =
+        { Token: string
+          RefreshToken: string option }
+        with static member Empty = { Token = ""; RefreshToken = None }
     type User =
         { Name: string
           EmailAddress: string
-          SessionToken: string
+          Session: EdSession
           MachineToken: string }
     type AuthorizedProduct =
         { Name: string

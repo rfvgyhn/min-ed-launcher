@@ -27,69 +27,82 @@ open Expecto
               ServerArgs = "" }
         let getTimestamp = fun () -> (double)1
         let hashFile = fun str -> Result.Ok Array.empty<byte>
+        let token = EdSession.Empty
             
         testList "Product" [
             testList "Argument String" [
                 test "Language provided" {
-                    let actual = createArgString Vr (Some "theLang") "" "" "" getTimestamp false Dev hashFile product
+                    let actual = createArgString Vr (Some "theLang") "" token "" getTimestamp false Dev hashFile product
                     
                     Expect.stringContains actual "/language theLang" ""
                 }
                 test "No language provided" {
-                    let actual = createArgString Vr None "" "" "" getTimestamp false Dev hashFile product
+                    let actual = createArgString Vr None "" token "" getTimestamp false Dev hashFile product
                     
                     Expect.notStringContains actual "/language" ""
                     Expect.notStringContains actual "theLang" ""
                 }
                 test "Steam platform and steam aware product" {
                     let product = { product with SteamAware = true }
-                    let actual = createArgString Vr None "" "" "" getTimestamp false Steam hashFile product
+                    let actual = createArgString Vr None "" token "" getTimestamp false Steam hashFile product
                     
                     Expect.stringContains actual "/steam" ""
                 }
                 test "Steam platform and non steam aware product" {
                     let product = { product with SteamAware = false }
-                    let actual = createArgString Vr None "" "" "" getTimestamp false Steam hashFile product
+                    let actual = createArgString Vr None "" token "" getTimestamp false Steam hashFile product
                     
                     Expect.notStringContains actual "/steam" ""
                 }
                 test "Non steam platform and steam aware product" {
                     let product = { product with SteamAware = true }
-                    let actual = createArgString Vr None "" "" "" getTimestamp false Dev hashFile product
+                    let actual = createArgString Vr None "" token "" getTimestamp false Dev hashFile product
                     
                     Expect.notStringContains actual "/steam" ""
                 }
                 test "Non steam platform and non steam aware product" {
                     let product = { product with SteamAware = false }
-                    let actual = createArgString Vr None "" "" "" getTimestamp false Dev hashFile product
+                    let actual = createArgString Vr None "" token "" getTimestamp false Dev hashFile product
                     
                     Expect.notStringContains actual "/steam" ""
                 }
+                test "Epic platform contains refresh token" {
+                    let token = { Token = ""; RefreshToken = Some "asdf" }
+                    let actual = createArgString Vr None "" token "" getTimestamp false (Epic EpicDetails.Empty) hashFile product
+                    
+                    Expect.stringContains actual "\"EpicToken asdf\"" ""
+                }
+                test "Non epic platform doesn't contain refresh token" {
+                    let token = { Token = ""; RefreshToken = Some "asdf" }
+                    let actual = createArgString Vr None "" token "" getTimestamp false Dev hashFile product
+                    
+                    Expect.notStringContains actual "\"EpicToken" ""
+                }
                 test "VR mode" {
-                    let actual = createArgString Vr None "" "" "" getTimestamp false Dev hashFile product
+                    let actual = createArgString Vr None "" token "" getTimestamp false Dev hashFile product
                     
                     Expect.stringContains actual "/vr" ""
                 }
                 test "Non VR mode" {
-                    let actual = createArgString Pancake None "" "" "" getTimestamp false Dev hashFile product
+                    let actual = createArgString Pancake None "" token "" getTimestamp false Dev hashFile product
                     
                     Expect.stringContains actual "/novr" ""
                 }
                 test "ServerToken is used when product is online and not watching for crashes" {
                     let machineToken = "12345"
-                    let sessionToken = "54321"
+                    let sessionToken = { Token = "54321"; RefreshToken = None }
                     let serverArgs = "/some arg"
                     let gameArgs = "/gameargs"
                     let product = { product with ServerArgs = serverArgs; Mode = Online; GameArgs = gameArgs }
                     let actual = createArgString Vr None machineToken sessionToken "" getTimestamp false Dev hashFile product
                     
-                    let expected = sprintf "\"ServerToken %s %s %s\"" machineToken sessionToken serverArgs
+                    let expected = sprintf "\"ServerToken %s %s %s\"" machineToken sessionToken.Token serverArgs
                     Expect.stringStarts actual expected ""
                     Expect.stringEnds actual gameArgs ""
                 }
                 test "Product is online and watching for crashes" {
                     let machineToken = "123"
-                    let sessionToken = "456"
+                    let sessionToken = { Token = "456"; RefreshToken = None }
                     let serverArgs = "/Test"
                     let machineId = "789"
                     let timeStamp = 12345.12345
@@ -99,10 +112,10 @@ open Expecto
                     let actual = createArgString Vr None machineToken sessionToken machineId timeStamp true Dev hashFile product
                     
                     let expectedExe = sprintf "/Executable \"%s\"" (Path.Combine("path", "to", "theExe.exe"))
-                    let expectedExeArgs = sprintf "/ExecutableArgs %s" <| sprintf "\"ServerToken %s %s %s\" /vr" machineToken sessionToken serverArgs
+                    let expectedExeArgs = sprintf "/ExecutableArgs %s" <| sprintf "\"ServerToken %s %s %s\" /vr" machineToken sessionToken.Token serverArgs
                     let expectedMachineToken = sprintf "/MachineToken %s" machineToken
                     let expectedVersion = sprintf "/Version %s" (version.ToString())
-                    let expectedsessionToken = sprintf "/AuthToken %s" sessionToken
+                    let expectedsessionToken = sprintf "/AuthToken %s" sessionToken.Token
                     let expectedMachineId = sprintf "/MachineId %s" machineId
                     let expectedTime = sprintf "/Time %s" <| timeStamp.ToString()
                     let expectedHash = sprintf "/ExecutableHash %s" "E4140B9A"

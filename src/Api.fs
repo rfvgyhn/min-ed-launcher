@@ -4,13 +4,8 @@ module Api =
     open System
     open Types
 
-    type AuthDetails =
-    | Steam of sessionToken:string * machineId:string
-    | Epic of accessToken:string * machineId:string
-    | Frontier of sessionToken:string * machineId:string
-
     type AuthResult =
-    | Authorized of sessionToken:string * authToken:string * registeredName:string
+    | Authorized of sessionToken:EdSession * authToken:string * registeredName:string
     | RegistrationRequired of Uri
     | LinkAvailable of Uri
     | Denied of string
@@ -19,9 +14,9 @@ module Api =
     type Request =
     | ServerTimestamp
     | LauncherStatus of string
-    | Authenticate of AuthDetails
-    | AuthorizedProjects of AuthDetails * language:string option
-    | CheckForUpdates of sessionToken:string * machineToken:string * machineId:string * Product
+    | Authenticate of authToken:AuthToken * platform:Platform * machineId:string
+    | AuthorizedProjects of edToken:EdSession * platform:Platform * machineId:string * language:string option
+    | CheckForUpdates of sessionToken:EdSession * machineToken:string * machineId:string * Product
 
     type Response =
     | TimestampReceived of int64
@@ -39,15 +34,15 @@ module Api =
         | Ok _ -> return failwith "Invalid return type"
     }
 
-    let authenticate authDetails serverRequest = async {
-        match! serverRequest (Authenticate authDetails) with
+    let authenticate token platform machineId serverRequest = async {
+        match! serverRequest (Authenticate (token, platform, machineId)) with
         | Ok (Authenticated result) -> return result 
         | Error msg -> return Failed msg
         | Ok _ -> return failwith "Invalid return type"
     }
     
-    let getAuthorizedProducts authDetails lang serverRequest = async {
-        match! serverRequest (AuthorizedProjects (authDetails, lang)) with
+    let getAuthorizedProducts token platform machineId lang serverRequest = async {
+        match! serverRequest (AuthorizedProjects (token, platform, machineId, lang)) with
         | Ok (ProductsReceived projects) -> return Ok projects
         | Error msg -> return Error msg
         | Ok _ -> return failwith "Invalid return type"

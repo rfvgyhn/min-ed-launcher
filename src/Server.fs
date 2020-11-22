@@ -33,21 +33,21 @@ module Server =
             return Error <| sprintf "%i: %s" ((int)result.StatusCode) result.ReasonPhrase
     }
     
-    let private authenticate (httpClient:HttpClient) (runningTime: unit -> double) details = async {
+    let private authenticate (httpClient:HttpClient) (runningTime: unit -> double) (token: AuthToken) platform machineId = async {
         // TODO: event log entries
         let uri, authHeader =
             let commonParams machineId =
                 [ "machineId", machineId
                   "fTime", runningTime().ToString() ]
-            match details with
-            | Api.Steam (sessionToken, machineId) ->
+            match platform with
+            | Steam ->
                 buildUri httpClient.BaseAddress "/3.0/user/steam/auth"
-                |> Uri.addQueryParam ("steamTicket", sessionToken)
+                |> Uri.addQueryParam ("steamTicket", token.GetAccessToken())
                 |> Uri.addQueryParams (commonParams machineId), None
-            | Api.Epic (accessToken, machineId) ->
+            | Epic _ ->
                 buildUri httpClient.BaseAddress "/3.0/user/forctoken"
-                |> Uri.addQueryParams (commonParams machineId), Some $"epic %s{accessToken}"
-            | Api.Frontier (sessionToken, machineId) -> raise (NotImplementedException())
+                |> Uri.addQueryParams (commonParams machineId), Some $"epic %s{token.GetAccessToken()}"
+            | p -> raise (NotImplementedException())
         use request = new HttpRequestMessage()
         request.Method <- HttpMethod.Get
         request.RequestUri <- uri
@@ -73,17 +73,19 @@ module Server =
             match response.StatusCode with
             | code when (int)code < 300 ->
                 let root = content |> Json.parseStream >>= Json.rootElement
-                let authToken = root >>= Json.parseProp "authToken" >>= Json.toString
+                let edAuthToken = root >>= Json.parseProp "authToken" >>= Json.toString
                 let machineToken = root >>= Json.parseProp "machineToken" >>= Json.toString
                 let registeredName = root >>= Json.parseProp "registeredName"
                                          >>= Json.toString
                                          |> Result.defaultValue "Steam User"
                 let errorValue = root >>= Json.parseProp "error_enum" >>= Json.toString
                 let errorMessage = root >>= Json.parseProp "message" >>= Json.toString
-                                     
-                match authToken, machineToken, errorValue, errorMessage with
+                
+                match edAuthToken, machineToken, errorValue, errorMessage with
                 | Error _, Error _, Ok value, Ok msg -> Failed <| sprintf "%s - %s" value msg
-                | Ok auth, Ok machine, _, _ -> Authorized (auth, machine, registeredName)
+                | Ok auth, Ok machine, _, _ ->
+                    let edToken = { Token = auth; RefreshToken = token.GetRefreshToken() }
+                    Authorized (edToken, machine, registeredName)
                 | Error msg, _, _, _
                 | _, Error msg, _, _ -> Failed msg
                 |> result
@@ -114,12 +116,15 @@ module Server =
                 sprintf "%i: %s" ((int)code) response.ReasonPhrase |> Error
     }
     
-    let private getAvailableProjects (httpClient:HttpClient) (runningTime: unit -> double) authDetails lang = async {
+    let private getAvailableProjects (httpClient:HttpClient) (runningTime: unit -> double) session platform machineToken lang = async {
         let authHeader, authParams =
-            match authDetails with
-            | AuthDetails.Steam (sessionToken, _) -> Some $"bearer %s{sessionToken}", []
-            | AuthDetails.Epic (accessToken, _) -> Some $"epic %s{accessToken}", []
-            | AuthDetails.Frontier (sessionToken, machineToken) -> None, [ "authToken", sessionToken; "machineToken", machineToken ]
+            match platform with
+            | Steam -> Some $"bearer %s{session.Token}", []
+            | Epic _ -> Some $"epic %s{session.Token}", []
+            | Frontier -> None, [ "authToken", session.Token; "machineToken", machineToken ]
+            | p ->
+                Log.error $"Attempting to get projects for unsupported platform {p |> Union.getCaseName}"
+                None, []
         use request = new HttpRequestMessage()
         match authHeader with
         | Some header -> request.Headers.Add("Authorization", header)
@@ -167,7 +172,7 @@ module Server =
             return sprintf "%i: %s" ((int)response.StatusCode) response.ReasonPhrase |> Error
     }
         
-    let private checkForUpdates (httpClient:HttpClient) (runningTime: unit -> double) sessionToken machineToken machineId product = async {
+    let private checkForUpdates (httpClient:HttpClient) (runningTime: unit -> double) session machineToken machineId product = async {
         match product with
         | Unknown _ -> return Error "Can't check updates for unknown product"
         | Missing _ -> return Error "Can't check updates for missing product"
@@ -176,7 +181,7 @@ module Server =
             let uri = buildUri httpClient.BaseAddress "/3.0/user/installer"
                       |> Uri.addQueryParams [
                           "machineToken", machineToken
-                          "authToken", sessionToken
+                          "authToken", session.Token
                           "machineId", machineId
                           "sku", product.Sku
                           "os", "win"
@@ -207,9 +212,9 @@ module Server =
             return! match request with
                     | ServerTimestamp -> getTime httpClient
                     | LauncherStatus currentVersion -> async { return Ok <| StatusReceived Current }
-                    | Authenticate details -> authenticate httpClient runningTime details
-                    | AuthorizedProjects (authDetails, lang) -> getAvailableProjects httpClient runningTime authDetails lang
-                    | CheckForUpdates (sessionToken, machineToken, machineId, product) -> checkForUpdates httpClient runningTime sessionToken machineToken machineId product
+                    | Authenticate (token, platform, machineId) -> authenticate httpClient runningTime token platform machineId
+                    | AuthorizedProjects (edSession, platform, machineId, lang) -> getAvailableProjects httpClient runningTime edSession platform machineId lang
+                    | CheckForUpdates (edSession, machineToken, machineId, product) -> checkForUpdates httpClient runningTime edSession machineToken machineId product
         with
         | e -> return Error e.Message
     }

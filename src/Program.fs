@@ -107,44 +107,40 @@ module Program =
         |> Option.map (fun v -> if v = null then Error ("Username is null " + xpath) else Ok v)
         |> Option.defaultValue (sprintf "Couldn't get user name from '%s'" appSettingsPath |> Error)
 
-    let mapPlatformToAuthDetails sessionToken machineToken = function
-        | Steam -> Api.Steam (sessionToken, machineToken)
-        | Epic _ -> Api.Epic (sessionToken, machineToken)
-        | Frontier -> Api.Frontier (sessionToken, machineToken)
-        | Oculus _ -> raise (NotImplementedException())
-        | Dev -> raise (NotImplementedException())
     type LoginResult =
     | Success of User
     | ActionRequired of string
     | Failure of string
     let login appSettingsPath serverRequest machineId platform = async {
-        match platform, (getUserEmail appSettingsPath) with
-        | _, Error msg -> return Failure msg
-        | Dev, Ok userEmail -> return Success { Name = "Dev User"; MachineToken = "DevToken"; EmailAddress = userEmail; SessionToken = "AuthToken" }
-        | Oculus _, _ -> return Failure "Oculus not supported"
-        | Frontier, _ -> return Failure "Frontier not supported"
-        | Steam, Ok userEmail ->
-            use steam = new Steam()
-            return! match steam.Login() with
-                    | Ok steamUser -> async {
-                        let authDetails = mapPlatformToAuthDetails steamUser.SessionToken machineId platform
-                        // TODO: event log RequestingSteamAuthentication no params
-                        Log.debug "Authenticating via Steam"
-                        match! Api.authenticate authDetails serverRequest with
-                        | Api.Authorized (authToken, machineToken, name) ->
-                            Log.debug "Successfully authenticated"
-                            // TODO: event log SteamAuthenticated no params
-                            return Success { Name = name
-                                             EmailAddress = userEmail
-                                             SessionToken = authToken
-                                             MachineToken = machineToken }
-                        | Api.RegistrationRequired uri -> return ActionRequired <| sprintf "Registration is required at %A" uri
-                        | Api.LinkAvailable uri -> return ActionRequired <| sprintf "Link available at %A" uri
-                        | Api.Denied msg -> return Failure msg
-                        | Api.Failed msg -> return Failure msg
-                        }
-                    | Error msg -> async { return Failure msg }
-            
+        let authenticate disposable = function
+            | Ok (authToken, userEmail) -> async {
+                use _ = disposable
+                Log.debug $"Authenticating via %s{platform |> Union.getCaseName}"
+                match! Api.authenticate authToken platform machineId serverRequest with
+                | Api.Authorized (authToken, machineToken, name) ->
+                    Log.debug "Successfully authenticated"
+                    return Success { Name = name
+                                     EmailAddress = userEmail
+                                     Session = authToken
+                                     MachineToken = machineToken }
+                | Api.RegistrationRequired uri -> return ActionRequired <| $"Registration is required at %A{uri}"
+                | Api.LinkAvailable uri -> return ActionRequired <| $"Link available at %A{uri}"
+                | Api.Denied msg -> return Failure msg
+                | Api.Failed msg -> return Failure msg }
+            | Error msg -> Failure msg |> async.Return
+        let authEmpty = authenticate { new IDisposable with member _.Dispose() = () }
+        return!
+            match platform, (getUserEmail appSettingsPath) with
+            | _, Error msg -> Failure msg |> async.Return
+            | Dev, Ok userEmail -> Ok (Permanent "DevAuthToken", userEmail) |> authEmpty
+            | Oculus _, _ -> Failure "Oculus not supported" |> async.Return
+            | Frontier, _ -> Failure "Frontier not supported" |> async.Return
+            | Steam, Ok userEmail ->
+                let steam = new Steam()
+                steam.Login() |> Result.map (fun steamUser -> Permanent steamUser.SessionToken, userEmail) |> authenticate steam
+            | Epic details, Ok userEmail -> async {
+                let! result = Epic.login details
+                return! result |> Result.map (fun epicUser -> epicUser.ToAuthToken(), userEmail) |> authEmpty }
     }
 
     let getLogPath = function
@@ -152,6 +148,7 @@ module Program =
         | Oculus _ -> Error "Oculus not supported"
         | Frontier -> Error "Frontier not supported"
         | Steam -> Ok "logs"
+        | Epic _ -> Ok "logs"
             
     let getProductsDir fallbackPath hasWriteAccess (forceLocal:ForceLocal) launcherDir =
         let productsPath = "Products"
@@ -304,7 +301,7 @@ module Program =
             p.WaitForExit()
             Log.infof "Shutdown %s" productName
             
-            
+            // TODO: need to have some mechanism to refresh epic token and update processArgs to include it
             if shouldRestart && not (cancelRestart()) then
                 launchProduct proton processArgs restart productName product
         | Product.RunResult.AlreadyRunning -> Log.infof "%s is already running" productName
@@ -360,13 +357,12 @@ module Program =
                     | Success user ->
                         // TODO: event log Authenticated user.Name
                         Log.infof "Logged in via %A as: %s (%s)" settings.Platform user.Name user.EmailAddress
-                        let authDetails = mapPlatformToAuthDetails user.SessionToken machineId settings.Platform
-                        match! Api.getAuthorizedProducts authDetails None serverRequest with
+                        match! Api.getAuthorizedProducts user.Session settings.Platform machineId None serverRequest with
                         | Ok authorizedProducts ->
                             do! logEvents [ EventLog.AvailableProjects (user.EmailAddress, authorizedProducts |> List.map (fun p -> p.Sku)) ]
                             let! products = authorizedProducts
                                             |> List.map (mapProduct productsDir)
-                                            |> Api.checkForUpdates user.SessionToken user.MachineToken machineId serverRequest
+                                            |> Api.checkForUpdates user.Session user.MachineToken machineId serverRequest
                             let availableProducts =
                                 products
                                 |> Result.defaultValue []
@@ -388,7 +384,7 @@ module Program =
                             match selectedProduct, true with
                             | Some product, true ->
                                 let gameLanguage = getGameLang settings.CbLauncherDir                                 
-                                let processArgs = Product.createArgString settings.DisplayMode gameLanguage user.MachineToken user.SessionToken machineId (runningTime()) settings.WatchForCrashes settings.Platform SHA1.hashFile product
+                                let processArgs = Product.createArgString settings.DisplayMode gameLanguage user.MachineToken user.Session machineId (runningTime()) settings.WatchForCrashes settings.Platform SHA1.hashFile product
                                 
                                 match Product.validateForRun settings.CbLauncherDir settings.WatchForCrashes product with
                                 | Ok p ->

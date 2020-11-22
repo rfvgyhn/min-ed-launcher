@@ -22,7 +22,7 @@ module Settings =
           ApiUri = Uri("http://localhost:8080")
           Restart = false, 0L
           Processes = List.empty }
-    type private EpicArg = Password of string | Type of string | Env of string | UserId of string | Locale of string | RefreshToken of string | TokenName of string | Log of bool
+    type private EpicArg = ExchangeCode of string | Type of string | Env of string | UserId of string | Locale of string | RefreshToken of string | TokenName of string | Log of bool
     let parseArgs defaults (findCbLaunchDir: unit -> Result<string,string>) (argv: string[]) =
         let proton, cbLaunchDir, args =
             if argv.Length > 2 && argv.[0] <> null && argv.[0].Contains("steamapps/common/Proton") then
@@ -43,7 +43,7 @@ module Settings =
                 arg
                 |> Option.map (fun arg ->
                     match arg with
-                    | Password p     -> { details with Password = p }
+                    | ExchangeCode p -> { details with ExchangeCode = p }
                     | Type t         -> { details with Type = t }
                     | Env e          -> { details with Env = e }
                     | UserId id      -> { details with UserId = id }
@@ -70,7 +70,7 @@ module Settings =
                 | "/steamid", _                   -> { s with Platform = Steam; ForceLocal = true }
                 | "/steam", _                     -> { s with Platform = Steam; ForceLocal = true }
                 | "/epic", _                      -> { s with Platform = applyEpicArg s.Platform None; ForceLocal = true }
-                | "-auth_password", Some password -> { s with Platform = epicArg (Password password) }
+                | "-auth_password", Some password -> { s with Platform = epicArg (ExchangeCode password) }
                 | "-auth_type", Some t            -> { s with Platform = epicArg (Type t) }
                 | "-epicenv", Some env            -> { s with Platform = epicArg (Env env) }
                 | "-epicuserid", Some id          -> { s with Platform = epicArg (UserId id) }

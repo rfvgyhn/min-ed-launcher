@@ -17,9 +17,13 @@
     <Compile Include="MachineId.fs" />
     <Compile Include="Server.fs" />
     <Compile Include="Steam.fs" />
+    <Compile Include="Epic.fs" />
     <Compile Include="Settings.fs" />
     <Compile Include="Program.fs" />
     <EmbeddedResource Include="settings.json" />
+    <Content Include="epic-sdk-details.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
@@ -30,6 +34,12 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="3.1.4" />
     <PackageReference Include="TypeShape" Version="8.0.1" />
     <PackageReference Include="FsConfig" Version="2.1.6" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="EosSdk, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+      <HintPath>..\lib\EosSdk.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>
