@@ -14,6 +14,7 @@ module Types =
     type EpicDetails =
         { ExchangeCode: string
           Type: string
+          AppId: string
           Env: string
           UserId: string
           Locale: string
@@ -22,6 +23,7 @@ module Types =
           TokenName: string }
         with static member Empty = { ExchangeCode = ""
                                      Type = ""
+                                     AppId = ""
                                      Env = ""
                                      UserId = ""
                                      Locale = ""

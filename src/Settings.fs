@@ -22,13 +22,14 @@ module Settings =
           ApiUri = Uri("http://localhost:8080")
           Restart = false, 0L
           Processes = List.empty }
-    type private EpicArg = ExchangeCode of string | Type of string | Env of string | UserId of string | Locale of string | RefreshToken of string | TokenName of string | Log of bool
-    let parseArgs defaults (findCbLaunchDir: unit -> Result<string,string>) (argv: string[]) =
+    type private EpicArg = ExchangeCode of string | Type of string | AppId of string | Env of string | UserId of string | Locale of string | RefreshToken of string | TokenName of string | Log of bool
+    let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (argv: string[]) =
         let proton, cbLaunchDir, args =
             if argv.Length > 2 && argv.[0] <> null && argv.[0].Contains("steamapps/common/Proton") then
-                Some (argv.[0], argv.[1]), Path.GetDirectoryName(argv.[2]) |> Ok, argv.[2..]
+                Some (argv.[0], argv.[1]), Path.GetDirectoryName(argv.[2]) |> Some, argv.[2..]
             else
-                None, findCbLaunchDir(), argv
+                None, None, argv
+                
         let getArg (arg:string) i =
             if i + 1 < args.Length && not (String.IsNullOrEmpty args.[i + 1]) && (not (args.[i + 1].StartsWith '/') && not (args.[i].StartsWith '-')) then // /arg argValue
                 arg.ToLowerInvariant(), Some args.[i + 1]
@@ -45,6 +46,7 @@ module Settings =
                     match arg with
                     | ExchangeCode p -> { details with ExchangeCode = p }
                     | Type t         -> { details with Type = t }
+                    | AppId id       -> { details with AppId = id }
                     | Env e          -> { details with Env = e }
                     | UserId id      -> { details with UserId = id }
                     | Locale l       -> { details with Locale = l }
@@ -59,8 +61,7 @@ module Settings =
             | Dev -> apply arg EpicDetails.Empty
             | _ -> platform
         
-        cbLaunchDir
-        |> Result.map (fun cbLaunchDir ->
+        let settings =
             args
             |> Array.mapi (fun index value -> index, value)
             |> Array.filter (fun (_, arg) -> not (String.IsNullOrEmpty(arg)))
@@ -72,6 +73,7 @@ module Settings =
                 | "/epic", _                      -> { s with Platform = applyEpicArg s.Platform None; ForceLocal = true }
                 | "-auth_password", Some password -> { s with Platform = epicArg (ExchangeCode password) }
                 | "-auth_type", Some t            -> { s with Platform = epicArg (Type t) }
+                | "-epicapp", Some id             -> { s with Platform = epicArg (AppId id) }
                 | "-epicenv", Some env            -> { s with Platform = epicArg (Env env) }
                 | "-epicuserid", Some id          -> { s with Platform = epicArg (UserId id) }
                 | "-epiclocale", Some locale      -> { s with Platform = epicArg (Locale locale) }
@@ -86,8 +88,12 @@ module Settings =
                 | "/ed", _                        -> { s with ProductWhitelist = s.ProductWhitelist.Add "ed" }
                 | "/edh", _                       -> { s with ProductWhitelist = s.ProductWhitelist.Add "edh" }
                 | "/eda", _                       -> { s with ProductWhitelist = s.ProductWhitelist.Add "eda" }
-                | _ -> s)
-                { defaults with Proton = proton; CbLauncherDir = cbLaunchDir })
+                | _ -> s) defaults
+        
+        cbLaunchDir
+        |> Option.map Ok |> Option.defaultWith (fun () -> findCbLaunchDir settings.Platform)
+        |> Result.map (fun launchDir -> { settings with Proton = proton; CbLauncherDir = launchDir })
+        
     [<CLIMutable>]
     type ProcessConfig =
         { FileName: string
@@ -126,15 +132,12 @@ module Settings =
         | Error error -> Error error
         
     let getSettings args fileConfig =
-        let findCbLaunchDir = fun () ->
-            let home = Environment.expandEnvVars("~");
-            [ sprintf "%s\Steam\steamapps\common\Elite Dangerous" (Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86))
-              sprintf "%s/.steam/steam/steamapps/common/Elite Dangerous" home
-              sprintf "%s/.local/share/Steam/steamapps/common/Elite Dangerous" home ]
-            |> List.map (fun path -> Some path)
+        let findCbLaunchDir paths =
+            paths
+            |> List.map Some
             |> List.append [ fileConfig.GameLocation ]
             |> List.choose id
-            |> List.tryFind (fun dir -> Directory.Exists dir)
+            |> List.tryFind Directory.Exists
             |> function
                 | None -> Error "Failed to find Elite Dangerous install directory"
                 | Some dir -> Ok dir
@@ -153,7 +156,14 @@ module Settings =
                 pInfo.WindowStyle <- ProcessWindowStyle.Minimized
                 pInfo)
         
-        parseArgs defaults findCbLaunchDir args
+        let fallbackDirs platform =
+            match platform with
+            | Epic d -> Epic.potentialInstallPaths d.AppId |> findCbLaunchDir
+            | Steam -> Steam.potentialInstallPaths() |> findCbLaunchDir
+            | Frontier -> raise (NotSupportedException("Frontier game version not supported"))
+            | _ -> Error "Failed to find Elite Dangerous install directory"
+        
+        parseArgs defaults fallbackDirs args
         |> Result.map (fun settings -> { settings with ApiUri = apiUri
                                                        Processes = processes
                                                        Restart = restart

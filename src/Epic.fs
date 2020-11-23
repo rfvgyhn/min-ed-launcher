@@ -1,16 +1,44 @@
 namespace EdLauncher
 
+open System.IO
+
 
 
 module Epic =
     open Types
+    open Rop
     open System
     open System.Threading.Tasks
     open Epic.OnlineServices
     open Epic.OnlineServices.Auth
     open Epic.OnlineServices.Logging
     open Epic.OnlineServices.Platform
-
+    
+    let potentialInstallPaths appId =
+        let progData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData)
+        Path.Combine(progData, "Epic", "UnrealEngineLauncher", "LauncherInstalled.dat")
+        |> Json.parseFile
+        >>= Json.rootElement
+        >>= Json.parseProp "InstallationList"
+        >>= Json.arrayTryFind (fun e ->
+            let appName = e |> Json.parseProp "AppName" >>= Json.toString |> Result.defaultValue ""
+            appName = appId)
+        |> Result.map (fun element ->
+            element
+            |> Option.bind (fun element ->
+                element |> Json.parseProp "InstallLocation" >>= Json.toString
+                |> function
+                    | Ok path -> Some path
+                    | Error msg ->
+                        Log.error $"Unable to parse 'InstallLocation': {msg}"
+                        None
+                )
+            |> Option.defaultValue "")
+        |> function
+            | Error msg -> []
+            | Ok dir -> [ dir ]
+        
+    
     let getLoginMethod (epicDetails: EpicDetails) =
         epicDetails.RefreshToken
         |> Option.map (fun token -> LoginCredentialType.RefreshToken, token)

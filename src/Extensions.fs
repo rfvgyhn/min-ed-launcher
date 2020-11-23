@@ -16,9 +16,17 @@ module Union =
 
 module Json =
     open System
+    open System.Collections.Generic
     open System.IO
     open System.Text.Json
     
+    let parseFile path =
+        try
+            use file = File.OpenRead(path)
+            JsonDocument.Parse(file) |> Ok
+        with
+        | :? JsonException -> Error "Invalid json document"
+        | e -> Error $"Couldn't open file at {path} - {e}"
     let parseStream (stream:Stream) =
         try
             Ok <| JsonDocument.Parse(stream)
@@ -35,7 +43,12 @@ module Json =
         with
         | :? InvalidOperationException -> Error "Element is not an array"
         |> Result.map (fun array -> seq { for p in array do yield f p })
-        
+    let arrayTryFind f (element:JsonElement) =
+        try
+            element.EnumerateArray() :> IEnumerable<JsonElement> |> Ok
+        with
+        | :? InvalidOperationException -> Error "Element is not an array"
+        |> Result.map (Seq.tryFind f)
     let asEnumerable (prop:JsonElement) = Ok <| seq { for p in prop.EnumerateArray() do yield p }
     let asInt64 (prop:JsonElement) =
         match prop.TryGetInt64() with

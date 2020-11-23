@@ -12,7 +12,7 @@ let tests =
         | Ok settings -> settings
         | Error _ -> Settings.defaults        
     let parse args =
-        parseWithFallback (fun () -> Ok ".") args
+        parseWithFallback (fun _ -> Ok ".") args
       
     testList "Parsing command line arguments" [
         test "Matches /steamid" {
@@ -119,7 +119,7 @@ let tests =
         }
         test "Non Proton uses fallback dir for cobra bay launcher dir" {
             let expectedDir = "test/dir"
-            let settings = parseWithFallback (fun () -> Ok expectedDir) [||]
+            let settings = parseWithFallback (fun _ -> Ok expectedDir) [||]
             Expect.equal settings.CbLauncherDir expectedDir ""
         }
         testProperty "Unknown arg doesn't change any values" <|
