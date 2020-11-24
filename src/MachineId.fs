@@ -27,7 +27,7 @@ module MachineId =
         let getIds() =
             match ensureIdsExist() with
             | Ok _ ->
-                let machineId = Registry.CurrentUser.OpenSubKey(machinePath).GetValue(key).ToString()
+                let machineId = Registry.LocalMachine.OpenSubKey(machinePath).GetValue(key).ToString()
                 let frontierId = Registry.CurrentUser.OpenSubKey(frontierPath).GetValue(key).ToString()
                 
                 Ok (machineId, frontierId)
