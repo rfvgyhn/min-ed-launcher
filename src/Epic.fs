@@ -1,18 +1,14 @@
 namespace EdLauncher
 
-open System.IO
-
-
-
 module Epic =
     open Types
     open Rop
+    open FSharp.Control.Tasks.NonAffine
     open System
-    open System.Threading.Tasks
-    open Epic.OnlineServices
-    open Epic.OnlineServices.Auth
-    open Epic.OnlineServices.Logging
-    open Epic.OnlineServices.Platform
+    open System.IO
+    open System.Net.Http
+    open System.Net.Http.Headers
+    open System.Text
     
     let potentialInstallPaths appId =
         let progData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData)
@@ -38,58 +34,6 @@ module Epic =
             | Error msg -> []
             | Ok dir -> [ dir ]
         
-    
-    let getLoginMethod (epicDetails: EpicDetails) =
-        epicDetails.RefreshToken
-        |> Option.map (fun token -> LoginCredentialType.RefreshToken, token)
-        |> Option.defaultValue (LoginCredentialType.ExchangeCode, epicDetails.ExchangeCode)
-    
-    let getLogger = function
-        | LogLevel.Off -> (fun _ -> ())
-        | LogLevel.Fatal -> Log.error
-        | LogLevel.Error -> Log.error
-        | LogLevel.Warning -> Log.warn
-        | LogLevel.Info -> Log.info
-        | LogLevel.Verbose -> Log.debug
-        | LogLevel.VeryVerbose -> Log.debug
-        | _ -> Log.debug
-    
-    // TODO: decide which values should be used
-    let getPlatformOptions() =
-        let lines = System.IO.File.ReadAllLines("epic-sdk-details.txt")
-        let credentials = ClientCredentials()
-        credentials.ClientId <- lines.[0]
-        credentials.ClientSecret <- lines.[1]
-        let platformOptions = Options()
-        platformOptions.ProductId <- lines.[2]
-        platformOptions.SandboxId <- lines.[3]
-        platformOptions.ClientCredentials <- credentials
-        platformOptions.Flags <- PlatformFlags.DisableOverlay
-        platformOptions.DeploymentId <- lines.[4]
-        
-        platformOptions
-    
-    let private configureLogging() =
-        LoggingInterface.SetLogLevel(LogCategory.AllCategories, LogLevel.VeryVerbose) |> ignore
-        LoggingInterface.SetCallback(fun m -> m.Level |> getLogger <| $"[EOS-SDK] [{m.Category}] {m.Message}") |> ignore
-        
-    let private getAuthInterface() =        
-        Log.debug "Initializing Epic Online Services"
-        let options = InitializeOptions()
-        options.ProductName <- "Callisto";
-        options.ProductVersion <- "1.0";
-        let result = PlatformInterface.Initialize(options)
-        
-        if result <> Result.Success then
-            Error $"Unable to initialize Epic Online Services %A{result}"
-        else
-            configureLogging()
-            let platform = PlatformInterface.Create(getPlatformOptions())
-            if platform = null then
-                Error $"Failed to create platform. Ensure the relevant {typedefof<Options>} are set or passed into the application as arguments."
-            else
-                Ok (platform.GetAuthInterface())
-      
     type EpicUser =
         { AccessToken: string
           TokenExpires: DateTime
@@ -97,37 +41,64 @@ module Epic =
           RefreshTokenExpires: DateTime }
         with member this.ToAuthToken() = { Token = this.AccessToken; TokenExpiry = this.TokenExpires; RefreshToken = this.RefreshToken; RefreshTokenExpiry = this.RefreshTokenExpires } |> Expires
         
-    let private loginCallback (authInterface: AuthInterface) (tcs: TaskCompletionSource<Result<EpicUser, string>>) (info: LoginCallbackInfo) =
-        if info.ResultCode = Result.Success then                        
-            let user =
-                let tokenResult, authToken = authInterface.CopyUserAuthToken(CopyUserAuthTokenOptions(), info.LocalUserId)
-                if tokenResult = Result.Success then
-                    Log.debug $"Got Epic auth token %A{authToken}"
-                    Ok { AccessToken = authToken.AccessToken
-                         TokenExpires = DateTime.Parse(authToken.RefreshExpiresAt).ToUniversalTime()
-                         RefreshToken = authToken.RefreshToken
-                         RefreshTokenExpires = DateTime.Parse(authToken.ExpiresAt).ToUniversalTime() }
-                else
-                    Error $"Unable to copy user auth token %A{tokenResult}"
-            tcs.SetResult(user)
-        else if (Helper.IsOperationComplete(info.ResultCode)) then
-            tcs.SetResult(Error $"Unable to login %A{info.ResultCode}")
-        else
-            ()
+    type Epic() =
+        let mutable disposed = false
+        let httpClient = new HttpClient()
         
-    let login (epicDetails: EpicDetails) =
-        let tcs = TaskCompletionSource<Result<EpicUser, string>>()
+        let cleanup disposing =
+            if not disposed then
+                Log.debug "Disposing Epic resources"
+                disposed <- true
+                
+                httpClient.Dispose()
+                
+        let parseJson element =
+            let accessToken = element >>= Json.parseProp "access_token" >>= Json.toString
+            let refreshToken = element >>= Json.parseProp "refresh_token" >>= Json.toString
+            let accessExpiry = element >>= Json.parseProp "expires_at" >>= Json.asDateTime
+            let refreshExpiry = element >>= Json.parseProp "refresh_expires_at" >>= Json.asDateTime
+            
+            match accessToken, refreshToken, accessExpiry, refreshExpiry with
+            | Ok accessToken, Ok refreshToken, Ok accessExpiry, Ok refreshExpiry ->
+                Ok { AccessToken = accessToken
+                     TokenExpires = accessExpiry.ToUniversalTime()
+                     RefreshToken = refreshToken
+                     RefreshTokenExpires = refreshExpiry.ToUniversalTime() }
+            | _ ->
+              $"Unexpected json object %s{element.ToString()}" |> Error
+
+        member this.Login epicDetails = task {
+            let lines = System.IO.File.ReadAllLines("epic-sdk-details.txt")     // TODO: decide which values should be used
+            let clientId = lines.[0]
+            let clientSecret = lines.[1]
+            let dId = lines.[4]
+            use content = new StringContent(String.Join("&", [
+                "grant_type=exchange_code"
+                $"deployment_id={dId}"
+                "scope=basic_profile friends_list presence"
+                $"exchange_code={epicDetails.ExchangeCode}"
+            ]), Encoding.UTF8, "application/x-www-form-urlencoded")
+            
+            let authHeaderValue = Convert.ToBase64String(Encoding.ASCII.GetBytes($"%s{clientId}:%s{clientSecret}"))
+            use request = new HttpRequestMessage()
+            request.Headers.Authorization <- AuthenticationHeaderValue("Basic", authHeaderValue)
+            request.Method <- HttpMethod.Post
+            request.RequestUri <- Uri("https://api.epicgames.dev/epic/oauth/v1/token")
+            request.Content <- content
+            
+            let! response = httpClient.SendAsync(request)
+            
+            if response.IsSuccessStatusCode then
+                use! content = response.Content.ReadAsStreamAsync()
+                return content |> Json.parseStream >>= Json.rootElement |> parseJson
+            else
+                return $"%i{int response.StatusCode}: %s{response.ReasonPhrase}" |> Error
+        }          
         
-        match getAuthInterface() with
-        | Ok authInterface ->
-            let method, token = getLoginMethod epicDetails
-            let credentials = Credentials()
-            credentials.Type <- method
-            credentials.Token <- token
-            let loginOptions = LoginOptions()
-            loginOptions.Credentials <- credentials
-            loginOptions.ScopeFlags <- AuthScopeFlags.BasicProfile ||| AuthScopeFlags.FriendsList ||| AuthScopeFlags.Presence
-            authInterface.Login(loginOptions, null, (fun i -> loginCallback authInterface tcs i))
-        | Error m -> tcs.SetResult(Error m)
-        
-        tcs.Task |> Async.AwaitTask
+        interface IDisposable with
+            member this.Dispose() =
+                cleanup true
+                GC.SuppressFinalize(this)
+                
+        override this.Finalize() =
+            cleanup false

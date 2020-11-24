@@ -7,6 +7,7 @@ module EventLog =
     open System.IO
     open System.Net.Http
     open System.Text.Json
+    open FSharp.Control.Tasks.NonAffine
     open Microsoft.FSharp.Reflection
     open Types
 
@@ -17,16 +18,17 @@ module EventLog =
         | ClientVersion of application:string * path:string * modification:DateTime
         | LogStarted
         | LogReset
-        | AvailableProjects of users:string * projects:string list
+        | AvailableProjects of users:string option * projects:string list
         
     type LocalFile = private LocalFile of string
     module LocalFile =
-        let create (path:string) = async {
+        
+        let create (path:string) = task {
             if File.Exists path then
                 return Ok <| LocalFile path
             else
                 try
-                    do! File.AppendAllTextAsync(path, "") |> Async.AwaitTask
+                    do! File.AppendAllTextAsync(path, "")
                     return Ok <| LocalFile path
                 with
                 | e -> return Error e.Message
@@ -76,7 +78,7 @@ module EventLog =
     let private getNow = fun () -> DateTime.UtcNow
     let private entryToStringUtcNow = entryToString getNow
     
-    let private writeLocal path entries = async {
+    let private writeLocal path entries = task {
         match path with
         | None -> return Ok ()
         | Some path ->
@@ -86,7 +88,7 @@ module EventLog =
                                         |> List.map entryToStringUtcNow
                                         |> List.append resetLine)
             try
-                do! File.AppendAllTextAsync(filePath, lines) |> Async.AwaitTask
+                do! File.AppendAllTextAsync(filePath, lines)
                 return Ok ()
             with
             | e -> return Error e.Message
@@ -95,7 +97,7 @@ module EventLog =
     let private writeRemote (remoteEntry:RemoteLog option) entries = 
         entries
         |> List.rev
-        |> List.map (fun entry -> async { 
+        |> List.map (fun entry -> task { 
             match remoteEntry with 
             | None -> return Ok ()
             | Some (RemoteLog (client, parms)) ->
@@ -109,7 +111,7 @@ module EventLog =
                 ]
                 use c = content
                 try
-                    let! result = (client.PostAsync(uri, c) |> Async.AwaitTask)
+                    let! result = (client.PostAsync(uri, c))
                     return Ok ()
                 with
                 | e -> return Error <| sprintf "Unable to write to remote log: %s - %s" action e.Message
@@ -118,4 +120,4 @@ module EventLog =
     let write localPath remoteUrl entries =
         [ writeLocal localPath entries ]
         |> List.append <| writeRemote remoteUrl entries
-        |> Async.Parallel
+        |> Task.whenAll

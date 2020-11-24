@@ -87,7 +87,7 @@ module Types =
         with static member Empty = { Token = ""; RefreshToken = None }
     type User =
         { Name: string
-          EmailAddress: string
+          EmailAddress: string option
           Session: EdSession
           MachineToken: string }
     type AuthorizedProduct =

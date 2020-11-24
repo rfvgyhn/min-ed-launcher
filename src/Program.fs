@@ -8,6 +8,7 @@ module Program =
     open System.Reflection
     open System.Resources
     open System.Runtime.InteropServices
+    open FSharp.Control.Tasks.NonAffine
     open FileIO
     open FsConfig
     open Steam
@@ -44,7 +45,7 @@ module Program =
         let os = getOs() |> osToStr
         os + arch
 
-    let getEventLogPaths httpClient = async {
+    let getEventLogPaths httpClient = task {
         let! result = EventLog.LocalFile.create "test.txt" // logs/Client.log
         let file =
             match result with
@@ -69,7 +70,7 @@ module Program =
                 None
         return file, remote
     }
-    let writeEventLog httpClient entry = async {
+    let writeEventLog httpClient entry = task {
         let! file, remote = getEventLogPaths httpClient
         let! result = EventLog.write file remote entry
         result |> Array.iter (fun e -> match e with
@@ -78,7 +79,7 @@ module Program =
     }
     let getAppSettingsPath cbLauncherVersion =
 #if WINDOWS
-        let appSettingsPath = "" // TODO: get app data path
+        let appSettingsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Frontier_Developments")
 #else
         let steamCompat = Environment.GetEnvironmentVariable("STEAM_COMPAT_DATA_PATH")
         let appSettingsPath =
@@ -104,16 +105,15 @@ module Program =
         let xpath = "//*[@name='UserName']/value"
         appSettingsPath
         |> Xml.getValue xpath
-        |> Option.map (fun v -> if v = null then Error ("Username is null " + xpath) else Ok v)
-        |> Option.defaultValue (sprintf "Couldn't get user name from '%s'" appSettingsPath |> Error)
+        |> Option.map (fun v -> if v = null then "" else v)
 
     type LoginResult =
     | Success of User
     | ActionRequired of string
     | Failure of string
-    let login appSettingsPath serverRequest machineId platform = async {
+    let login appSettingsPath serverRequest machineId platform = task {
         let authenticate disposable = function
-            | Ok (authToken, userEmail) -> async {
+            | Ok (authToken, userEmail) -> task {
                 use _ = disposable
                 Log.debug $"Authenticating via %s{platform |> Union.getCaseName}"
                 match! Api.authenticate authToken platform machineId serverRequest with
@@ -127,20 +127,24 @@ module Program =
                 | Api.LinkAvailable uri -> return ActionRequired <| $"Link available at %A{uri}"
                 | Api.Denied msg -> return Failure msg
                 | Api.Failed msg -> return Failure msg }
-            | Error msg -> Failure msg |> async.Return
+            | Error msg -> Failure msg |> Task.fromResult
+            
         let authEmpty = authenticate { new IDisposable with member _.Dispose() = () }
-        return!
-            match platform, (getUserEmail appSettingsPath) with
-            | _, Error msg -> Failure msg |> async.Return
-            | Dev, Ok userEmail -> Ok (Permanent "DevAuthToken", userEmail) |> authEmpty
-            | Oculus _, _ -> Failure "Oculus not supported" |> async.Return
-            | Frontier, _ -> Failure "Frontier not supported" |> async.Return
-            | Steam, Ok userEmail ->
+        let userEmail = getUserEmail appSettingsPath
+        let! result =
+            match platform with
+            | Dev -> Ok (Permanent "DevAuthToken", userEmail) |> authEmpty
+            | Oculus _ -> Failure "Oculus not supported" |> Task.fromResult
+            | Frontier-> Failure "Frontier not supported" |> Task.fromResult
+            | Steam ->
                 let steam = new Steam()
                 steam.Login() |> Result.map (fun steamUser -> Permanent steamUser.SessionToken, userEmail) |> authenticate steam
-            | Epic details, Ok userEmail -> async {
-                let! result = Epic.login details
+            | Epic details -> task {
+                use epic = new Epic.Epic()
+                let! result = epic.Login details
                 return! result |> Result.map (fun epicUser -> epicUser.ToAuthToken(), userEmail) |> authEmpty }
+            
+        return result
     }
 
     let getLogPath = function
@@ -184,7 +188,7 @@ module Program =
         Log.infof "OS: %s" (getOsIdent())
         Log.infof "CobraBay Version: %s" cobraVersion
         Log.infof "Launcher Version: %A" launcherVersion
-        Log.infof "Launcher Name: %A" (System.Reflection.AssemblyName.GetAssemblyName("/mnt/games/Steam/Linux/steamapps/common/Elite Dangerous/EDLaunch.exe").Name)
+        //Log.infof "Launcher Name: %A" (System.Reflection.AssemblyName.GetAssemblyName("/mnt/games/Steam/Linux/steamapps/common/Elite Dangerous/EDLaunch.exe").Name)
         Log.infof "Remote Time: %i" remoteTime
         Log.infof "Products Dir: %s" productsDir
 
@@ -307,7 +311,7 @@ module Program =
         | Product.RunResult.AlreadyRunning -> Log.infof "%s is already running" productName
         | Product.RunResult.Error e -> Log.errorf "Couldn't start selected product: %s" (e.ToString())
         
-    let private run settings = async {
+    let private run settings = task {
         let appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Frontier_Developments")
         let productsDir =
             getProductsDir appDataDir hasWriteAccess settings.ForceLocal settings.CbLauncherDir
@@ -315,18 +319,18 @@ module Program =
         let version = getVersion settings.CbLauncherDir
         return!
             match productsDir, version with 
-            | _, Error msg -> async {
+            | _, Error msg -> task {
                 Log.errorf "Unable to get version: %s" msg
                 return 1 }
-            | Error msg, _ -> async { 
+            | Error msg, _ -> task { 
                 Log.errorf "Unable to get products directory: %s" msg
                 return 1 }
-            | Ok productsDir, Ok (cbVersion, launcherVersion) -> async {
-                let cbLauncherName = System.Reflection.AssemblyName.GetAssemblyName(Path.Combine(settings.CbLauncherDir, "EDLaunch.exe")).Name
+            | Ok productsDir, Ok (cbVersion, launcherVersion) -> task {
+                let cbLauncherName = "EDLaunch"// System.Reflection.AssemblyName.GetAssemblyName(Path.Combine(settings.CbLauncherDir, "EDLaunch.exe")).Name
                 use httpClient = createZaonceClient settings.ApiUri cbLauncherName cbVersion (getOsIdent())
                 let serverRequest = Server.request httpClient 
                 let localTime = DateTime.UtcNow
-                let getRemoteTime runningTime = async { 
+                let getRemoteTime runningTime = task { 
                     match! Api.getTime localTime (serverRequest runningTime) with
                     | Ok timestamp -> return timestamp
                     | Error (localTimestamp, msg) ->
@@ -340,7 +344,7 @@ module Program =
                 let serverRequest = serverRequest runningTime
                 let! machineId =
 #if WINDOWS
-                    MachineId.getWindowsId()
+                    MachineId.getWindowsId() |> Task.fromResult
 #else
                     MachineId.getWineId()
 #endif
@@ -356,7 +360,8 @@ module Program =
                     match! login appSettingsPath serverRequest machineId settings.Platform with
                     | Success user ->
                         // TODO: event log Authenticated user.Name
-                        Log.infof "Logged in via %A as: %s (%s)" settings.Platform user.Name user.EmailAddress
+                        let emailDisplay = user.EmailAddress |> Option.map (fun e -> $"({e})") |> Option.defaultValue ""
+                        Log.info $"Logged in via %s{settings.Platform |> Union.getCaseName} as: %s{user.Name} %s{emailDisplay}"
                         match! Api.getAuthorizedProducts user.Session settings.Platform machineId None serverRequest with
                         | Ok authorizedProducts ->
                             do! logEvents [ EventLog.AvailableProjects (user.EmailAddress, authorizedProducts |> List.map (fun p -> p.Sku)) ]
@@ -415,31 +420,34 @@ module Program =
     [<EntryPoint>]
     let main argv =
         async {
-            do! Async.SwitchToThreadPool ()
-            Log.debugf "Args: %A" argv
-            let settings =
-                let path = Path.Combine(Environment.configDir, "elite-dangerous-launcher")
-                match ensureDirExists path with
-                | Error msg -> sprintf "Unable to find/create configuration directory at %s - %s" path msg |> Error
-                | Ok settingsDir ->
-                    let settingsPath = Path.Combine(settingsDir, "settings.json")
-                    if not (File.Exists(settingsPath)) then
-                        use settings = typeof<Steam>.GetTypeInfo().Assembly.GetManifestResourceStream("EdLauncher.settings.json")
-                        use file = File.OpenWrite(settingsPath)
-                        settings.CopyTo(file)
-                    |> ignore
-                        
-                    parseConfig settingsPath
-                    |> Result.mapError (fun e ->
-                        match e with
-                        | BadValue (key, value) -> sprintf "Bad Value: %s - %s" key value
-                        | ConfigParseError.NotFound key -> sprintf "Key not found: %s" key
-                        | NotSupported key -> sprintf "Key not supported: %s" key)
-                    >>= getSettings argv
-            Log.debugf "Settings: %A" settings
-            return! match settings with
-                    | Ok settings -> run settings
-                    | Error msg -> async { Log.error msg; return 1 }
+            try
+                do! Async.SwitchToThreadPool ()
+                Log.debugf "Args: %A" argv
+                let settings =
+                    let path = Path.Combine(Environment.configDir, "elite-dangerous-launcher")
+                    match ensureDirExists path with
+                    | Error msg -> sprintf "Unable to find/create configuration directory at %s - %s" path msg |> Error
+                    | Ok settingsDir ->
+                        let settingsPath = Path.Combine(settingsDir, "settings.json")
+                        if not (File.Exists(settingsPath)) then
+                            use settings = typeof<Steam>.GetTypeInfo().Assembly.GetManifestResourceStream("EdLauncher.settings.json")
+                            use file = File.OpenWrite(settingsPath)
+                            settings.CopyTo(file)
+                        |> ignore
+                            
+                        parseConfig settingsPath
+                        |> Result.mapError (fun e ->
+                            match e with
+                            | BadValue (key, value) -> sprintf "Bad Value: %s - %s" key value
+                            | ConfigParseError.NotFound key -> sprintf "Key not found: %s" key
+                            | NotSupported key -> sprintf "Key not supported: %s" key)
+                        >>= getSettings argv
+                Log.debugf "Settings: %A" settings
+                return! match settings with
+                        | Ok settings -> run settings |> Async.AwaitTask
+                        | Error msg -> async { Log.error msg; return 1 }
+            with
+            | e -> Log.error $"Unhandled exception: {e}"; return 1
         } |> Async.RunSynchronously
         
         

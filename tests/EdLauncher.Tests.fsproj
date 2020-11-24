@@ -4,6 +4,15 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <GenerateProgramFile>false</GenerateProgramFile>
+    <Configurations>Debug;Release;ReleaseWindows</Configurations>
+    <Platforms>AnyCPU</Platforms>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'ReleaseWindows' ">
+    <Optimize Condition=" '$(Optimize)' == '' ">true</Optimize>
+    <DebugSymbols Condition="'$(DebugSymbols)' == '' ">false</DebugSymbols>
+    <Optimize Condition="'$(Optimize)' == '' ">true</Optimize>
+    <Tailcalls Condition="'$(Tailcalls)' == '' ">true</Tailcalls>
   </PropertyGroup>
 
   <ItemGroup>

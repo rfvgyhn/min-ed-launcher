@@ -3,6 +3,7 @@ namespace EdLauncher
 module MachineId =
     open System
     open System.IO
+    open FSharp.Control.Tasks.NonAffine
 
     module WindowsRegistry =
         open Microsoft.Win32
@@ -38,7 +39,7 @@ module MachineId =
         let private machineEntry = @"[Software\\Microsoft\\Cryptography]"
         let private frontierEntry = @"[Software\\Frontier Developments\\Cryptography]"
         
-        let ensureIdsExist registryPath = async {
+        let ensureIdsExist registryPath = task {
             try
                 let system = FileInfo(machineFilePath registryPath)
                 let user = FileInfo(frontierFilePath registryPath)
@@ -60,7 +61,7 @@ module MachineId =
                         sprintf "\"MachineGuid\"=\"%s\"" (Guid.NewGuid().ToString())
                     ])
                     use sw = user.AppendText()
-                    do! sw.WriteLineAsync(entry) |> Async.AwaitTask
+                    do! sw.WriteLineAsync(entry)
                 
                 return Ok ()
             with
@@ -81,7 +82,7 @@ module MachineId =
             |> split "\""
             |> Array.last
             
-        let getIds registryPath = async {
+        let getIds registryPath = task {
             match! ensureIdsExist registryPath with
             | Ok _ ->
                 let machineId = readEntry (machineFilePath registryPath) machineEntry
@@ -98,14 +99,14 @@ module MachineId =
         let private machinePath = Path.Combine(configPath, "machineid.txt")
         let private frontierPath = Path.Combine(configPath, "frontierid.txt")
 
-        let ensureIdsExist() = async {
+        let ensureIdsExist() = task {
             try
                 let files = [ FileInfo(machinePath); FileInfo(frontierPath) ]
                 for file in files do
                     if not file.Exists || file.Length < 1L then
                         Directory.CreateDirectory file.DirectoryName |> ignore
                         use sw = file.AppendText()
-                        do! sw.WriteLineAsync(Guid.NewGuid().ToString()) |> Async.AwaitTask
+                        do! sw.WriteLineAsync(Guid.NewGuid().ToString())
                         
                 let! machineId = FileIO.readAllText machinePath
                 let! frontierId = FileIO.readAllText frontierPath
@@ -118,11 +119,11 @@ module MachineId =
             | e -> return Error e.Message
         }
             
-        let getIds() = async {
+        let getIds() = task {
             match! ensureIdsExist() with
             | Ok _ ->
-                let! machineId = File.ReadAllLinesAsync(machinePath) |> Async.AwaitTask
-                let! frontierId = File.ReadAllLinesAsync(frontierPath) |> Async.AwaitTask
+                let! machineId = File.ReadAllLinesAsync(machinePath)
+                let! frontierId = File.ReadAllLinesAsync(frontierPath)
                 return Ok (machineId.FirstOrDefault(), frontierId.FirstOrDefault())
             | Error msg -> return Error msg
         }
@@ -138,7 +139,7 @@ module MachineId =
         | Ok (machineId, frontierId) -> Ok <| getId machineId frontierId
         | Error msg -> Error msg
     
-    let getWineId() = async {
+    let getWineId() = task {
         let registryPath =
             let steamCompat = Environment.GetEnvironmentVariable("STEAM_COMPAT_DATA_PATH")
             let winePrefix = Environment.GetEnvironmentVariable("WINEPREFIX")
@@ -153,7 +154,7 @@ module MachineId =
             | Ok (machineId, frontierId) -> return Ok <| getId machineId frontierId
             | Error msg -> return Error msg
     }
-    let getFilesystemId() = async {
+    let getFilesystemId() = task {
         match! Filesystem.getIds() with
         | Ok (machineId, frontierId) -> return Ok <| getId machineId frontierId
         | Error msg -> return Error msg

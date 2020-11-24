@@ -2,6 +2,8 @@ namespace EdLauncher
 
 module Api =
     open System
+    open System.Threading.Tasks
+    open FSharp.Control.Tasks.NonAffine
     open Types
 
     type AuthResult =
@@ -25,7 +27,7 @@ module Api =
     | ProductsReceived of AuthorizedProduct list
     | UpdatesChecked of Product
         
-    let getTime (now:DateTime) serverRequest = async {
+    let getTime (now:DateTime) (serverRequest: Request -> Task<Result<Response, 'a>>) = task {
         match! serverRequest ServerTimestamp with
         | Ok (TimestampReceived unixTimestamp) -> return Ok unixTimestamp
         | Error msg ->
@@ -34,33 +36,34 @@ module Api =
         | Ok _ -> return failwith "Invalid return type"
     }
 
-    let authenticate token platform machineId serverRequest = async {
+    let authenticate token platform machineId (serverRequest: Request -> Task<Result<Response, string>>) = task {
         match! serverRequest (Authenticate (token, platform, machineId)) with
         | Ok (Authenticated result) -> return result 
         | Error msg -> return Failed msg
         | Ok _ -> return failwith "Invalid return type"
     }
     
-    let getAuthorizedProducts token platform machineId lang serverRequest = async {
+    let getAuthorizedProducts token platform machineId lang (serverRequest: Request -> Task<Result<Response, 'a>>) = task {
         match! serverRequest (AuthorizedProjects (token, platform, machineId, lang)) with
         | Ok (ProductsReceived projects) -> return Ok projects
         | Error msg -> return Error msg
         | Ok _ -> return failwith "Invalid return type"
     }
     
-    let checkForUpdates sessionToken machineToken machineId serverRequest (products: Product list) : Async<Result<Product list, string>> = async {
+    let checkForUpdates sessionToken machineToken machineId (serverRequest: Request -> Task<Result<Response, string>>) (products: Product list) = task {
         let! result =
             products
             |> List.map (fun p -> serverRequest (CheckForUpdates (sessionToken, machineToken, machineId, p)))
-            |> Async.Parallel
+            |> Task.whenAll
+        
         return result
-            |> List.ofArray
-            |> List.map (fun r ->
+            |> Array.map (fun r ->
                 match r with
                 | Ok (UpdatesChecked product) -> Some product
                 | Error msg -> None
                 | Ok _ -> failwith "Invalid return type")
-            |> List.choose id
+            |> Array.choose id
+            |> List.ofArray
             |> Ok
     }
         

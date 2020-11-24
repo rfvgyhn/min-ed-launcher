@@ -5,6 +5,7 @@ module Server =
     open System
     open System.Net
     open System.Net.Http
+    open FSharp.Control.Tasks.NonAffine
     open Api
     open Types
     open Rop
@@ -16,12 +17,12 @@ module Server =
         builder.Uri
     
         
-    let private getTime (httpClient:HttpClient) = async {
+    let private getTime (httpClient:HttpClient) = task {
         let uri = buildUri httpClient.BaseAddress "/1.1/server/time"
-        use! result = httpClient.GetAsync(uri) |> Async.AwaitTask
+        use! result = httpClient.GetAsync(uri)
         
         if result.IsSuccessStatusCode then
-            use! content = result.Content.ReadAsStreamAsync() |> Async.AwaitTask
+            use! content = result.Content.ReadAsStreamAsync()
             let timeStamp = content |> Json.parseStream
                                     >>= Json.rootElement
                                     >>= Json.parseProp "unixTimestamp"
@@ -33,7 +34,7 @@ module Server =
             return Error <| sprintf "%i: %s" ((int)result.StatusCode) result.ReasonPhrase
     }
     
-    let private authenticate (httpClient:HttpClient) (runningTime: unit -> double) (token: AuthToken) platform machineId = async {
+    let private authenticate (httpClient:HttpClient) (runningTime: unit -> double) (token: AuthToken) platform machineId = task {
         // TODO: event log entries
         let uri, authHeader =
             let commonParams machineId =
@@ -56,8 +57,8 @@ module Server =
         | None -> ()
             
         // TODO: set allow redirect to false
-        use! response = httpClient.SendAsync(request) |> Async.AwaitTask
-        use! content = response.Content.ReadAsStreamAsync() |> Async.AwaitTask
+        use! response = httpClient.SendAsync(request)
+        use! content = response.Content.ReadAsStreamAsync()
         
         let result r = r |> Authenticated |> Ok
         let mapResult f = function
@@ -116,7 +117,7 @@ module Server =
                 sprintf "%i: %s" ((int)code) response.ReasonPhrase |> Error
     }
     
-    let private getAvailableProjects (httpClient:HttpClient) (runningTime: unit -> double) session platform machineToken lang = async {
+    let private getAvailableProjects (httpClient:HttpClient) (runningTime: unit -> double) session platform machineToken lang = task {
         let authHeader, authParams =
             match platform with
             | Steam -> Some $"bearer %s{session.Token}", []
@@ -136,10 +137,10 @@ module Server =
                                       if Option.isSome lang then "lang", Option.get lang
                                       "fTime", runningTime().ToString() ]
                               |> Uri.addQueryParams authParams
-        let! response = httpClient.SendAsync(request) |> Async.AwaitTask
+        let! response = httpClient.SendAsync(request)
         
         if response.IsSuccessStatusCode then
-            use! content = response.Content.ReadAsStreamAsync() |> Async.AwaitTask
+            use! content = response.Content.ReadAsStreamAsync()
             return content |> Json.parseStream
                            >>= Json.rootElement
                            >>= Json.parseProp "purchases"
@@ -172,7 +173,7 @@ module Server =
             return sprintf "%i: %s" ((int)response.StatusCode) response.ReasonPhrase |> Error
     }
         
-    let private checkForUpdates (httpClient:HttpClient) (runningTime: unit -> double) session machineToken machineId product = async {
+    let private checkForUpdates (httpClient:HttpClient) (runningTime: unit -> double) session machineToken machineId product = task {
         match product with
         | Unknown _ -> return Error "Can't check updates for unknown product"
         | Missing _ -> return Error "Can't check updates for missing product"
@@ -187,10 +188,10 @@ module Server =
                           "os", "win"
                           "fTime", runningTime().ToString() ]
                       
-            use! response = httpClient.GetAsync(uri) |> Async.AwaitTask
+            use! response = httpClient.GetAsync(uri)
             
             if response.IsSuccessStatusCode then
-                use! content = response.Content.ReadAsStreamAsync() |> Async.AwaitTask
+                use! content = response.Content.ReadAsStreamAsync()
                 let root = content |> Json.parseStream >>= Json.rootElement
                 let remoteVersion = root >>= Json.parseProp "version" >>= Json.asVersion
                 let result p = p |> UpdatesChecked |> Ok
@@ -207,11 +208,11 @@ module Server =
     }
         
         
-    let request (httpClient:HttpClient) (runningTime: unit -> double) request = async {
+    let request (httpClient:HttpClient) (runningTime: unit -> double) request = task {
         try
             return! match request with
                     | ServerTimestamp -> getTime httpClient
-                    | LauncherStatus currentVersion -> async { return Ok <| StatusReceived Current }
+                    | LauncherStatus currentVersion -> task { return Ok <| StatusReceived Current }
                     | Authenticate (token, platform, machineId) -> authenticate httpClient runningTime token platform machineId
                     | AuthorizedProjects (edSession, platform, machineId, lang) -> getAvailableProjects httpClient runningTime edSession platform machineId lang
                     | CheckForUpdates (edSession, machineToken, machineId, product) -> checkForUpdates httpClient runningTime edSession machineToken machineId product

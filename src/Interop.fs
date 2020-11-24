@@ -16,8 +16,11 @@ module Interop =
 //    let private WM_CLOSE = 0x10u;
 //    let private terminate handle =
 //        SendMessage(handle, WM_CLOSE, IntPtr.Zero, IntPtr.Zero) |> ignore
-    let private terminate process =
-        process.CloseMainWindow()
+    let private terminate (p: Process) =
+        if p.CloseMainWindow() then
+            Ok ()
+        else
+            Error ""
 #else
     open Microsoft.FSharp.NativeInterop
     
@@ -54,11 +57,11 @@ module Interop =
             Ok ()
         else
 #if WINDOWS
-            match terminate p.Handle with
+            match terminate p with
 #else
             match terminate p.Id with
 #endif
-            | Ok code -> Ok ()
+            | Ok _ -> Ok ()
             | Error msg ->
                 p.Kill()
                 sprintf "Unable to gracefully stop %s. Killed process instead. %s" p.ProcessName msg |> Error

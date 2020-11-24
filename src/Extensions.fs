@@ -63,6 +63,11 @@ module Json =
         match Int32.TryParse(str) with
         | true, value -> Ok value
         | false, _ -> Error <| sprintf "Unable to convert string to int '%s'" str
+    let asDateTime (prop:JsonElement) =
+        let str = prop.ToString()
+        match DateTime.TryParse(str) with
+        | true, value -> Ok value
+        | false, _ -> Error <| $"Unable to parse string as DateTime '%s{str}'"
     let asUri (prop:JsonElement) =
         match Uri.TryCreate(prop.ToString(), UriKind.Absolute) with
         | true, value -> Ok value
@@ -125,10 +130,17 @@ module Hex =
     let toString bytes = BitConverter.ToString(bytes).Replace("-","")
     let toStringTrunc length bytes = BitConverter.ToString(bytes).Replace("-","").Substring(0, length)
 
+module Task =
+    open System.Threading.Tasks
+    open System.Collections.Generic
+    let fromResult r = Task.FromResult(r)
+    let whenAll (tasks: IEnumerable<Task<'t>>) = Task.WhenAll(tasks)
+
 module FileIO =
     open System
     open System.IO
-
+    open FSharp.Control.Tasks.NonAffine
+    
     let hasWriteAccess directory =
         try
             let temp = Path.Combine(directory, "deleteme.txt")
@@ -152,17 +164,17 @@ module FileIO =
         with
         | e -> Error e.Message
     
-    let readAllText path = async {
+    let readAllText path = task {
         try
-            let! result = File.ReadAllTextAsync(path) |> Async.AwaitTask 
+            let! result = File.ReadAllTextAsync(path) 
             return Ok result
         with
         | e -> return Error e.Message
     }
 
-    let ensureFileExists path = async {
+    let ensureFileExists path = task {
         try
-            do! File.WriteAllTextAsync(path, "") |> Async.AwaitTask
+            do! File.WriteAllTextAsync(path, "")
             return Ok ()
         with
         | e -> return Error e.Message
