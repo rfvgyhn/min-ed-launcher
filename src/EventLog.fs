@@ -48,13 +48,19 @@ module EventLog =
             if typedefof<ICollection>.IsAssignableFrom(t) || t.IsGenericType && t.GetGenericTypeDefinition() = typedefof<list<_>>
             then Some (candidate :?> IEnumerable)
             else None
+        let (|IsOption|_|) (candidate: obj) =
+            let t = candidate.GetType()
+            if t.IsGenericType && t.GetGenericTypeDefinition() = typedefof<Option<_>> then Some (candidate :?> Option<obj>)
+            else None
         case.GetFields()
         |> Seq.mapi (fun i p ->
             let field = fields.[i]
             
             p.Name,
             match field with
-            | IsCollection c ->"[" + String.Join(", ", (Seq.cast<obj> c |> Seq.map (fun s -> s.ToString()))) + "]"
+            | null -> ""
+            | IsCollection c -> "[" + String.Join(", ", (Seq.cast<obj> c |> Seq.map (fun s -> s.ToString()))) + "]"
+            | IsOption o -> o |> Option.map (fun o -> o.ToString()) |> Option.defaultValue ""
             | _ -> field.ToString())
         |> List.ofSeq
         
