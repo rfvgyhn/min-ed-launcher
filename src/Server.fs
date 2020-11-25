@@ -85,7 +85,7 @@ module Server =
                 match edAuthToken, machineToken, errorValue, errorMessage with
                 | Error _, Error _, Ok value, Ok msg -> Failed <| sprintf "%s - %s" value msg
                 | Ok auth, Ok machine, _, _ ->
-                    let edToken = { Token = auth; RefreshToken = token.GetRefreshToken() }
+                    let edToken = { Token = auth; PlatformToken = token }
                     Authorized (edToken, machine, registeredName)
                 | Error msg, _, _, _
                 | _, Error msg, _, _ -> Failed msg
@@ -121,16 +121,13 @@ module Server =
         let authHeader, authParams =
             match platform with
             | Steam -> Some $"bearer %s{session.Token}", []
-            | Epic _ -> Some $"epic %s{session.Token}", []
+            | Epic _ -> Some $"epic %s{session.PlatformToken.GetAccessToken()}", []
             | Frontier -> None, [ "authToken", session.Token; "machineToken", machineToken ]
             | p ->
                 Log.error $"Attempting to get projects for unsupported platform {p |> Union.getCaseName}"
                 None, []
         use request = new HttpRequestMessage()
-        match authHeader with
-        | Some header -> request.Headers.Add("Authorization", header)
-        | None -> ()
-        
+        authHeader |> Option.iter (fun header -> request.Headers.Add("Authorization", header))
         request.Method <- HttpMethod.Get
         request.RequestUri <- buildUri httpClient.BaseAddress "/3.0/user/purchases"
                               |> Uri.addQueryParams [
@@ -164,7 +161,9 @@ module Server =
                                             Sku = sku
                                             TestApi = testApi }
                                    | _ ->
-                                       sprintf "Unexpected json object %s" (element.ToString()) |> Error)
+                                       let msg = $"Unexpected json object %s{element.ToString()}"
+                                       Log.debug msg
+                                       Error msg)
                            |> Result.map Seq.chooseResult
                            |> Result.map (fun products -> products |> Seq.sortBy (fun p -> p.SortKey)
                                                                    |> List.ofSeq

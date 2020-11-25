@@ -67,13 +67,13 @@ open Expecto
                     Expect.notStringContains actual "/steam" ""
                 }
                 test "Epic platform contains refresh token" {
-                    let token = { Token = ""; RefreshToken = Some "asdf" }
+                    let token = { Token = ""; PlatformToken = Expires { RefreshableToken.Empty with RefreshToken = "asdf" } }
                     let actual = createArgString Vr None "" token "" getTimestamp false (Epic EpicDetails.Empty) hashFile product
                     
                     Expect.stringContains actual "\"EpicToken asdf\"" ""
                 }
                 test "Non epic platform doesn't contain refresh token" {
-                    let token = { Token = ""; RefreshToken = Some "asdf" }
+                    let token = { Token = ""; PlatformToken = Expires { RefreshableToken.Empty with RefreshToken = "asdf" } }
                     let actual = createArgString Vr None "" token "" getTimestamp false Dev hashFile product
                     
                     Expect.notStringContains actual "\"EpicToken" ""
@@ -90,7 +90,7 @@ open Expecto
                 }
                 test "ServerToken is used when product is online and not watching for crashes" {
                     let machineToken = "12345"
-                    let sessionToken = { Token = "54321"; RefreshToken = None }
+                    let sessionToken = { EdSession.Empty with Token = "54321" }
                     let serverArgs = "/some arg"
                     let gameArgs = "/gameargs"
                     let product = { product with ServerArgs = serverArgs; Mode = Online; GameArgs = gameArgs }
@@ -102,7 +102,7 @@ open Expecto
                 }
                 test "Product is online and watching for crashes" {
                     let machineToken = "123"
-                    let sessionToken = { Token = "456"; RefreshToken = None }
+                    let sessionToken = { EdSession.Empty with Token = "456" }
                     let serverArgs = "/Test"
                     let machineId = "789"
                     let timeStamp = 12345.12345

@@ -70,6 +70,7 @@ module Types =
           TokenExpiry: DateTime
           RefreshToken: string
           RefreshTokenExpiry: DateTime }
+        with static member Empty = { Token = ""; TokenExpiry = DateTime.MinValue; RefreshToken = ""; RefreshTokenExpiry = DateTime.MinValue }
     type AuthToken =
         | Expires of RefreshableToken
         | Permanent of string
@@ -83,8 +84,8 @@ module Types =
                | Permanent _ -> None
     type EdSession =
         { Token: string
-          RefreshToken: string option }
-        with static member Empty = { Token = ""; RefreshToken = None }
+          PlatformToken: AuthToken }
+        with static member Empty = { Token = ""; PlatformToken = Permanent "" }
     type User =
         { Name: string
           EmailAddress: string option

@@ -11,7 +11,7 @@ namespace EdLauncher
                 match platform, product.SteamAware with
                     | Steam, true -> "/steam"
                     | Epic _, _ ->
-                        let refresh = edSession.RefreshToken |> Option.map id |> Option.defaultValue ""
+                        let refresh = edSession.PlatformToken.GetRefreshToken() |> Option.defaultValue ""
                         $"\"EpicToken {refresh}\""
                     | _, _ -> ()
                 match vr with

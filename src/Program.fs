@@ -364,20 +364,26 @@ module Program =
                         Log.info $"Logged in via %s{settings.Platform |> Union.getCaseName} as: %s{user.Name} %s{emailDisplay}"
                         match! Api.getAuthorizedProducts user.Session settings.Platform machineId None serverRequest with
                         | Ok authorizedProducts ->
-                            do! logEvents [ EventLog.AvailableProjects (user.EmailAddress, authorizedProducts |> List.map (fun p -> p.Sku)) ]
+                            let skus = authorizedProducts |> List.map (fun p -> p.Sku)
+                            do! logEvents [ EventLog.AvailableProjects (user.EmailAddress, skus) ]
+                            Log.info $"Authorized Products: %s{String.Join(',', skus)}"
                             let! products = authorizedProducts
                                             |> List.map (mapProduct productsDir)
                                             |> Api.checkForUpdates user.Session user.MachineToken machineId serverRequest
                             let availableProducts =
                                 products
-                                |> Result.defaultValue []
+                                |> Result.defaultWith (fun e -> Log.warn $"{e}"; [])
                                 |> List.map (fun p -> match p with
                                                       | Playable p -> Some (p.Name, "Up to date")
                                                       | RequiresUpdate p -> Some (p.Name, "Requires Update")
                                                       | Missing _ -> None
                                                       | Product.Unknown _ -> None)
                                 |> List.choose id
-                            Log.infof "Available Products:%s\t%s" Environment.NewLine (String.Join(Environment.NewLine + "\t", availableProducts))
+                            let availableProductsDisplay =
+                                match availableProducts with
+                                | [] -> "None"
+                                | p -> String.Join(Environment.NewLine + "\t", p)
+                            Log.info $"Available Products:{Environment.NewLine}\t%s{availableProductsDisplay}" 
                             let selectedProduct =
                                products
                                |> Result.defaultValue []
