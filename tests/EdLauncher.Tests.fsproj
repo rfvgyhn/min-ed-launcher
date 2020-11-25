@@ -33,6 +33,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\src\EdLauncher.fsproj" />
+    <ProjectReference Include="..\src\EdLauncher\EdLauncher.fsproj" />
   </ItemGroup>
 </Project>

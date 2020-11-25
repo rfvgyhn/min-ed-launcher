@@ -39,7 +39,7 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </Content>
-    <Content Include="..\lib\EOSSDK-Win64-Shipping.dll">
+    <Content Include="..\..\lib\EOSSDK-Win64-Shipping.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </Content>
