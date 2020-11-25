@@ -364,12 +364,13 @@ module Program =
                         Log.info $"Logged in via %s{settings.Platform |> Union.getCaseName} as: %s{user.Name} %s{emailDisplay}"
                         match! Api.getAuthorizedProducts user.Session settings.Platform machineId None serverRequest with
                         | Ok authorizedProducts ->
-                            let skus = authorizedProducts |> List.map (fun p -> p.Sku)
-                            do! logEvents [ EventLog.AvailableProjects (user.EmailAddress, skus) ]
-                            Log.info $"Authorized Products: %s{String.Join(',', skus)}"
+                            do! logEvents [ EventLog.AvailableProjects (user.EmailAddress, authorizedProducts |> List.map (fun p -> p.Sku)) ]
+                            let names = authorizedProducts |> List.map (fun p -> p.Name)
+                            Log.info $"Authorized Products: %s{String.Join(',', names)}"
+                            Log.info "Checking for updates"
                             let! products = authorizedProducts
                                             |> List.map (mapProduct productsDir)
-                                            |> Api.checkForUpdates user.Session user.MachineToken machineId serverRequest
+                                            |> Api.checkForUpdates user.Session settings.Platform user.MachineToken machineId serverRequest
                             let availableProducts =
                                 products
                                 |> Result.defaultWith (fun e -> Log.warn $"{e}"; [])

@@ -18,7 +18,7 @@ module Api =
     | LauncherStatus of string
     | Authenticate of authToken:AuthToken * platform:Platform * machineId:string
     | AuthorizedProjects of edToken:EdSession * platform:Platform * machineId:string * language:string option
-    | CheckForUpdates of sessionToken:EdSession * machineToken:string * machineId:string * Product
+    | CheckForUpdates of sessionToken:EdSession * platform:Platform * machineToken:string * machineId:string * Product
 
     type Response =
     | TimestampReceived of int64
@@ -50,17 +50,17 @@ module Api =
         | Ok _ -> return failwith "Invalid return type"
     }
     
-    let checkForUpdates sessionToken machineToken machineId (serverRequest: Request -> Task<Result<Response, string>>) (products: Product list) = task {
+    let checkForUpdates sessionToken platform machineToken machineId (serverRequest: Request -> Task<Result<Response, string>>) (products: Product list) = task {
         let! result =
             products
-            |> List.map (fun p -> serverRequest (CheckForUpdates (sessionToken, machineToken, machineId, p)))
+            |> List.map (fun p -> serverRequest (CheckForUpdates (sessionToken, platform, machineToken, machineId, p)))
             |> Task.whenAll
         
         return result
             |> Array.map (fun r ->
                 match r with
                 | Ok (UpdatesChecked product) -> Some product
-                | Error msg -> None
+                | Error msg -> Log.error msg; None
                 | Ok _ -> failwith "Invalid return type")
             |> Array.choose id
             |> List.ofArray

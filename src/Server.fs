@@ -172,23 +172,33 @@ module Server =
             return sprintf "%i: %s" ((int)response.StatusCode) response.ReasonPhrase |> Error
     }
         
-    let private checkForUpdates (httpClient:HttpClient) (runningTime: unit -> double) session machineToken machineId product = task {
+    let private checkForUpdates (httpClient:HttpClient) (runningTime: unit -> double) session platform machineToken machineId product = task {
         match product with
-        | Unknown _ -> return Error "Can't check updates for unknown product"
-        | Missing _ -> return Error "Can't check updates for missing product"
+        | Unknown name -> return Error $"{name}: Can't check updates for unknown product"
+        | Missing p -> return Error $"{p.Name}: Can't check updates for missing product"
         | RequiresUpdate product
         | Playable product ->
-            let uri = buildUri httpClient.BaseAddress "/3.0/user/installer"
-                      |> Uri.addQueryParams [
-                          "machineToken", machineToken
-                          "authToken", session.Token
-                          "machineId", machineId
-                          "sku", product.Sku
-                          "os", "win"
-                          "fTime", runningTime().ToString() ]
-                      
-            use! response = httpClient.GetAsync(uri)
-            
+            let authHeader =
+                match platform with
+                | Steam -> None
+                | Epic _ -> Some $"epic %s{session.PlatformToken.GetAccessToken()}"
+                | Frontier -> None
+                | p ->
+                    Log.error $"Attempting to check for updates for unsupported platform {p |> Union.getCaseName}"
+                    None
+            use request = new HttpRequestMessage()
+            authHeader |> Option.iter (fun header -> request.Headers.Add("Authorization", header))
+            request.Method <- HttpMethod.Get
+            request.RequestUri <- buildUri httpClient.BaseAddress "/3.0/user/installer"
+                                  |> Uri.addQueryParams [
+                                      "machineToken", machineToken
+                                      "authToken", session.Token
+                                      "machineId", machineId
+                                      "sku", product.Sku
+                                      "os", "win"
+                                      "fTime", runningTime().ToString() ]
+                                  
+            use! response = httpClient.SendAsync(request)
             if response.IsSuccessStatusCode then
                 use! content = response.Content.ReadAsStreamAsync()
                 let root = content |> Json.parseStream >>= Json.rootElement
@@ -203,7 +213,7 @@ module Server =
                         return product |> RequiresUpdate |> result
                 | Error msg -> return Error msg            
             else
-                return Error <| sprintf "%i: %s" ((int)response.StatusCode) response.ReasonPhrase
+                return Error $"%s{product.Name}: %i{int response.StatusCode}: %s{response.ReasonPhrase}"
     }
         
         
@@ -214,7 +224,7 @@ module Server =
                     | LauncherStatus currentVersion -> task { return Ok <| StatusReceived Current }
                     | Authenticate (token, platform, machineId) -> authenticate httpClient runningTime token platform machineId
                     | AuthorizedProjects (edSession, platform, machineId, lang) -> getAvailableProjects httpClient runningTime edSession platform machineId lang
-                    | CheckForUpdates (edSession, machineToken, machineId, product) -> checkForUpdates httpClient runningTime edSession machineToken machineId product
+                    | CheckForUpdates (edSession, platform, machineToken, machineId, product) -> checkForUpdates httpClient runningTime edSession platform machineToken machineId product
         with
         | e -> return Error e.Message
     }

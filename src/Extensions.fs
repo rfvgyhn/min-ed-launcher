@@ -3,7 +3,10 @@ namespace EdLauncher
 module Result =
     let defaultValue value = function
         | Ok v -> v
-        | Error _ -> value        
+        | Error _ -> value
+    let defaultWith (defThunk: 'T -> 'U) = function
+        | Ok v -> v
+        | Error e -> defThunk e
 
 module Seq =
     let chooseResult r = r |> Seq.choose (fun r -> match r with | Error _ -> None | Ok v -> Some v)
