@@ -3,6 +3,7 @@ namespace EdLauncher
         open System
         open System.Diagnostics
         open System.IO
+        open System.Runtime.InteropServices
         open EdLauncher.Types
         
         let createArgString vr (lang: string option) machineToken edSession machineId timestamp watchForCrashes platform hashFile (product:ProductDetails) =
@@ -56,13 +57,16 @@ namespace EdLauncher
             
         let isRunning (product:RunnableProduct) =
             let exeName = product.Executable.Name
-            Process.GetProcessesByName(exeName).Length > 0 || // TODO: check that this is true when running on Windows
-            Process.GetProcesses() // When running via wine, process name can be truncated and the main module is wine so check all module names
-            |> Array.exists (fun p ->
-                p.Modules
-                |> Seq.cast<ProcessModule>
-                |> Seq.exists (fun m -> m.ModuleName = exeName))
             
+            if RuntimeInformation.IsOSPlatform(OSPlatform.Windows) then
+                Process.GetProcessesByName(exeName).Length > 0 // TODO: check that this is true when running on Windows
+            else
+                Process.GetProcesses() // When running via wine, process name can be truncated and the main module is wine so check all module names
+                |> Array.exists (fun p ->
+                    p.Modules
+                    |> Seq.cast<ProcessModule>
+                    |> Seq.exists (fun m -> m.ModuleName = exeName))
+
         type RunResult = Ok of Process | AlreadyRunning | Error of exn
         let run proton args (product:RunnableProduct)  =
             if isRunning product then
