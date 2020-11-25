@@ -1,18 +1,42 @@
 module EdLauncher.Log
 
-open System
 open System.IO
+open System.Text.RegularExpressions
 open Serilog
 open Serilog.Events
+open Serilog.Formatting
+open Serilog.Formatting.Display
 
-let logger = 
+type EpicSanitizer(mainFormatter: ITextFormatter) = // https://github.com/serilog/serilog/issues/938#issuecomment-383440607
+    let sanitiser = Regex(@"[a-z0-9]{32}", RegexOptions.IgnoreCase)
+    
+    interface ITextFormatter with
+        member this.Format(logEvent, output) =
+            use stringWriter = new StringWriter()
+            mainFormatter.Format(logEvent, stringWriter)
+            let input = stringWriter.ToString();
+            let sanitized = sanitiser.Replace(input, (fun m -> $"{m.Value.[..2]}...{m.Value.[^2..]}"))
+
+            try
+                output.Write(sanitized);
+            with
+            | e -> Log.Error(e, "serilog Sanitiser broke");
+
+let private fileFormatter = EpicSanitizer(MessageTemplateTextFormatter("{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}", null))
+
+let logger =
+  let consoleLevel =
+#if DEBUG
+      LogEventLevel.Debug
+#else      
+      LogEventLevel.Information
+#endif
   LoggerConfiguration()
-    .MinimumLevel.Debug()
-    .WriteTo.Console()
-    .WriteTo.File("ed.log")
+    .MinimumLevel.Verbose()
+    .WriteTo.Console(consoleLevel)
+    .WriteTo.File(formatter = fileFormatter, path="ed.log", restrictedToMinimumLevel=LogEventLevel.Verbose)
     .CreateLogger()
     
-let private timestamp (tw: TextWriter) = tw.Write("{0:yyyy-MM-dd hh:mm:ss.ff}", DateTime.Now)
 let private write level msg =
     logger.Write(level, msg)
 let private writeExn exn level msg =
