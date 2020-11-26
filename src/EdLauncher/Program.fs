@@ -355,6 +355,7 @@ module Program =
                             Log.info "Checking for updates"
                             let! products = authorizedProducts
                                             |> List.map (mapProduct productsDir)
+                                            |> List.filter (function | Playable _ -> true | _ -> false)
                                             |> Api.checkForUpdates settings.Platform machineId connection
                             let availableProducts =
                                 products
