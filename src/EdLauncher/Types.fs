@@ -36,6 +36,7 @@ module Types =
         | Frontier
         | Oculus of string
         | Dev
+        with member this.Name = Union.getCaseName this
     type DisplayMode = Vr | Pancake
     type AutoRun = bool
     type AutoQuit = bool
@@ -84,8 +85,10 @@ module Types =
                | Permanent _ -> None
     type EdSession =
         { Token: string
-          PlatformToken: AuthToken }
-        with static member Empty = { Token = ""; PlatformToken = Permanent "" }
+          PlatformToken: AuthToken
+          MachineToken: string
+          Name: string }
+        with static member Empty = { Token = ""; PlatformToken = Permanent ""; Name = ""; MachineToken = "" }
     type User =
         { Name: string
           EmailAddress: string option

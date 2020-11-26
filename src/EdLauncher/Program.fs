@@ -4,7 +4,6 @@ module Program =
     open System
     open System.Diagnostics
     open System.IO
-    open System.Net.Http
     open System.Reflection
     open System.Resources
     open System.Runtime.InteropServices
@@ -108,21 +107,18 @@ module Program =
         |> Option.map (fun v -> if v = null then "" else v)
 
     type LoginResult =
-    | Success of User
+    | Success of Api.Connection
     | ActionRequired of string
     | Failure of string
-    let login appSettingsPath serverRequest machineId platform = task {
+    let login runningTime httpClient machineId (platform: Platform) = task {
         let authenticate disposable = function
-            | Ok (authToken, userEmail) -> task {
+            | Ok authToken -> task {
                 use _ = disposable
-                Log.debug $"Authenticating via %s{platform |> Union.getCaseName}"
-                match! Api.authenticate authToken platform machineId serverRequest with
-                | Api.Authorized (authToken, machineToken, name) ->
+                Log.debug $"Authenticating via %s{platform.Name}"
+                match! Api.authenticate runningTime authToken platform machineId httpClient with
+                | Api.Authorized connection ->
                     Log.debug "Successfully authenticated"
-                    return Success { Name = name
-                                     EmailAddress = userEmail
-                                     Session = authToken
-                                     MachineToken = machineToken }
+                    return Success connection
                 | Api.RegistrationRequired uri -> return ActionRequired <| $"Registration is required at %A{uri}"
                 | Api.LinkAvailable uri -> return ActionRequired <| $"Link available at %A{uri}"
                 | Api.Denied msg -> return Failure msg
@@ -130,19 +126,18 @@ module Program =
             | Error msg -> Failure msg |> Task.fromResult
             
         let authEmpty = authenticate { new IDisposable with member _.Dispose() = () }
-        let userEmail = getUserEmail appSettingsPath
         let! result =
             match platform with
-            | Dev -> Ok (Permanent "DevAuthToken", userEmail) |> authEmpty
+            | Dev -> Ok (Permanent "DevAuthToken") |> authEmpty
             | Oculus _ -> Failure "Oculus not supported" |> Task.fromResult
             | Frontier-> Failure "Frontier not supported" |> Task.fromResult
             | Steam ->
                 let steam = new Steam()
-                steam.Login() |> Result.map (fun steamUser -> Permanent steamUser.SessionToken, userEmail) |> authenticate steam
+                steam.Login() |> Result.map (fun steamUser -> Permanent steamUser.SessionToken) |> authenticate steam
             | Epic details -> task {
                 use epic = new Epic.Epic()
                 let! result = epic.Login details
-                return! result |> Result.map (fun epicUser -> epicUser.ToAuthToken(), userEmail) |> authEmpty }
+                return! result |> Result.map (fun epicUser -> epicUser.ToAuthToken()) |> authEmpty }
             
         return result
     }
@@ -173,14 +168,6 @@ module Program =
             let launcherVersion = typeof<Steam>.Assembly.GetName().Version
             
             Ok (cobraVersion, launcherVersion)
-            
-    let createZaonceClient baseUri clientName clientVersion osIdent =
-        let userAgent = sprintf "%s/%s/%s" clientName clientVersion osIdent
-        let httpClient = new HttpClient()
-        httpClient.BaseAddress <- baseUri
-        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", userAgent) |> ignore
-        httpClient.DefaultRequestHeaders.ConnectionClose <- Nullable<bool>(false)
-        httpClient
         
     let printInfo platform productsDir cobraVersion launcherVersion remoteTime =
         Log.info "Elite: Dangerous Launcher"
@@ -326,22 +313,18 @@ module Program =
                 Log.errorf "Unable to get products directory: %s" msg
                 return 1 }
             | Ok productsDir, Ok (cbVersion, launcherVersion) -> task {
-                let cbLauncherName = "EDLaunch"// System.Reflection.AssemblyName.GetAssemblyName(Path.Combine(settings.CbLauncherDir, "EDLaunch.exe")).Name
-                use httpClient = createZaonceClient settings.ApiUri cbLauncherName cbVersion (getOsIdent())
-                let serverRequest = Server.request httpClient 
+                use httpClient = Api.createClient settings.ApiUri cbVersion (getOsIdent())
                 let localTime = DateTime.UtcNow
-                let getRemoteTime runningTime = task { 
-                    match! Api.getTime localTime (serverRequest runningTime) with
+                let! remoteTime = task {
+                    match! Api.getTime localTime httpClient with
                     | Ok timestamp -> return timestamp
                     | Error (localTimestamp, msg) ->
-                        Log.warnf "Couldn't get remote time: %s. Using local system time instead" msg
+                        Log.warn $"Couldn't get remote time: %s{msg}. Using local system time instead"
                         return localTimestamp
-                    }
-                let! remoteTime = getRemoteTime (fun () -> (double)1)
+                }
                 let runningTime = fun () ->
                         let runningTime = DateTime.UtcNow.Subtract(localTime);
                         ((double)remoteTime + runningTime.TotalSeconds)
-                let serverRequest = serverRequest runningTime
                 let! machineId =
 #if WINDOWS
                     MachineId.getWindowsId() |> Task.fromResult
@@ -357,20 +340,22 @@ module Program =
                 
                 match machineId, (getAppSettingsPath cbVersion) with
                 | Ok machineId, Ok appSettingsPath ->
-                    match! login appSettingsPath serverRequest machineId settings.Platform with
-                    | Success user ->
+                    let userEmail = getUserEmail appSettingsPath
+                    match! login runningTime httpClient machineId settings.Platform with
+                    | Success connection ->
                         // TODO: event log Authenticated user.Name
-                        let emailDisplay = user.EmailAddress |> Option.map (fun e -> $"({e})") |> Option.defaultValue ""
-                        Log.info $"Logged in via %s{settings.Platform |> Union.getCaseName} as: %s{user.Name} %s{emailDisplay}"
-                        match! Api.getAuthorizedProducts user.Session settings.Platform machineId None serverRequest with
+                        let emailDisplay = userEmail |> Option.map (fun e -> $"({e})") |> Option.defaultValue ""
+                        Log.info $"Logged in via %s{settings.Platform.Name} as: %s{connection.Session.Name} %s{emailDisplay}"
+                        Log.debug "Getting authorized products"
+                        match! Api.getAuthorizedProducts settings.Platform None connection with
                         | Ok authorizedProducts ->
-                            do! logEvents [ EventLog.AvailableProjects (user.EmailAddress, authorizedProducts |> List.map (fun p -> p.Sku)) ]
+                            do! logEvents [ EventLog.AvailableProjects (userEmail, authorizedProducts |> List.map (fun p -> p.Sku)) ]
                             let names = authorizedProducts |> List.map (fun p -> p.Name)
-                            Log.info $"Authorized Products: %s{String.Join(',', names)}"
+                            Log.debug $"Authorized Products: %s{String.Join(',', names)}"
                             Log.info "Checking for updates"
                             let! products = authorizedProducts
                                             |> List.map (mapProduct productsDir)
-                                            |> Api.checkForUpdates user.Session settings.Platform user.MachineToken machineId serverRequest
+                                            |> Api.checkForUpdates settings.Platform machineId connection
                             let availableProducts =
                                 products
                                 |> Result.defaultWith (fun e -> Log.warn $"{e}"; [])
@@ -396,7 +381,7 @@ module Program =
                             match selectedProduct, true with
                             | Some product, true ->
                                 let gameLanguage = getGameLang settings.CbLauncherDir                                 
-                                let processArgs = Product.createArgString settings.DisplayMode gameLanguage user.MachineToken user.Session machineId (runningTime()) settings.WatchForCrashes settings.Platform SHA1.hashFile product
+                                let processArgs = Product.createArgString settings.DisplayMode gameLanguage connection.Session machineId (runningTime()) settings.WatchForCrashes settings.Platform SHA1.hashFile product
                                 
                                 match Product.validateForRun settings.CbLauncherDir settings.WatchForCrashes product with
                                 | Ok p ->
