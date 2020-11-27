@@ -8,6 +8,7 @@ module Epic =
     open System.IO
     open System.Net.Http
     open System.Net.Http.Headers
+    open System.Reflection
     open System.Text
     
     let potentialInstallPaths appId =
@@ -67,33 +68,71 @@ module Epic =
             | _ ->
               $"Unexpected json object %s{element.ToString()}" |> Error
 
-        member this.Login epicDetails = task {
-            let lines = System.IO.File.ReadAllLines("epic-sdk-details.txt")     // TODO: decide which values should be used
-            let clientId = lines.[0]
-            let clientSecret = lines.[1]
-            let dId = lines.[4]
-            use content = new StringContent(String.Join("&", [
-                "grant_type=exchange_code"
-                $"deployment_id={dId}"
-                "scope=basic_profile friends_list presence"
-                $"exchange_code={epicDetails.ExchangeCode}"
-            ]), Encoding.UTF8, "application/x-www-form-urlencoded")
-            
-            let authHeaderValue = Convert.ToBase64String(Encoding.ASCII.GetBytes($"%s{clientId}:%s{clientSecret}"))
-            use request = new HttpRequestMessage()
-            request.Headers.Authorization <- AuthenticationHeaderValue("Basic", authHeaderValue)
-            request.Method <- HttpMethod.Post
-            request.RequestUri <- Uri("https://api.epicgames.dev/epic/oauth/v1/token")
-            request.Content <- content
-            
-            let! response = httpClient.SendAsync(request)
-            
-            if response.IsSuccessStatusCode then
-                use! content = response.Content.ReadAsStreamAsync()
-                return content |> Json.parseStream >>= Json.rootElement |> parseJson
-            else
-                return $"%i{int response.StatusCode}: %s{response.ReasonPhrase}" |> Error
-        }          
+        let extractEpicValues() =
+            let err msg = Error $"Couldn't extract Epic credentials - {msg}"
+            try
+                let eosIfType = Assembly.LoadFrom("EosIF.dll").GetType("EosIF.EosInterface")
+                let eos = Assembly.LoadFrom("EosSdk.dll")
+                let credType = eos.GetType("Epic.OnlineServices.Platform.ClientCredentials")
+                let optType = eos.GetType("Epic.OnlineServices.Platform.Options")
+                
+                if eosIfType <> null && credType <> null && optType <> null then
+                    let methodInfo = eosIfType.GetMethod("CreatePlatformOptions", BindingFlags.Instance ||| BindingFlags.NonPublic)
+                    let credIdProp = credType.GetProperty("ClientId")
+                    let credSecretProp = credType.GetProperty("ClientSecret")
+                    let depIdProp = optType.GetProperty("DeploymentId")
+                    let credsProp = optType.GetProperty("ClientCredentials")
+                    
+                    if methodInfo <> null && credIdProp <> null && credSecretProp <> null && depIdProp <> null && credsProp <> null then
+                        let eosIf = Activator.CreateInstance(eosIfType, null)
+                        let options = methodInfo.Invoke(eosIf, null)
+                        
+                        if options <> null then
+                            let credentials = credsProp.GetValue(options)
+                            if credentials <> null then
+                                let depId = depIdProp.GetValue(options) :?> string
+                                let cId = credIdProp.GetValue(credentials) :?> string
+                                let cSecret = credSecretProp.GetValue(credentials) :?> string
+                                
+                                if depId <> null && cId <> null && cSecret <> null then
+                                    Ok (cId, cSecret, depId)
+                                else
+                                    err "Unable to get values of IDs"
+                            else
+                                err "Unable to get value of credentials"
+                        else
+                            err "Unable to call method CreatePlatformOptions"
+                    else
+                        err "Unable to reflect method/props for Epic IDs"
+                else
+                    err "Unable to reflect types for Epic IDs"
+            with e -> err (e.ToString())
+
+        member this.Login epicDetails =
+            match extractEpicValues() with
+            | Ok (clientId, clientSecret, dId) -> task {
+                use content = new StringContent(String.Join("&", [
+                    "grant_type=exchange_code"
+                    $"deployment_id={dId}"
+                    "scope=basic_profile friends_list presence"
+                    $"exchange_code={epicDetails.ExchangeCode}"
+                ]), Encoding.UTF8, "application/x-www-form-urlencoded")
+                
+                let authHeaderValue = Convert.ToBase64String(Encoding.ASCII.GetBytes($"%s{clientId}:%s{clientSecret}"))
+                use request = new HttpRequestMessage()
+                request.Headers.Authorization <- AuthenticationHeaderValue("Basic", authHeaderValue)
+                request.Method <- HttpMethod.Post
+                request.RequestUri <- Uri("https://api.epicgames.dev/epic/oauth/v1/token")
+                request.Content <- content
+                
+                let! response = httpClient.SendAsync(request)
+                
+                if response.IsSuccessStatusCode then
+                    use! content = response.Content.ReadAsStreamAsync()
+                    return content |> Json.parseStream >>= Json.rootElement |> parseJson
+                else
+                    return $"%i{int response.StatusCode}: %s{response.ReasonPhrase}" |> Error }
+            | Error msg -> Error msg |> Task.fromResult
         
         interface IDisposable with
             member this.Dispose() =
