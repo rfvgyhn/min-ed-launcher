@@ -26,7 +26,6 @@
     <Compile Include="Log.fs" />
     <Compile Include="Interop.fs" />
     <Compile Include="Product.fs" />
-    <Compile Include="EventLog.fs" />
     <Compile Include="Api.fs" />
     <Compile Include="MachineId.fs" />
     <Compile Include="Steam.fs" />

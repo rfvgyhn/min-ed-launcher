@@ -1,6 +1,5 @@
 {
     "apiUri": "https://api.zaonce.net",
-    "remoteLogging": false,
     "watchForCrashes": false,
     "restart": {
         "enabled": false,

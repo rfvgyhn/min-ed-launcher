@@ -14,7 +14,6 @@ module Settings =
           AutoRun = false
           AutoQuit = false
           WatchForCrashes = true
-          RemoteLogging = true
           ProductWhitelist = Set.empty
           ForceLocal = false
           Proton = None
@@ -105,7 +104,6 @@ module Settings =
     [<CLIMutable>]
     type Config =
         { ApiUri: string
-          RemoteLogging: bool
           WatchForCrashes: bool
           GameLocation: string option
           Restart: RestartConfig
@@ -167,5 +165,4 @@ module Settings =
         |> Result.map (fun settings -> { settings with ApiUri = apiUri
                                                        Processes = processes
                                                        Restart = restart
-                                                       RemoteLogging = fileConfig.RemoteLogging
                                                        WatchForCrashes = fileConfig.WatchForCrashes })

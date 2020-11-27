@@ -44,38 +44,6 @@ module Program =
         let os = getOs() |> osToStr
         os + arch
 
-    let getEventLogPaths httpClient = task {
-        let! result = EventLog.LocalFile.create "test.txt" // logs/Client.log
-        let file =
-            match result with
-            | Ok file -> Some file
-            | Error msg ->
-                Log.error msg
-                None
-        let remote =
-            let url = "http://localhost:8080" // https://api.zaonce.net/1.1/
-            match httpClient, Uri.TryCreate(url, UriKind.Absolute) with
-            | None, _ ->
-                Log.info "Remote logging disabled via configuration"
-                None
-            | Some httpClient, (true, uri) ->
-                Some <| EventLog.RemoteLog (httpClient, { Uri = uri
-                                                          MachineToken = ""
-                                                          AuthToken = ""
-                                                          MachineId = ""
-                                                          RunningTime = fun () -> 1L })
-            | Some _, (false, _) ->
-                Log.errorf "EventLog.RemotePath - Invalid URI %s. Disabling" url
-                None
-        return file, remote
-    }
-    let writeEventLog httpClient entry = task {
-        let! file, remote = getEventLogPaths httpClient
-        let! result = EventLog.write file remote entry
-        result |> Array.iter (fun e -> match e with
-                                       | Error e -> Log.warn e
-                                       | _ -> ())
-    }
     let getAppSettingsPath cbLauncherVersion =
 #if WINDOWS
         let appSettingsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Frontier_Developments")
@@ -331,9 +299,6 @@ module Program =
 #else
                     MachineId.getWineId()
 #endif
-                let remoteLogHttpClient = if settings.RemoteLogging then Some httpClient else None
-                let logEvents = writeEventLog remoteLogHttpClient
-                do! logEvents [ EventLog.LogStarted; EventLog.ClientVersion ("app", "path", DateTime.Now) ] // TODO: Check if .Now is correct
                 // TODO: Check if launcher version is compatible with current ED version
                 
                 printInfo settings.Platform productsDir cbVersion launcherVersion remoteTime
@@ -349,7 +314,6 @@ module Program =
                         Log.debug "Getting authorized products"
                         match! Api.getAuthorizedProducts settings.Platform None connection with
                         | Ok authorizedProducts ->
-                            do! logEvents [ EventLog.AvailableProjects (userEmail, authorizedProducts |> List.map (fun p -> p.Sku)) ]
                             let names = authorizedProducts |> List.map (fun p -> p.Name)
                             Log.debug $"Authorized Products: %s{String.Join(',', names)}"
                             Log.info "Checking for updates"

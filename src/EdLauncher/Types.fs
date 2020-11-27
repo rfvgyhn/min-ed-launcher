@@ -41,7 +41,6 @@ module Types =
     type AutoRun = bool
     type AutoQuit = bool
     type WatchForCrashes = bool
-    type RemoteLogging = bool
     type ForceLocal = bool
     type LauncherSettings =
         { Platform: Platform
@@ -49,7 +48,6 @@ module Types =
           AutoRun: AutoRun
           AutoQuit: AutoQuit
           WatchForCrashes: WatchForCrashes
-          RemoteLogging: RemoteLogging
           ProductWhitelist: Set<string>
           ForceLocal: ForceLocal
           Proton: (string * string) option
