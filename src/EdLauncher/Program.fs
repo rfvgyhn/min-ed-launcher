@@ -138,14 +138,13 @@ module Program =
             Ok (cobraVersion, launcherVersion)
         
     let printInfo platform productsDir cobraVersion launcherVersion remoteTime =
-        Log.info "Elite: Dangerous Launcher"
-        Log.infof "Platform: %A" platform
-        Log.infof "OS: %s" (getOsIdent())
-        Log.infof "CobraBay Version: %s" cobraVersion
-        Log.infof "Launcher Version: %A" launcherVersion
-        //Log.infof "Launcher Name: %A" (System.Reflection.AssemblyName.GetAssemblyName("/mnt/games/Steam/Linux/steamapps/common/Elite Dangerous/EDLaunch.exe").Name)
-        Log.infof "Remote Time: %i" remoteTime
-        Log.infof "Products Dir: %s" productsDir
+        Log.info $"""Elite: Dangerous Launcher
+    Platform: %A{platform}
+    OS: %s{getOsIdent()}
+    CobraBay Version: %s{cobraVersion}
+    Launcher Version: %A{launcherVersion}
+    Remote Time: %i{remoteTime}
+    Products Dir: %s{productsDir}"""
 
     type VersionInfoStatus = Found of VersionInfo | NotFound of string | Failed of string
     let readVersionInfo path = 
