@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'DebugWindows' ">
-    <DefineConstants>TRACE;WINDOWS</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;WINDOWS</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'ReleaseWindows' ">
@@ -22,8 +22,9 @@
 
   <ItemGroup>
     <Compile Include="Extensions.fs" />
-    <Compile Include="Types.fs" />
     <Compile Include="Log.fs" />
+    <Compile Include="Token.fs" />
+    <Compile Include="Types.fs" />
     <Compile Include="Interop.fs" />
     <Compile Include="Product.fs" />
     <Compile Include="Api.fs" />

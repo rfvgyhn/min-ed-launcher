@@ -11,6 +11,7 @@ module Program =
     open FileIO
     open FsConfig
     open Steam
+    open EdLauncher.Token
     open Types
     open Settings
     open Rop
@@ -78,10 +79,9 @@ module Program =
     | Success of Api.Connection
     | ActionRequired of string
     | Failure of string
-    let login runningTime httpClient machineId (platform: Platform) = task {
-        let authenticate disposable = function
+    let login runningTime httpClient machineId (platform: Platform) =
+        let authenticate = function
             | Ok authToken -> task {
-                use _ = disposable
                 Log.debug $"Authenticating via %s{platform.Name}"
                 match! Api.authenticate runningTime authToken platform machineId httpClient with
                 | Api.Authorized connection ->
@@ -93,22 +93,25 @@ module Program =
                 | Api.Failed msg -> return Failure msg }
             | Error msg -> Failure msg |> Task.fromResult
             
-        let authEmpty = authenticate { new IDisposable with member _.Dispose() = () }
-        let! result =
-            match platform with
-            | Dev -> Ok (Permanent "DevAuthToken") |> authEmpty
-            | Oculus _ -> Failure "Oculus not supported" |> Task.fromResult
-            | Frontier-> Failure "Frontier not supported" |> Task.fromResult
-            | Steam ->
-                let steam = new Steam()
-                steam.Login() |> Result.map (fun steamUser -> Permanent steamUser.SessionToken) |> authenticate steam
-            | Epic details -> task {
-                use epic = new Epic.Epic()
-                let! result = epic.Login details
-                return! result |> Result.map (fun epicUser -> epicUser.ToAuthToken()) |> authEmpty }
-            
-        return result
-    }
+        let noopDisposable = { new IDisposable with member _.Dispose() = () }
+        
+        match platform with
+        | Oculus _ -> (Failure "Oculus not supported", noopDisposable) |> Task.fromResult
+        | Frontier-> (Failure "Frontier not supported", noopDisposable) |> Task.fromResult
+        | Dev -> task {
+            let! result = Permanent "DevAuthToken" |> Ok |> authenticate
+            return result, noopDisposable }
+        | Steam -> task {
+            let steam = new Steam()
+            let! result = steam.Login() |> Result.map (fun steamUser -> Permanent steamUser.SessionToken) |> authenticate
+            return (result, (steam :> IDisposable)) }
+        | Epic details -> task {
+            match! Epic.login details with
+            | Ok t ->
+                let tokenManager = new RefreshableTokenManager(t, Epic.refreshToken)
+                let! result = tokenManager.Get |> Expires |> Ok |> authenticate 
+                return result, (tokenManager :> IDisposable)
+            | Error msg -> return Failure msg, noopDisposable }
 
     let getLogPath = function
         | Dev -> Ok "logs"
@@ -230,7 +233,7 @@ module Program =
             | Error msg -> Log.warn msg)
         
     let rec launchProduct proton processArgs restart productName product =
-        match Product.run proton processArgs product with
+        match Product.run proton (processArgs()) product with
         | Product.RunResult.Ok p ->
             let shouldRestart = restart |> fst
             let timeout = restart |> snd
@@ -259,7 +262,6 @@ module Program =
             p.WaitForExit()
             Log.infof "Shutdown %s" productName
             
-            // TODO: need to have some mechanism to refresh epic token and update processArgs to include it
             if shouldRestart && not (cancelRestart()) then
                 launchProduct proton processArgs restart productName product
         | Product.RunResult.AlreadyRunning -> Log.infof "%s is already running" productName
@@ -305,7 +307,9 @@ module Program =
                 match machineId, (getAppSettingsPath cbVersion) with
                 | Ok machineId, Ok appSettingsPath ->
                     let userEmail = getUserEmail appSettingsPath
-                    match! login runningTime httpClient machineId settings.Platform with
+                    let! loginResult, disposable = login runningTime httpClient machineId settings.Platform
+                    use _ = disposable
+                    match loginResult with
                     | Success connection ->
                         // TODO: event log Authenticated user.Name
                         let emailDisplay = userEmail |> Option.map (fun e -> $"({e})") |> Option.defaultValue ""
@@ -345,7 +349,7 @@ module Program =
                             match selectedProduct, true with
                             | Some product, true ->
                                 let gameLanguage = getGameLang settings.CbLauncherDir                                 
-                                let processArgs = Product.createArgString settings.DisplayMode gameLanguage connection.Session machineId (runningTime()) settings.WatchForCrashes settings.Platform SHA1.hashFile product
+                                let processArgs() = Product.createArgString settings.DisplayMode gameLanguage connection.Session machineId (runningTime()) settings.WatchForCrashes settings.Platform SHA1.hashFile product
                                 
                                 match Product.validateForRun settings.CbLauncherDir settings.WatchForCrashes product with
                                 | Ok p ->

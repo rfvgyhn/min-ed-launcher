@@ -2,6 +2,7 @@ module Tests.Product
 
 open System.IO
 open EdLauncher.Product
+open EdLauncher.Token
 open EdLauncher.Types
 open Expecto
 
@@ -67,13 +68,13 @@ open Expecto
                     Expect.notStringContains actual "/steam" ""
                 }
                 test "Epic platform contains refresh token" {
-                    let token = { EdSession.Empty with PlatformToken = Expires { RefreshableToken.Empty with RefreshToken = "asdf" } }
+                    let token = { EdSession.Empty with PlatformToken = Expires (fun () -> { RefreshableToken.Empty with RefreshToken = "asdf" }) }
                     let actual = createArgString Vr None token "" getTimestamp false (Epic EpicDetails.Empty) hashFile product
                     
                     Expect.stringContains actual "\"EpicToken asdf\"" ""
                 }
                 test "Non epic platform doesn't contain refresh token" {
-                    let token = { EdSession.Empty with PlatformToken = Expires { RefreshableToken.Empty with RefreshToken = "asdf" } }
+                    let token = { EdSession.Empty with PlatformToken = Expires (fun () -> { RefreshableToken.Empty with RefreshToken = "asdf" }) }
                     let actual = createArgString Vr None token "" getTimestamp false Dev hashFile product
                     
                     Expect.notStringContains actual "\"EpicToken" ""

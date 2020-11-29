@@ -2,7 +2,7 @@ namespace EdLauncher
 
 open System
 open System.Diagnostics
-open System.IO
+open Token
 
 module Types =
     type ILog =
@@ -64,23 +64,6 @@ module Types =
         | Future
     type ServerInfo =
         { Status: ServerStatus}
-    type RefreshableToken =
-        { Token: string
-          TokenExpiry: DateTime
-          RefreshToken: string
-          RefreshTokenExpiry: DateTime }
-        with static member Empty = { Token = ""; TokenExpiry = DateTime.MinValue; RefreshToken = ""; RefreshTokenExpiry = DateTime.MinValue }
-    type AuthToken =
-        | Expires of RefreshableToken
-        | Permanent of string
-        member this.GetAccessToken() =
-               match this with
-               | Expires t -> t.Token
-               | Permanent t -> t
-        member this.GetRefreshToken() =
-               match this with
-               | Expires t -> Some t.RefreshToken
-               | Permanent _ -> None
     type EdSession =
         { Token: string
           PlatformToken: AuthToken
