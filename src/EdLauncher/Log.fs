@@ -11,7 +11,7 @@ open Serilog.Formatting.Display
 open Serilog.Sinks.SystemConsole.Themes
 
 type EpicScrubber(mainFormatter: ITextFormatter) = // https://github.com/serilog/serilog/issues/938#issuecomment-383440607
-    let scubber = Regex(@"[a-z0-9]{32}", RegexOptions.IgnoreCase)
+    let scubber = Regex(@"[a-zA-Z0-9-_]{24,}\.[a-zA-Z0-9-_]{24,}\.[a-zA-Z0-9-_]{24,}|[a-z0-9]{32}", RegexOptions.IgnoreCase)
     
     interface ITextFormatter with
         member this.Format(logEvent, output) =
