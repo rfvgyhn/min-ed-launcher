@@ -33,14 +33,6 @@
     <Compile Include="Settings.fs" />
     <Compile Include="Program.fs" />
     <EmbeddedResource Include="settings.json" />
-    <Content Include="epic-sdk-details.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
-    </Content>
-    <Content Include="..\..\lib\EOSSDK-Win64-Shipping.dll">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
-    </Content>
   </ItemGroup>
 
   <ItemGroup>
