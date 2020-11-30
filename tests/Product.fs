@@ -111,13 +111,13 @@ open Expecto
                     let actual = createArgString Vr None session machineId timeStamp true Dev hashFile product
                     
                     let expectedExe = sprintf "/Executable \"%s\"" (Path.Combine("path", "to", "theExe.exe"))
-                    let expectedExeArgs = sprintf "/ExecutableArgs %s" <| sprintf "\"ServerToken %s %s %s\" /vr" session.MachineToken session.Token serverArgs
-                    let expectedMachineToken = sprintf "/MachineToken %s" session.MachineToken
-                    let expectedVersion = sprintf "/Version %s" (version.ToString())
-                    let expectedsessionToken = sprintf "/AuthToken %s" session.Token
-                    let expectedMachineId = sprintf "/MachineId %s" machineId
-                    let expectedTime = sprintf "/Time %s" <| timeStamp.ToString()
-                    let expectedHash = sprintf "/ExecutableHash %s" "E4140B9A"
+                    let expectedExeArgs = sprintf "/ExecutableArgs \"%s\"" <| sprintf "\"\"ServerToken %s %s %s\"\" /vr" session.MachineToken session.Token serverArgs
+                    let expectedMachineToken = $"/MachineToken %s{session.MachineToken}"
+                    let expectedVersion = $"/Version %s{version.ToString()}"
+                    let expectedsessionToken = $"/AuthToken %s{session.Token}"
+                    let expectedMachineId = $"/MachineId %s{machineId}"
+                    let expectedTime = $"/Time %s{timeStamp.ToString()}"
+                    let expectedHash = $"/ExecutableHash \"E4140B9A\""
                     Expect.stringContains actual expectedExe ""
                     Expect.stringContains actual expectedExeArgs ""
                     Expect.stringContains actual expectedMachineToken ""

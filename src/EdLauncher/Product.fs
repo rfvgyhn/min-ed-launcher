@@ -23,19 +23,21 @@ namespace EdLauncher
                 match product.Mode with
                 | Offline -> false
                 | Online -> true
-            let serverToken = if online then sprintf "ServerToken %s %s %s" edSession.MachineToken (edSession.Token) product.ServerArgs else ""
-            let combined = sprintf "\"%s\" %s" serverToken targetOptions
+            let prepareQuotes (input: string) = if watchForCrashes then input.Replace("\"", "\"\"") else input
+            let serverToken = if online then $"ServerToken %s{edSession.MachineToken} %s{edSession.Token} %s{product.ServerArgs}" else ""
+            let combined = $"\"%s{serverToken}\" %s{targetOptions}" |> prepareQuotes
             let fullExePath = Path.Combine(product.Directory, product.Executable)
             let exeHash = fullExePath |> hashFile |> Result.map Hex.toString |> Result.map (fun p -> p.ToUpperInvariant()) |> Result.defaultValue ""
             if watchForCrashes && online then
                 let version = product.Version.ToString()
-                sprintf "/Executable \"%s\" /ExecutableArgs %s /MachineToken %s /Version %s /AuthToken %s /MachineId %s /Time %s /ExecutableHash %s"
+                sprintf "/Executable \"%s\" /ExecutableArgs \"%s\" /MachineToken %s /Version %s /AuthToken %s /MachineId %s /Time %s /ExecutableHash \"%s\""
                     fullExePath combined edSession.MachineToken version (edSession.Token) machineId (timestamp.ToString()) exeHash
             else
                 combined
                 
         type RunnableProduct =
             { Executable: FileInfo
+              WorkingDir: DirectoryInfo
               Version: Version
               SteamAware: bool
               Mode: ProductMode
@@ -50,6 +52,7 @@ namespace EdLauncher
             else
                 let exePath = if watchForCrashes then watchDogFullPath else productFullPath
                 Ok { Executable = FileInfo(exePath)
+                     WorkingDir = DirectoryInfo(Path.GetDirectoryName(productFullPath))
                      Version = product.Version
                      SteamAware = product.SteamAware
                      Mode = product.Mode
@@ -79,7 +82,7 @@ namespace EdLauncher
                 
                 let startInfo = ProcessStartInfo()
                 startInfo.FileName <- fileName
-                startInfo.WorkingDirectory <- product.Executable.DirectoryName
+                startInfo.WorkingDirectory <- product.WorkingDir.FullName
                 startInfo.Arguments <- arguments
                 startInfo.CreateNoWindow <- true
                 startInfo.UseShellExecute <- false
