@@ -109,9 +109,9 @@ module Program =
             let! result = Permanent "DevAuthToken" |> Ok |> authenticate
             return result, noopDisposable }
         | Steam -> task {
-            let steam = new Steam()
+            use steam = new Steam()
             let! result = steam.Login() |> Result.map (fun steamUser -> Permanent steamUser.SessionToken) |> authenticate
-            return (result, (steam :> IDisposable)) }
+            return result, noopDisposable }
         | Epic details -> task {
             match! Epic.login details with
             | Ok t ->
