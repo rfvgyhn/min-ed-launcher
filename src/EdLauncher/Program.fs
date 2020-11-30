@@ -54,8 +54,15 @@ module Program =
             if not (String.IsNullOrEmpty(steamCompat)) then
                 Path.Combine(steamCompat, "pfx", "drive_c", "users", "steamuser", "Local Settings", "Application Data", "Frontier_Developments")
             else
-                // TODO: search common locations for steam compat data paths
-                "/mnt/games/Steam/Linux/steamapps/compatdata/359320/pfx/drive_c/users/steamuser/Local Settings/Application Data/Frontier_Developments"
+                let home = Environment.expandEnvVars("~")
+                let user = Environment.expandEnvVars("$USER")
+                [ $"{home}/.local/share/Steam/steamapps/compatdata/359320/pfx/drive_c/users/steamuser"
+                  $"{home}/.steam/steam/steamapps/compatdata/359320/pfx/drive_c/users/steamuser"
+                  $"{home}/Games/elite-dangerous/drive_c/users/{user}" // lutris
+                  $"{home}/.wine/drive_c/users/{user}" ]
+                |> List.map (fun path -> $"%s{path}/Local Settings/Application Data/Frontier_Developments")
+                |> List.tryFind Directory.Exists
+                |> Option.defaultValue "."
 #endif
         let path =
             Directory.EnumerateDirectories(appSettingsPath, "EDLaunch.exe*")
