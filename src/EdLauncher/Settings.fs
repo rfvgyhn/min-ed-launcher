@@ -21,7 +21,7 @@ module Settings =
           ApiUri = Uri("http://localhost:8080")
           Restart = false, 0L
           Processes = List.empty }
-    type private EpicArg = ExchangeCode of string | Type of string | AppId of string | Env of string | UserId of string | Locale of string | RefreshToken of string | TokenName of string | Log of bool
+    type private EpicArg = ExchangeCode of string | Type of string | AppId of string
     let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (argv: string[]) =
         let proton, cbLaunchDir, args =
             if argv.Length > 2 && argv.[0] <> null && argv.[0].Contains("steamapps/common/Proton") then
@@ -45,13 +45,7 @@ module Settings =
                     match arg with
                     | ExchangeCode p -> { details with ExchangeCode = p }
                     | Type t         -> { details with Type = t }
-                    | AppId id       -> { details with AppId = id }
-                    | Env e          -> { details with Env = e }
-                    | UserId id      -> { details with UserId = id }
-                    | Locale l       -> { details with Locale = l }
-                    | RefreshToken t -> { details with RefreshToken = Some t }
-                    | TokenName n    -> { details with TokenName = n }
-                    | Log v      -> { details with Log = v })
+                    | AppId id       -> { details with AppId = id })
                 |> Option.defaultValue details
                 |> Epic
                 
@@ -73,12 +67,6 @@ module Settings =
                 | "-auth_password", Some password -> { s with Platform = epicArg (ExchangeCode password) }
                 | "-auth_type", Some t            -> { s with Platform = epicArg (Type t) }
                 | "-epicapp", Some id             -> { s with Platform = epicArg (AppId id) }
-                | "-epicenv", Some env            -> { s with Platform = epicArg (Env env) }
-                | "-epicuserid", Some id          -> { s with Platform = epicArg (UserId id) }
-                | "-epiclocale", Some locale      -> { s with Platform = epicArg (Locale locale) }
-                | "/epicrefreshtoken", Some token -> { s with Platform = epicArg (RefreshToken token) }
-                | "/epictokenname", Some name     -> { s with Platform = epicArg (TokenName name) }
-                | "/logepicinfo", _               -> { s with Platform = epicArg (Log true) }
                 | "/oculus", Some nonce           -> { s with Platform = Oculus nonce; ForceLocal = true }
                 | "/vr", _                        -> { s with DisplayMode = Vr; AutoRun = true }
                 | "/autorun", _                   -> { s with AutoRun = true }

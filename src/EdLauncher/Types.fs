@@ -14,22 +14,10 @@ module Types =
     type EpicDetails =
         { ExchangeCode: string
           Type: string
-          AppId: string
-          Env: string
-          UserId: string
-          Locale: string
-          RefreshToken: string option
-          Log: bool
-          TokenName: string }
+          AppId: string }
         with static member Empty = { ExchangeCode = ""
                                      Type = ""
-                                     AppId = ""
-                                     Env = ""
-                                     UserId = ""
-                                     Locale = ""
-                                     RefreshToken = None
-                                     Log = false
-                                     TokenName = "" }
+                                     AppId = "" }
     type Platform =
         | Steam
         | Epic of EpicDetails

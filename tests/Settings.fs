@@ -38,29 +38,9 @@ let tests =
             let settings = parse [| "-AUTH_TYPE=asdf" |]
             Expect.equal settings.Platform (Epic { EpicDetails.Empty with Type = "asdf" }) ""
         }
-        test "Matches epic env" {
-            let settings = parse [| "-epicenv=asdf" |]
-            Expect.equal settings.Platform (Epic { EpicDetails.Empty with Env = "asdf" }) ""
-        }
-        test "Matches epic userid" {
-            let settings = parse [| "-epicuserid=asdf" |]
-            Expect.equal settings.Platform (Epic { EpicDetails.Empty with UserId = "asdf" }) ""
-        }
-        test "Matches epic locale" {
-            let settings = parse [| "-epiclocale=asdf" |]
-            Expect.equal settings.Platform (Epic { EpicDetails.Empty with Locale = "asdf" }) ""
-        }
-        test "Matches epic refresh token" {
-            let settings = parse [| "/epicrefreshtoken"; "asdf" |]
-            Expect.equal settings.Platform (Epic { EpicDetails.Empty with RefreshToken = Some "asdf" }) ""
-        }
-        test "Matches epic log" {
-            let settings = parse [| "/logepicinfo" |]
-            Expect.equal settings.Platform (Epic { EpicDetails.Empty with Log = true }) ""
-        }
-        test "Matches epic token name" {
-            let settings = parse [| "/epictokenname"; "asdf" |]
-            Expect.equal settings.Platform (Epic { EpicDetails.Empty with TokenName = "asdf" }) ""
+        test "Matches epic app id" {
+            let settings = parse [| "-epicapp=asdf" |]
+            Expect.equal settings.Platform (Epic { EpicDetails.Empty with AppId = "asdf" }) ""
         }
         test "Matches /oculus nonce" {
             let settings = parse [| "/oculus"; "123" |]
