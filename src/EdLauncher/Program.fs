@@ -311,7 +311,6 @@ module Program =
                     use _ = disposable
                     match loginResult with
                     | Success connection ->
-                        // TODO: event log Authenticated user.Name
                         let emailDisplay = userEmail |> Option.map (fun e -> $"({e})") |> Option.defaultValue ""
                         Log.info $"Logged in via %s{settings.Platform.Name} as: %s{connection.Session.Name} %s{emailDisplay}"
                         Log.debug "Getting authorized products"

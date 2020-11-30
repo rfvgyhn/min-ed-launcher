@@ -71,7 +71,6 @@ module Api =
     }
     
     let authenticate (runningTime: unit -> double) (token: AuthToken) platform machineId (httpClient:HttpClient) = task {
-        // TODO: event log entries
         let path, query =
             let queryParams other =
                 [ "machineId", machineId
