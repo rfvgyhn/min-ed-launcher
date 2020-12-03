@@ -147,13 +147,12 @@ module Program =
             
             Ok (cobraVersion, launcherVersion)
         
-    let printInfo platform productsDir cobraVersion launcherVersion remoteTime =
+    let printInfo (platform: Platform) productsDir cobraVersion launcherVersion =
         Log.info $"""Elite: Dangerous Launcher
-    Platform: %A{platform}
+    Platform: %s{platform.Name}
     OS: %s{getOsIdent()}
     CobraBay Version: %s{cobraVersion}
     Launcher Version: %A{launcherVersion}
-    Remote Time: %i{remoteTime}
     Products Dir: %s{productsDir}"""
 
     type VersionInfoStatus = Found of VersionInfo | NotFound of string | Failed of string
@@ -289,6 +288,7 @@ module Program =
                 Log.errorf "Unable to get products directory: %s" msg
                 return 1 }
             | Ok productsDir, Ok (cbVersion, launcherVersion) -> task {
+                printInfo settings.Platform productsDir cbVersion launcherVersion
                 use httpClient = Api.createClient settings.ApiUri cbVersion (getOsIdent())
                 let localTime = DateTime.UtcNow
                 let! remoteTime = task {
@@ -308,8 +308,6 @@ module Program =
                     MachineId.getWineId()
 #endif
                 // TODO: Check if launcher version is compatible with current ED version
-                
-                printInfo settings.Platform productsDir cbVersion launcherVersion remoteTime
                 
                 match machineId, (getAppSettingsPath cbVersion) with
                 | Ok machineId, Ok appSettingsPath ->
