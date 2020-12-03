@@ -45,7 +45,7 @@ module MachineId =
                 let user = FileInfo(frontierFilePath registryPath)
                 
                 if not (system.Exists || user.Exists) then
-                    return Error <| sprintf "Unable to find registry file(s) at '%s' and/or '%s'" user.FullName system.FullName
+                    return Error $"Unable to find registry file(s) at '%s{user.FullName}' and/or '%s{system.FullName}'"
                 else
                 
                 let keyExists =
@@ -56,9 +56,9 @@ module MachineId =
                 if not keyExists then
                     let entry = String.Join(Environment.NewLine, [
                         ""
-                        sprintf"%s 1585703162" frontierEntry
-                        sprintf "#time=%s" "1d52cf302f944a0" // TODO: figure out how to generate this timestamp
-                        sprintf "\"MachineGuid\"=\"%s\"" (Guid.NewGuid().ToString())
+                        $"%s{frontierEntry} 1585703162"
+                        "#time=1d52cf302f944a0" // TODO: figure out how to generate this timestamp
+                        $"\"MachineGuid\"=\"%s{Guid.NewGuid().ToString()}\""
                     ])
                     use sw = user.AppendText()
                     do! sw.WriteLineAsync(entry)

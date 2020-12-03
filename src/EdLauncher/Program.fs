@@ -10,7 +10,7 @@ module Program =
     let getSettings args =
         let path = Path.Combine(Environment.configDir, "elite-dangerous-launcher")
         match FileIO.ensureDirExists path with
-        | Error msg -> sprintf "Unable to find/create configuration directory at %s - %s" path msg |> Error
+        | Error msg -> Error $"Unable to find/create configuration directory at %s{path} - %s{msg}"  
         | Ok settingsDir ->
             let settingsPath = Path.Combine(settingsDir, "settings.json")
             if not (File.Exists(settingsPath)) then
@@ -22,9 +22,9 @@ module Program =
             Settings.parseConfig settingsPath
             |> Result.mapError (fun e ->
                 match e with
-                | BadValue (key, value) -> sprintf "Bad Value: %s - %s" key value
-                | ConfigParseError.NotFound key -> sprintf "Key not found: %s" key
-                | NotSupported key -> sprintf "Key not supported: %s" key)
+                | BadValue (key, value) -> $"Bad Value: %s{key} - %s{value}"
+                | ConfigParseError.NotFound key -> $"Key not found: %s{key}"
+                | NotSupported key -> $"Key not supported: %s{key}")
             >>= Settings.getSettings args
     
     [<EntryPoint>]

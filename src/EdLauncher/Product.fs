@@ -100,9 +100,9 @@ namespace EdLauncher
             let productFullPath = Path.Combine(product.Directory, product.Executable)
             let watchDogFullPath = if product.UseWatchDog64 then Path.Combine(launcherDir, "WatchDog64.exe") else Path.Combine(launcherDir, "WatchDog.exe") 
             if not (File.Exists(productFullPath)) then
-                Error <| sprintf "Unable to find product exe at '%s'" productFullPath
+                Error $"Unable to find product exe at '%s{productFullPath}'"
             elif watchForCrashes && not (File.Exists(watchDogFullPath)) then
-                Error <| sprintf "Unable to find watchdog exe at '%s'" watchDogFullPath
+                Error $"Unable to find watchdog exe at '%s{watchDogFullPath}'"
             else
                 let exePath = if watchForCrashes then watchDogFullPath else productFullPath
                 Ok { Executable = FileInfo(exePath)
@@ -131,7 +131,7 @@ namespace EdLauncher
             else
                 let fileName, arguments =
                     match proton with
-                    | Some (path, action) -> "python3", sprintf "\"%s\" %s \"%s\" %s" path action product.Executable.FullName args
+                    | Some (path, action) -> "python3", $"\"%s{path}\" %s{action} \"%s{product.Executable.FullName}\" %s{args}"
                     | None -> product.Executable.FullName, args
                 
                 let startInfo = ProcessStartInfo()

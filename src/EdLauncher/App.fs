@@ -83,7 +83,7 @@ let rec launchProduct proton processArgs restart productName product =
         Log.info $"Launching %s{productName}"
         use p = p
         p.WaitForExit()
-        Log.info "Shutdown %s{productName}"
+        Log.info $"Shutdown %s{productName}"
         
         if shouldRestart && not (cancelRestart()) then
             launchProduct proton processArgs restart productName product

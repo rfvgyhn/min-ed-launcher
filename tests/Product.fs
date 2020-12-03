@@ -96,7 +96,7 @@ open Expecto
                     let product = { product with ServerArgs = serverArgs; Mode = Online; GameArgs = gameArgs }
                     let actual = createArgString Vr None session "" getTimestamp false Dev hashFile product
                     
-                    let expected = sprintf "\"ServerToken %s %s %s\"" session.MachineToken session.Token serverArgs
+                    let expected = $"\"ServerToken %s{session.MachineToken} %s{session.Token} %s{serverArgs}\""
                     Expect.stringStarts actual expected ""
                     Expect.stringEnds actual gameArgs ""
                 }

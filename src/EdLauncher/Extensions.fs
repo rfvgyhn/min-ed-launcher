@@ -39,7 +39,7 @@ module Json =
     let parseProp (prop:string) (element:JsonElement) =
         match element.TryGetProperty(prop) with
         | true, prop -> Ok prop
-        | false, _ -> Error <| sprintf "Unable to find '%s' in json document" prop
+        | false, _ -> Error $"Unable to find '%s{prop}' in json document"
     let mapArray f (element:JsonElement) =
         try
             Ok <| element.EnumerateArray()
@@ -56,35 +56,35 @@ module Json =
     let asInt64 (prop:JsonElement) =
         match prop.TryGetInt64() with
         | true, value -> Ok value
-        | false, _ -> Error <| sprintf "Unable to parse '%s' as int64" (prop.ToString())
+        | false, _ -> Error $"Unable to parse '%s{prop.ToString()}' as int64"
     let asInt (prop:JsonElement) =
         match prop.TryGetInt32() with
         | true, value -> Ok value
-        | false, _ -> Error <| sprintf "Unable to parse '%s' as int" (prop.ToString())
+        | false, _ -> Error $"Unable to parse '%s{prop.ToString()}' as int"
     let toInt (prop:JsonElement) =
         let str = prop.ToString()
         match Int32.TryParse(str) with
         | true, value -> Ok value
-        | false, _ -> Error <| sprintf "Unable to convert string to int '%s'" str
+        | false, _ -> Error $"Unable to convert string to int '%s{str}'"
     let asDateTime (prop:JsonElement) =
         let str = prop.ToString()
         match DateTime.TryParse(str) with
         | true, value -> Ok value
-        | false, _ -> Error <| $"Unable to parse string as DateTime '%s{str}'"
+        | false, _ -> Error $"Unable to parse string as DateTime '%s{str}'"
     let asUri (prop:JsonElement) =
         match Uri.TryCreate(prop.ToString(), UriKind.Absolute) with
         | true, value -> Ok value
-        | false, _ -> Error <| sprintf "Unable to parse '%s' as Uri" (prop.ToString())
+        | false, _ -> Error $"Unable to parse '%s{prop.ToString()}' as Uri"
     let toString (prop:JsonElement) =
         Ok <| prop.ToString()
     let asVersion (prop:JsonElement) =
         match Version.TryParse(prop.ToString()) with
         | true, value -> Ok value
-        | false, _ -> Error <| sprintf "Unable to parse '%s' as Version" (prop.ToString())
+        | false, _ -> Error  $"Unable to parse '%s{prop.ToString()}' as Version"
     let asBool (prop:JsonElement) =
         match bool.TryParse(prop.ToString()) with
         | true, value -> Ok value
-        | false, _ -> Error <| sprintf "Unable to parse '%s' as boolean" (prop.ToString())
+        | false, _ -> Error $"Unable to parse '%s{prop.ToString()}' as boolean"
 
 module RuntimeInformation =
     open System.Runtime.InteropServices

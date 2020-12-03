@@ -18,7 +18,7 @@ let getVersion cbLauncherDir =
     let cobraPath = Path.Combine(cbLauncherDir, "CBViewModel.dll")
     
     if not (File.Exists cobraPath) then
-        Error <| sprintf "Unable to find CBViewModel.dll in directory %s" cbLauncherDir
+        Error $"Unable to find CBViewModel.dll in directory %s{cbLauncherDir}"
     else
         let cobraVersion =
             let version = FileVersionInfo.GetVersionInfo(cobraPath)

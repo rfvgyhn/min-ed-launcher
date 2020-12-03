@@ -37,7 +37,7 @@ module Interop =
         if result = 0 then
             Marshal.PtrToStringAnsi(buffer |> NativePtr.toNativeInt)
         else
-            sprintf "errno %i" errno
+            $"errno %i{errno}"
     
     [<Literal>]
     let private SIGTERM = 15
@@ -64,4 +64,4 @@ module Interop =
             | Ok _ -> Ok ()
             | Error msg ->
                 p.Kill()
-                sprintf "Unable to gracefully stop %s. Killed process instead. %s" p.ProcessName msg |> Error
+                Error $"Unable to gracefully stop %s{p.ProcessName}. Killed process instead. %s{msg}"
