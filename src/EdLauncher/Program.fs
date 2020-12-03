@@ -45,43 +45,6 @@ module Program =
         let os = getOs() |> osToStr
         os + arch
 
-    let getAppSettingsPath cbLauncherVersion =
-#if WINDOWS
-        let appSettingsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Frontier_Developments")
-#else
-        let steamCompat = Environment.GetEnvironmentVariable("STEAM_COMPAT_DATA_PATH")
-        let appSettingsPath =
-            if not (String.IsNullOrEmpty(steamCompat)) then
-                Path.Combine(steamCompat, "pfx", "drive_c", "users", "steamuser", "Local Settings", "Application Data", "Frontier_Developments")
-            else
-                let home = Environment.expandEnvVars("~")
-                let user = Environment.expandEnvVars("$USER")
-                [ $"{home}/.local/share/Steam/steamapps/compatdata/359320/pfx/drive_c/users/steamuser"
-                  $"{home}/.steam/steam/steamapps/compatdata/359320/pfx/drive_c/users/steamuser"
-                  $"{home}/Games/elite-dangerous/drive_c/users/{user}" // lutris
-                  $"{home}/.wine/drive_c/users/{user}" ]
-                |> List.map (fun path -> $"%s{path}/Local Settings/Application Data/Frontier_Developments")
-                |> List.tryFind Directory.Exists
-                |> Option.defaultValue "."
-#endif
-        let path =
-            Directory.EnumerateDirectories(appSettingsPath, "EDLaunch.exe*")
-            |> Seq.tryHead
-            |> Option.map (fun dir -> Path.Combine(dir, cbLauncherVersion, "user.config"))
-        match path with
-        | Some path ->
-            if File.Exists(path) then
-                Ok path
-            else
-                sprintf "Couldn't find user.config in '%s'" path |> Error
-        | None -> sprintf "Couldn't find user.config in '%s'" appSettingsPath |> Error
-        
-    let getUserEmail appSettingsPath =
-        let xpath = "//*[@name='UserName']/value"
-        appSettingsPath
-        |> Xml.getValue xpath
-        |> Option.map (fun v -> if v = null then "" else v)
-
     type LoginResult =
     | Success of Api.Connection
     | ActionRequired of string
@@ -309,15 +272,13 @@ module Program =
 #endif
                 // TODO: Check if launcher version is compatible with current ED version
                 
-                match machineId, (getAppSettingsPath cbVersion) with
-                | Ok machineId, Ok appSettingsPath ->
-                    let userEmail = getUserEmail appSettingsPath
+                match machineId with
+                | Ok machineId ->
                     let! loginResult, disposable = login runningTime httpClient machineId settings.Platform
                     use _ = disposable
                     match loginResult with
                     | Success connection ->
-                        let emailDisplay = userEmail |> Option.map (fun e -> $"({e})") |> Option.defaultValue ""
-                        Log.info $"Logged in via %s{settings.Platform.Name} as: %s{connection.Session.Name} %s{emailDisplay}"
+                        Log.info $"Logged in via %s{settings.Platform.Name} as: %s{connection.Session.Name}"
                         Log.debug "Getting authorized products"
                         match! Api.getAuthorizedProducts settings.Platform None connection with
                         | Ok authorizedProducts ->
@@ -374,10 +335,8 @@ module Program =
                         Log.errorf "Unsupported login action required: %s" msg
                     | Failure msg ->
                         Log.errorf "Couldn't login: %s" msg
-                | Error msg, _ ->
+                | Error msg ->
                     Log.errorf "Couldn't get machine id: %s" msg
-                | _, Error msg ->
-                    Log.error msg
                 return 0 }
     }    
 
