@@ -5,12 +5,6 @@ open System.Diagnostics
 open Token
 
 module Types =
-    type ILog =
-        { Debug: string -> unit
-          Info: string -> unit
-          Warn: string -> unit
-          Error: string -> unit }
-        with static member Noop = { Debug = (fun _ -> ()); Info = (fun _ -> ()); Warn = (fun _ -> ()); Error = (fun _ -> ()) }
     type EpicDetails =
         { ExchangeCode: string
           Type: string

@@ -52,6 +52,7 @@ type LoggerSinkConfiguration with
         let formatter = EpicScrubber(MessageTemplateTextFormatter("{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}", null))
         this.File(formatter = formatter, path=path, restrictedToMinimumLevel=restrictedToMinimumLevel)
 
+let logPath = Path.Combine("logs/min-ed-launcher.log")
 let logger =
   let consoleLevel =
 #if DEBUG
@@ -62,24 +63,14 @@ let logger =
   LoggerConfiguration()
     .MinimumLevel.Verbose()
     .WriteTo.ScrubbedConsole(consoleLevel)
-    .WriteTo.ScrubbedFile("ed.log", LogEventLevel.Verbose)
+    .WriteTo.ScrubbedFile(logPath, LogEventLevel.Verbose)
     .CreateLogger()
     
-let private write level msg =
-    logger.Write(level, msg)
-let private writeExn exn level msg =
-    logger.Write(level, msg)
-    
-let private log level format = Printf.ksprintf (write level) format
-let private logExn level exn format = Printf.ksprintf (writeExn exn level) format
+let private log level msg = logger.Write(level, msg)
+let private logExn level (exn: exn) msg = logger.Write(level, exn, msg)
 
-let debugf format = log LogEventLevel.Debug format
-let debug msg = debugf "%s" msg
-let infof format = log LogEventLevel.Information format
-let info msg = infof "%s" msg
-let warnf format = log LogEventLevel.Warning format
-let warn msg = warnf "%s" msg
-let errorf format = log LogEventLevel.Error format
-let error msg = errorf "%s" msg
-let exnf e format = logExn LogEventLevel.Fatal e format
-let exn e msg = exnf e "%s" msg
+let debug msg = log LogEventLevel.Debug msg
+let info msg = log LogEventLevel.Information msg
+let warn msg = log LogEventLevel.Warning msg
+let error msg = log LogEventLevel.Error msg
+let exn e msg = logExn LogEventLevel.Fatal e msg

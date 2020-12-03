@@ -6,13 +6,6 @@ open System.Reflection
 open System.Resources
 open Steam
 open Types
-
-let getLogPath = function
-    | Dev -> Ok "logs"
-    | Oculus _ -> Error "Oculus not supported"
-    | Frontier -> Error "Frontier not supported"
-    | Steam -> Ok "logs"
-    | Epic _ -> Ok "logs"
         
 let getProductsDir fallbackPath hasWriteAccess (forceLocal:ForceLocal) launcherDir =
     let productsPath = "Products"
