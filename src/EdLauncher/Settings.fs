@@ -51,8 +51,7 @@ module Settings =
                 
             match platform with
             | Epic d -> apply arg d
-            | Dev -> apply arg EpicDetails.Empty
-            | _ -> platform
+            | _ -> apply arg EpicDetails.Empty
         
         let settings =
             args

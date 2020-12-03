@@ -30,6 +30,13 @@ let tests =
             Expect.equal settings.Platform (Epic EpicDetails.Empty) ""
             Expect.equal settings.ForceLocal true ""
         }
+        test "Last platform wins" {
+            let settingsEpic = parse [| "/steam"; "/epic" |]
+            let settingsSteam = parse [| "/epic"; "/steam" |]
+            
+            Expect.equal settingsEpic.Platform (Epic EpicDetails.Empty) ""
+            Expect.equal settingsSteam.Platform Steam ""
+        }
         test "Matches epic password" {
             let settings = parse [| "-AUTH_PASSWORD=asdf" |]
             Expect.equal settings.Platform (Epic { EpicDetails.Empty with ExchangeCode = "asdf" }) ""
