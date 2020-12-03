@@ -106,7 +106,7 @@ module Program =
             let cobraVersion =
                 let version = FileVersionInfo.GetVersionInfo(cobraPath)
                 if String.IsNullOrEmpty(version.FileVersion) then version.ProductVersion else version.FileVersion
-            let launcherVersion = typeof<Steam>.Assembly.GetName().Version
+            let launcherVersion = typeof<Steam>.Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion
             
             Ok (cobraVersion, launcherVersion)
         
@@ -115,7 +115,7 @@ module Program =
     Platform: %s{platform.Name}
     OS: %s{getOsIdent()}
     CobraBay Version: %s{cobraVersion}
-    Launcher Version: %A{launcherVersion}
+    Launcher Version: %s{launcherVersion}
     Products Dir: %s{productsDir}"""
 
     type VersionInfoStatus = Found of VersionInfo | NotFound of string | Failed of string
@@ -252,7 +252,7 @@ module Program =
                 return 1 }
             | Ok productsDir, Ok (cbVersion, launcherVersion) -> task {
                 printInfo settings.Platform productsDir cbVersion launcherVersion
-                use httpClient = Api.createClient settings.ApiUri cbVersion (getOsIdent())
+                use httpClient = Api.createClient settings.ApiUri launcherVersion (getOsIdent())
                 let localTime = DateTime.UtcNow
                 let! remoteTime = task {
                     match! Api.getTime localTime httpClient with

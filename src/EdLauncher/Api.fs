@@ -48,7 +48,7 @@ module Api =
     }
     
     let createClient apiUri version os =
-        let appName = "EDLaunch"// System.Reflection.AssemblyName.GetAssemblyName(Path.Combine(settings.CbLauncherDir, "EDLaunch.exe")).Name
+        let appName = "min-ed-launcher"
         let userAgent = $"%s{appName}/%s{version}/%s{os}"
         let httpClient = new HttpClient()
         httpClient.BaseAddress <- apiUri
