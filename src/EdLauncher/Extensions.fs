@@ -86,6 +86,37 @@ module Json =
         | true, value -> Ok value
         | false, _ -> Error <| sprintf "Unable to parse '%s' as boolean" (prop.ToString())
 
+module RuntimeInformation =
+    open System.Runtime.InteropServices
+    type OS = Linux | Windows | OSX | FreeBSD | Unknown
+    let getOs() =
+        let platToOs plat =
+            if   plat = OSPlatform.Linux   then Linux
+            elif plat = OSPlatform.Windows then Windows
+            elif plat = OSPlatform.OSX     then OSX
+            elif plat = OSPlatform.FreeBSD then FreeBSD
+            else Unknown        
+        [ OSPlatform.Linux; OSPlatform.Windows; OSPlatform.OSX; OSPlatform.FreeBSD ]
+        |> List.pick (fun p -> if RuntimeInformation.IsOSPlatform(p) then Some p else None)
+        |> platToOs
+        
+    let getOsIdent() =
+        let osToStr = function
+            | Linux -> "Linux"
+            | Windows -> "Win"
+            | OSX -> "Mac"
+            | FreeBSD -> "FreeBSD"
+            | Unknown -> "Unknown"
+        let arch =
+            match RuntimeInformation.ProcessArchitecture with
+            | Architecture.Arm -> "Arm"
+            | Architecture.Arm64 -> "Arm64"
+            | Architecture.X64 -> "64"
+            | Architecture.X86 -> "32"
+            | unknownArch -> unknownArch.ToString()
+        let os = getOs() |> osToStr
+        os + arch
+
 module Uri =
     open System
     open System.Web

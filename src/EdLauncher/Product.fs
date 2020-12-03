@@ -4,6 +4,7 @@ namespace EdLauncher
         open System.Diagnostics
         open System.IO
         open System.Runtime.InteropServices
+        open EdLauncher.Rop
         open EdLauncher.Types
         
         let createArgString vr (lang: string option) edSession machineId timestamp watchForCrashes platform hashFile (product:ProductDetails) =
@@ -34,6 +35,59 @@ namespace EdLauncher
                     fullExePath combined edSession.MachineToken version (edSession.Token) machineId (timestamp.ToString()) exeHash
             else
                 combined
+                
+        type VersionInfoStatus = Found of VersionInfo | NotFound of string | Failed of string
+        let readVersionInfo path = 
+            let file = Path.Combine(path, "VersionInfo.txt")
+            let mode offline = if offline then Offline else Online
+            if not (File.Exists(file)) then NotFound file
+            else
+                let json = (FileIO.openRead file) >>= Json.parseStream >>= Json.rootElement
+                let version = json >>= Json.parseProp "Version" >>= Json.asVersion
+                let exe = json >>= Json.parseProp "executable" >>= Json.toString
+                let name = json >>= Json.parseProp "name" >>= Json.toString
+                let wd64 = json >>= Json.parseProp "useWatchDog64" >>= Json.asBool |> Result.defaultValue false
+                let steamAware = json >>= Json.parseProp "steamaware" >>= Json.asBool |> Result.defaultValue true
+                let offline = json >>= Json.parseProp "offline" >>= Json.asBool |> Result.defaultValue false
+                match version, exe, name with
+                | Ok version, Ok exe, Ok name ->
+                    { Name = name
+                      Executable = exe
+                      UseWatchDog64 = wd64
+                      SteamAware = steamAware
+                      Version = version
+                      Mode = mode offline } |> Found
+                | _ -> VersionInfoStatus.Failed "Unexpected VersionInfo json document"
+        
+        let mapProduct productsDir (product:AuthorizedProduct) =
+            let serverArgs = String.Join(" ", [
+                    if product.TestApi then "/Test"
+                    if not (String.IsNullOrEmpty(product.ServerArgs)) then product.ServerArgs
+                ])
+            let filters = product.Filter.Split(',', StringSplitOptions.RemoveEmptyEntries) |> Set.ofArray
+            let directory = Path.Combine(productsDir, product.Directory)
+            match readVersionInfo (Path.Combine(productsDir, product.Directory)) with
+            | Found v ->
+                Playable { Sku = product.Sku
+                           Name = product.Name
+                           Filters = filters
+                           Executable = v.Executable
+                           UseWatchDog64 = v.UseWatchDog64
+                           SteamAware = v.SteamAware
+                           Version = v.Version
+                           Mode = v.Mode
+                           Directory = directory
+                           GameArgs = product.GameArgs
+                           ServerArgs = serverArgs }
+            | NotFound file ->
+                Log.info $"Disabling '%s{product.Name}'. Unable to find product at '%s{file}'"
+                Missing { Sku = product.Sku
+                          Name = product.Name
+                          Filters = filters
+                          Directory = directory }
+            | Failed msg ->
+                Log.error $"Unable to parse product %s{product.Name}: %s{msg}"
+                Product.Unknown product.Name
                 
         type RunnableProduct =
             { Executable: FileInfo
