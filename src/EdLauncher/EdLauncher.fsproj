@@ -7,10 +7,26 @@
     <Configurations>Debug;Release;DebugWindows;ReleaseWindows</Configurations>
     <Platforms>AnyCPU</Platforms>
     <Version>0.1.0</Version>
+    <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
   </PropertyGroup>
-
+  
+  <PropertyGroup>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>Link</TrimMode>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableUnsafeBinaryFormatterSerialization>false</EnableUnsafeBinaryFormatterSerialization>
+    <EnableUnsafeUTF7Encoding>false</EnableUnsafeUTF7Encoding>
+    <EventSourceSupport>false</EventSourceSupport>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+  </PropertyGroup>
+  <ItemGroup>
+    <TrimmerRootAssembly Include="mscorlib" />
+  </ItemGroup>
+  
   <PropertyGroup Condition=" '$(Configuration)' == 'DebugWindows' ">
     <DefineConstants>TRACE;DEBUG;WINDOWS</DefineConstants>
+    <RuntimeIdentifier>win10-x64</RuntimeIdentifier>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'ReleaseWindows' ">
@@ -19,6 +35,7 @@
     <Optimize Condition="'$(Optimize)' == '' ">true</Optimize>
     <Tailcalls Condition="'$(Tailcalls)' == '' ">true</Tailcalls>
     <DefineConstants>WINDOWS</DefineConstants>
+    <RuntimeIdentifier>win10-x64</RuntimeIdentifier>
   </PropertyGroup>
 
   <ItemGroup>
