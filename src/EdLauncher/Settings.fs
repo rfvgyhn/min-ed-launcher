@@ -25,6 +25,8 @@ let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (arg
     let proton, cbLaunchDir, args =
         if argv.Length > 2 && argv.[0] <> null && argv.[0].Contains("steamapps/common/Proton") then
             Some (argv.[0], argv.[1]), Path.GetDirectoryName(argv.[2]) |> Some, argv.[2..]
+        else if argv.Length > 0 && argv.[0] <> null && argv.[0].Contains("EDLaunch.exe", StringComparison.OrdinalIgnoreCase) then
+            None, Some (Path.GetDirectoryName(argv.[0])), argv.[1..]
         else
             None, None, argv
             

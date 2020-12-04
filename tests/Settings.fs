@@ -104,6 +104,11 @@ let tests =
             let settings = parse [| "asdf"; "fdsa"; "launchDir" |]
             Expect.equal settings.Proton None ""
         }
+        test "Uses first arg as launch dir if it points to EDLaunch.exe" {
+            let expectedDir = "test/dir"
+            let settings = parse [| $"{expectedDir}/EDLaunch.exe" |]
+            Expect.equal settings.CbLauncherDir expectedDir ""
+        }
         test "Non Proton uses fallback dir for cobra bay launcher dir" {
             let expectedDir = "test/dir"
             let settings = parseWithFallback (fun _ -> Ok expectedDir) [||]
