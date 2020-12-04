@@ -15,6 +15,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "root", "root", "{DCB76620-F
 ProjectSection(SolutionItems) = preProject
 	README.md = README.md
 	.gitignore = .gitignore
+	publish.ps1 = publish.ps1
+	publish.sh = publish.sh
+	.github\workflows\release.yaml = .github\workflows\release.yaml
 EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EdLauncher.Bootstrap", "src\EdLauncher.Bootstrap\EdLauncher.Bootstrap.csproj", "{7C2DC5A4-619E-4189-888E-393224E5E6A6}"

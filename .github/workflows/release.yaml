@@ -1,0 +1,47 @@
+name: Publish
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  release:
+    name: Release
+    strategy:
+      matrix:
+        kind: ['linux', 'windows']
+        include:
+          - kind: linux
+            os: ubuntu-latest
+            target: linux-x64
+          - kind: windows
+            os: windows-latest
+            target: win10-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0
+
+      - name: Publish Windows
+        if: ${{ matrix.target == 'win10-x64' }}
+        run: |
+          tag=git describe --tags --abbrev=0
+          .\publish.ps1 $tag
+        
+      - name: Publish Linux
+        if: ${{ matrix.target == 'linux-x64' }}
+        run: |
+          tag=$(git describe --tags --abbrev=0)
+          ./publish.sh "$tag"
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: "artifacts/min-ed-launcher*"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
