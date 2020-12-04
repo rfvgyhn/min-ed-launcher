@@ -9,7 +9,7 @@ namespace EdLauncher.Bootstrap
         {
             var startInfo = new ProcessStartInfo
             {
-                FileName = "EdLauncher.exe",
+                FileName = "MinEdLauncher.exe",
                 Arguments = string.Join(" ", args),
                 CreateNoWindow = false,
                 UseShellExecute = false

@@ -1,9 +1,9 @@
-module EdLauncher.Tests.Settings
+module MinEdLauncher.Tests.Settings
 
 open Expecto
-open EdLauncher
-open EdLauncher.Settings
-open EdLauncher.Types
+open MinEdLauncher
+open MinEdLauncher.Settings
+open MinEdLauncher.Types
 
 [<Tests>]
 let tests =

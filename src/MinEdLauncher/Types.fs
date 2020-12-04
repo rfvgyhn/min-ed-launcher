@@ -1,4 +1,4 @@
-module EdLauncher.Types
+module MinEdLauncher.Types
 
 open System
 open System.Diagnostics

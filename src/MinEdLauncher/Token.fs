@@ -1,4 +1,4 @@
-module EdLauncher.Token
+module MinEdLauncher.Token
 
 open System
 open System.Threading.Tasks

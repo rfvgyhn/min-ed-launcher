@@ -1,4 +1,4 @@
-module EdLauncher.MachineId
+module MinEdLauncher.MachineId
 open System
 open System.IO
 open FSharp.Control.Tasks.NonAffine

@@ -1,4 +1,4 @@
-module EdLauncher.Settings
+module MinEdLauncher.Settings
 
 open Types
 open System

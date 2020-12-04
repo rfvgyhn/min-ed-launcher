@@ -1,9 +1,9 @@
-module EdLauncher.Tests.Product
+module MinEdLauncher.Tests.Product
 
 open System.IO
-open EdLauncher.Product
-open EdLauncher.Token
-open EdLauncher.Types
+open MinEdLauncher.Product
+open MinEdLauncher.Token
+open MinEdLauncher.Types
 open Expecto
 
     module Expect =

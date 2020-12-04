@@ -1,4 +1,4 @@
-module EdLauncher.Process
+module MinEdLauncher.Process
 
 open System.Diagnostics
 

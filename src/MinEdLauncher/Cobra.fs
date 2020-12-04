@@ -1,4 +1,4 @@
-module EdLauncher.Cobra
+module MinEdLauncher.Cobra
 open System
 open System.Diagnostics
 open System.IO

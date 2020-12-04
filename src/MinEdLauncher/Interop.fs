@@ -1,4 +1,4 @@
-module EdLauncher.Interop
+module MinEdLauncher.Interop
 #nowarn "9"
 
 open System.Diagnostics

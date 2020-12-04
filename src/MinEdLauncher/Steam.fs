@@ -1,4 +1,4 @@
-module EdLauncher.Steam
+module MinEdLauncher.Steam
 
 open System
 open System.IO

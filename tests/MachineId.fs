@@ -1,8 +1,8 @@
-module EdLauncher.Tests.MachineId
+module MinEdLauncher.Tests.MachineId
 
 open System
 open Expecto
-open EdLauncher.MachineId
+open MinEdLauncher.MachineId
 
 [<Tests>]
 let tests =

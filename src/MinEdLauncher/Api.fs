@@ -1,10 +1,10 @@
-module EdLauncher.Api
+module MinEdLauncher.Api
 
 open System
 open System.Net
 open System.Net.Http
 open FSharp.Control.Tasks.NonAffine
-open EdLauncher.Token
+open MinEdLauncher.Token
 open Types
 open Rop
 

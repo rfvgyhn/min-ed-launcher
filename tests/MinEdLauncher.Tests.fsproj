@@ -6,6 +6,7 @@
     <GenerateProgramFile>false</GenerateProgramFile>
     <Configurations>Debug;Release;ReleaseWindows</Configurations>
     <Platforms>AnyCPU</Platforms>
+    <RootNamespace>EdLauncher.Tests</RootNamespace>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'ReleaseWindows' ">
@@ -32,6 +33,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\src\EdLauncher\EdLauncher.fsproj" />
+    <ProjectReference Include="..\src\MinEdLauncher\MinEdLauncher.fsproj" />
   </ItemGroup>
 </Project>

@@ -1,8 +1,8 @@
-module EdLauncher.Epic
+module MinEdLauncher.Epic
 
 open Types
 open Rop
-open EdLauncher.Token
+open MinEdLauncher.Token
 open FSharp.Control.Tasks.NonAffine
 open System
 open System.IO

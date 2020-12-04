@@ -1,4 +1,4 @@
-module EdLauncher.Log
+module MinEdLauncher.Log
 
 open System
 open System.IO

@@ -1,4 +1,4 @@
-namespace EdLauncher
+namespace MinEdLauncher
 
 module Result =
     let defaultValue value = function

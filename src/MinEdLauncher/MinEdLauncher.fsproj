@@ -8,6 +8,7 @@
     <Platforms>AnyCPU</Platforms>
     <Version>0.1.0</Version>
     <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
+    <RootNamespace>EdLauncher</RootNamespace>
   </PropertyGroup>
   
   <PropertyGroup>

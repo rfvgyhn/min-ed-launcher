@@ -1,8 +1,8 @@
-module EdLauncher.Tests.EdLauncher
+module MinEdLauncher.Tests.EdLauncher
 
 open System.IO
 open Expecto
-open EdLauncher.Cobra
+open MinEdLauncher.Cobra
 
 [<Tests>]
 let tests =

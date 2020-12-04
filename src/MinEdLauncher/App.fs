@@ -1,13 +1,13 @@
-module EdLauncher.App
+module MinEdLauncher.App
 
 open System.IO
-open EdLauncher
-open EdLauncher.Token
+open MinEdLauncher
+open MinEdLauncher.Token
 open FSharp.Control.Tasks.NonAffine
 open Steam
 open System
 open System.Diagnostics
-open EdLauncher.Types
+open MinEdLauncher.Types
 
 type LoginResult =
 | Success of Api.Connection

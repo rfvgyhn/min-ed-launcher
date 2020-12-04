@@ -1,11 +1,11 @@
-module EdLauncher.Product
+module MinEdLauncher.Product
 
 open System
 open System.Diagnostics
 open System.IO
 open System.Runtime.InteropServices
-open EdLauncher.Rop
-open EdLauncher.Types
+open MinEdLauncher.Rop
+open MinEdLauncher.Types
 
 let createArgString vr (lang: string option) edSession machineId timestamp watchForCrashes platform hashFile (product:ProductDetails) =
     let targetOptions = String.Join(" ", [
