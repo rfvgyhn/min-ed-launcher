@@ -1,4 +1,4 @@
-module Tests.Settings
+module EdLauncher.Tests.Settings
 
 open Expecto
 open EdLauncher

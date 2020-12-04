@@ -1,4 +1,4 @@
-module Tests.Product
+module EdLauncher.Tests.Product
 
 open System.IO
 open EdLauncher.Product

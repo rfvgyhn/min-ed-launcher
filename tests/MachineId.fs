@@ -1,4 +1,4 @@
-module Tests.MachineId
+module EdLauncher.Tests.MachineId
 
 open System
 open Expecto

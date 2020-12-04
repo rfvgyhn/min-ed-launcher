@@ -1,4 +1,4 @@
-module Tests.EdLauncher
+module EdLauncher.Tests.EdLauncher
 
 open System.IO
 open Expecto
