@@ -48,7 +48,7 @@ let login runningTime httpClient machineId (platform: Platform) =
         | Error msg -> return Failure msg, noopDisposable }
 
 let printInfo (platform: Platform) productsDir cobraVersion launcherVersion =
-    Log.info $"""Elite: Dangerous - Minimal Launcher
+    Log.info $"""Elite Dangerous - Minimal Launcher
 Platform: %s{platform.Name}
 OS: %s{RuntimeInformation.getOsIdent()}
 CobraBay Version: %s{cobraVersion}

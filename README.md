@@ -1,5 +1,5 @@
-# Minimal Elite: Dangerous Launcher
-Cross-platform launcher for the game Elite: Dangerous. Created mainly to avoid the long startup
+# Minimal Elite Dangerous Launcher
+Cross-platform launcher for the game Elite Dangerous. Created mainly to avoid the long startup
 time of the default launcher when running on Linux. Can be used with Steam and Epic on both
 Windows and Linux. Game accounts purchased via Frontier or Oculus are not supported.
 
@@ -41,21 +41,21 @@ Windows and Linux. Game accounts purchased via Frontier or Oculus are not suppor
   
 ## Usage
 
-This launcher doesn't setup/link new accounts. You'll need to launch Elite: Dangerous at least once with
+This launcher doesn't setup/link new accounts. You'll need to launch Elite Dangerous at least once with
 the default launcher for this one to work.
 
 ### Setup
 #### Steam
 1. Download the [latest release] for your operating system
 2. Extract executable from the zip/tar archive
-3. Place `MinEdLauncher` in your Elite: Dangerous install location so that it's in the same folder
+3. Place `MinEdLauncher` in your Elite Dangerous install location so that it's in the same folder
    as `EDLaunch.exe`. `MinEdLauncher.Bootstrap` is for Epic only and may be ignored. To find your install
    directory:
-    1. Right click _Elite: Dangerous_ in your Steam library
+    1. Right click _Elite Dangerous_ in your Steam library
     2. Select _properties_
     3. In the _Local Files_ tab, click _Browse Local Files..._
 4. Update your launch options to point to `MinEdLauncher`.
-    1. Right click _Elite: Dangerous_ in your Steam library
+    1. Right click _Elite Dangerous_ in your Steam library
     2. Select _properties_
     3. In the _general_ tab, click _Set Launch Options_
     4. Windows users - Set the value to `cmd /c "MinEdLauncher.exe %command% /autoquit /EDH"`
@@ -72,7 +72,7 @@ the default launcher for this one to work.
 #### Epic
 1. Download the [latest release] for Windows
 2. Extract executables from the zip archive
-3. Navigate to your Elite: Dangerous install location (folder that contains `EDLaunch.exe`)
+3. Navigate to your Elite Dangerous install location (folder that contains `EDLaunch.exe`)
 4. Copy `MinEdLauncher.exe`
 5. Delete or rename `EDLaunch.exe` (e.g. `EDLaunch.exe.bak`)
 6. Copy and rename `MinEdLauncher.Bootstrap.exe` to `EDLaunch.exe`. This step is required because
@@ -82,7 +82,7 @@ the default launcher for this one to work.
    your game files, you'll have to replace `EDLaunch.exe` with `MinEdLauncher.Bootstrap.exe`.
 7. Update your launch options to auto start your preferred product
     1. Click _Settings_ in the Epic Games Launcher
-    2. Scroll down to the _Manage Games_ section and click _Elite: Dangerous_
+    2. Scroll down to the _Manage Games_ section and click _Elite Dangerous_
     3. Check _Additional Command Line Arguments_
     4. Set the value to `/autoquit /EDH`
 8. Launch your game as you normally would in Epic
@@ -97,9 +97,9 @@ you to select a version of the game.
 |----------------|-----------------------------------------------------------|
 | /autoquit      | Automatically close the launcher when the game closes     |
 | /autorun       | Automatically start selected product when launcher starts |
-| /ed            | Select Elite: Dangerous as the startup product            |
-| /edh           | Select Elite: Dangerous Horizons as the startup product   |
-| /eda           | Select Elite: Dangerous Arena as the startup product      |
+| /ed            | Select Elite Dangerous as the startup product            |
+| /edh           | Select Elite Dangerous Horizons as the startup product   |
+| /eda           | Select Elite Dangerous Arena as the startup product      |
 | /vr            | Tell the game that you want to play in VR mode            |
 | -auth_password | Epic exchange code. Used for authenticating with Epic     |
 
