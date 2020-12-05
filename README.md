@@ -68,7 +68,8 @@ Windows and Linux. Game accounts purchased via Frontier or Oculus are not suppor
 6. Copy and rename `MinEdLauncher.Bootstrap.exe` to `EDLaunch.exe`. This step is required because
    Epic doesn't allow changing the game's startup application. If someone knows how to modify the
    game's manifest file (`EliteDangerous/.egstore/*.manifest`), this could be avoided. Please open
-   a [new issue] if you can help with this.
+   a [new issue] if you can help with this. This also means any time the game updates or you verify
+   your game files, you'll have to replace `EDLaunch.exe` with `MinEdLauncher.Bootstrap.exe`.
 7. Update your launch options to auto start your preferred product
     1. Click _Settings_ in the Epic Games Launcher
     2. Scroll down to the _Manage Games_ section and click _Elite: Dangerous_
