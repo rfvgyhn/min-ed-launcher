@@ -29,15 +29,11 @@ jobs:
 
       - name: Publish Windows
         if: ${{ matrix.target == 'win10-x64' }}
-        run: |
-          tag=git describe --tags --abbrev=0
-          .\publish.ps1 $tag
+        run: .\publish.ps1
         
       - name: Publish Linux
         if: ${{ matrix.target == 'linux-x64' }}
-        run: |
-          tag=$(git describe --tags --abbrev=0)
-          ./publish.sh "$tag"
+        run: ./publish.sh
 
       - name: Release
         uses: softprops/action-gh-release@v1

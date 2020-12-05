@@ -1,8 +1,8 @@
 #!/bin/bash
 
 target="linux-x64"
-tag="${1:-dev}"
-release_name="min-ed-launcher-$tag-$target"
+version=$(grep -oPm1 "(?<=<Version>)[^<]+") # use something like xml_grep if this regex becomes a problem
+release_name="min-ed-launcher-$version-$target"
 
 dotnet publish src/MinEdLauncher/MinEdLauncher.fsproj -r "$target" --self-contained true -o "artifacts/$release_name" -c Release
 rm artifacts/"$release_name"/*.pdb
