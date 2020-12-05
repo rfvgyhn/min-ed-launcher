@@ -49,7 +49,11 @@ the default launcher for this one to work.
 1. Download the [latest release] for your operating system
 2. Extract executable from the zip/tar archive
 3. Place `MinEdLauncher` in your Elite: Dangerous install location so that it's in the same folder
-   as `EDLaunch.exe`. `MinEdLauncher.Bootstrap` is for Epic only and may be ignored.
+   as `EDLaunch.exe`. `MinEdLauncher.Bootstrap` is for Epic only and may be ignored. To find your install
+   directory:
+    1. Right click _Elite: Dangerous_ in your Steam library
+    2. Select _properties_
+    3. In the _Local Files_ tab, click _Browse Local Files..._
 4. Update your launch options to point to `MinEdLauncher`.
     1. Right click _Elite: Dangerous_ in your Steam library
     2. Select _properties_
