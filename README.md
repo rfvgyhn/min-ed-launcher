@@ -120,6 +120,9 @@ Linux: `$XDG_CONFIG_DIR/min-ed-launcher/settings.json` (`~/.config` if `$XDG_CON
 | restart         | Restart the game after it has closed                                                      |
 | processes       | Additional applications to launch before launching the game                               |
 
+When specifying a path for either `gameLocation` or `processes.fileName` on Windows, it's required to escape backslashes. Make sure to use a
+double backslash (`\\`) instead of a single backslash (`\`).
+
 ```json
 {
     "apiUri": "https://api.zaonce.net",
@@ -131,11 +134,11 @@ Linux: `$XDG_CONFIG_DIR/min-ed-launcher/settings.json` (`~/.config` if `$XDG_CON
     },
     "processes": [
         {
-            "fileName": "/path/to/app",
+            "fileName": "C:\\path\\to\\app",
             "arguments": "--arg1 --arg2"
         },
         {
-            "fileName": "/path/to/app2",
+            "fileName": "C:\\path\\to\\app2",
             "arguments": "--arg1 --arg2"
         }
     ]
