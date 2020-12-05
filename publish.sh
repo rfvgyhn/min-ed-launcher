@@ -5,6 +5,7 @@ version=$(grep -oPm1 "(?<=<Version>)[^<]+" src/MinEdLauncher/MinEdLauncher.fspro
 release_name="min-ed-launcher-$version-$target"
 
 dotnet publish src/MinEdLauncher/MinEdLauncher.fsproj -r "$target" --self-contained true -o "artifacts/$release_name" -c Release
+cp README.md "artifacts/$release_name"
 rm artifacts/"$release_name"/*.pdb
 
 tar czvf "artifacts/$release_name.tar.gz" -C "artifacts" "$release_name"
