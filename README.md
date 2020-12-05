@@ -40,6 +40,10 @@ Windows and Linux. Game accounts purchased via Frontier or Oculus are not suppor
   installation. See [details] for how this works.
   
 ## Usage
+
+This launcher doesn't setup/link new accounts. You'll need to launch Elite: Dangerous at least once with
+the default launcher for this one to work.
+
 ### Setup
 #### Steam
 1. Download the [latest release] for your operating system
