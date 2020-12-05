@@ -43,6 +43,8 @@ Global
 		{55188BBB-C5EE-403E-A006-12DEDF4B4D2F}.DebugWindows|Any CPU.Build.0 = DebugWindows|Any CPU
 		{55188BBB-C5EE-403E-A006-12DEDF4B4D2F}.ReleaseWindows|Any CPU.ActiveCfg = ReleaseWindows|Any CPU
 		{55188BBB-C5EE-403E-A006-12DEDF4B4D2F}.ReleaseWindows|Any CPU.Build.0 = ReleaseWindows|Any CPU
+		{55188BBB-C5EE-403E-A006-12DEDF4B4D2F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{55188BBB-C5EE-403E-A006-12DEDF4B4D2F}.Release|Any CPU.Build.0 = Release|Any CPU
 		{BEA4B51C-5BA7-408D-A822-C5B61D103166}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{BEA4B51C-5BA7-408D-A822-C5B61D103166}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BEA4B51C-5BA7-408D-A822-C5B61D103166}.Debug|x64.ActiveCfg = Debug|Any CPU
