@@ -3,6 +3,8 @@ Cross-platform launcher for the game Elite: Dangerous. Created mainly to avoid t
 time of the default launcher when running on Linux. Can be used with Steam and Epic on both
 Windows and Linux. Game accounts purchased via Frontier or Oculus are not supported.
 
+![preview-gif]
+
 ## Features
 * **Minimal Interface**
   
@@ -164,6 +166,7 @@ Run either `publish.sh` or `publish.ps1` depending on your OS. These scripts mak
 Note that the bootstrap project uses [NativeAOT] to link and compile the app and the .net 5 runtime into a single native executable. It
 specifically targets Windows and won't publish on a non-Windows machine.
 
+[preview-gif]: https://rfvgyhn.blob.core.windows.net/elite-dangerous/min-ed-launcher-demo.gif
 [Settings]: #settings
 [flag]: #flags
 [Elite Log Agent]: https://github.com/DarkWanderer/Elite-Log-Agent
