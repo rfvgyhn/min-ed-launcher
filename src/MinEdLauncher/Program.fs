@@ -13,7 +13,7 @@ let getSettings args =
     | Ok settingsDir ->
         let settingsPath = Path.Combine(settingsDir, "settings.json")
         if not (File.Exists(settingsPath)) then
-            use settings = typeof<Steam>.GetTypeInfo().Assembly.GetManifestResourceStream("EdLauncher.settings.json")
+            use settings = typeof<Steam>.GetTypeInfo().Assembly.GetManifestResourceStream("MinEdLauncher.settings.json")
             use file = File.OpenWrite(settingsPath)
             settings.CopyTo(file)
         |> ignore
