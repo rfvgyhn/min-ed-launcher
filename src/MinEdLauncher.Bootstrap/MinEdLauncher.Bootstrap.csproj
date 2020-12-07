@@ -8,7 +8,6 @@
         <IlcDisableReflection>true</IlcDisableReflection>
         <IlcFoldIdenticalMethodBodies>true</IlcFoldIdenticalMethodBodies>
         <IlcOptimizationPreference>Speed</IlcOptimizationPreference>
-        <RootNamespace>EdLauncher.Bootstrap</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

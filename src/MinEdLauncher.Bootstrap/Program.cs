@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace EdLauncher.Bootstrap
+namespace MinEdLauncher.Bootstrap
 {
     // C# instead of F# since final exe output is quite a bit smaller
     class Program
