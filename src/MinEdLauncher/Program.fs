@@ -12,6 +12,7 @@ let getSettings args =
     | Error msg -> Error $"Unable to find/create configuration directory at %s{path} - %s{msg}"  
     | Ok settingsDir ->
         let settingsPath = Path.Combine(settingsDir, "settings.json")
+        Log.debug $"Reading settings from '%s{settingsPath}'"
         if not (File.Exists(settingsPath)) then
             use settings = typeof<Steam>.GetTypeInfo().Assembly.GetManifestResourceStream("MinEdLauncher.settings.json")
             use file = File.OpenWrite(settingsPath)
