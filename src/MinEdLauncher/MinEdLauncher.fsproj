@@ -6,7 +6,6 @@
     <LangVersion>preview</LangVersion>
     <Configurations>Debug;Release;DebugWindows;ReleaseWindows</Configurations>
     <Platforms>AnyCPU</Platforms>
-    <Version>0.1.0</Version>
   </PropertyGroup>
   
   <PropertyGroup>

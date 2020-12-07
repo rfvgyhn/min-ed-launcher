@@ -1,8 +1,8 @@
 $ErrorActionPreference = "Stop"
 
 $target="win10-x64"
-[xml]$proj = Get-Content src\MinEdLauncher\MinEdLauncher.fsproj
-$version=$proj.Project.PropertyGroup[0].Version
+[xml]$proj = Get-Content src\Directory.Build.props
+$version=$proj.Project.PropertyGroup.VersionPrefix
 $release_name="min-ed-launcher-$version-$target"
 
 dotnet publish src\MinEdLauncher\MinEdLauncher.fsproj -r "$target" --self-contained true -o "artifacts\$release_name" -c ReleaseWindows -p:PublishSingleFile=true
