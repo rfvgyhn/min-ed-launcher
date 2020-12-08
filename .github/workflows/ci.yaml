@@ -59,7 +59,12 @@ jobs:
           release_name="min-ed-launcher_${{ steps.version.outputs.version }}_$target"
           dotnet publish src/MinEdLauncher.Bootstrap/MinEdLauncher.Bootstrap.csproj -r "$target" --self-contained true -o "artifacts/$release_name" -c Release -p:VersionSuffix=${{ steps.version.outputs.version-suffix }}
 
-      - name: Upload Artifacts
+      - name: Upload Windows Artifacts
         uses: actions/upload-artifact@v2
         with:
-          path: "artifacts/"
+          path: "artifacts/*win10*"
+
+      - name: Upload Linux Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          path: "artifacts/*linux*"
