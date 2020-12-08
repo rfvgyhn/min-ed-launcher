@@ -23,7 +23,8 @@ let defaults =
 type private EpicArg = ExchangeCode of string | Type of string | AppId of string
 let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (argv: string[]) =
     let proton, cbLaunchDir, args =
-        if argv.Length > 2 && argv.[0] <> null && argv.[0].Contains("steamapps/common/Proton") then
+        let protonPath = Path.Combine("steamapps", "common", "Proton")
+        if argv.Length > 2 && argv.[0] <> null && argv.[0].Contains(protonPath) then
             Some (argv.[0], argv.[1]), Path.GetDirectoryName(argv.[2]) |> Some, argv.[2..]
         else if argv.Length > 0 && argv.[0] <> null && argv.[0].Contains("EDLaunch.exe", StringComparison.OrdinalIgnoreCase) then
             None, Some (Path.GetDirectoryName(argv.[0])), argv.[1..]

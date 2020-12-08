@@ -1,5 +1,6 @@
 module MinEdLauncher.Tests.Settings
 
+open System.IO
 open Expecto
 open MinEdLauncher
 open MinEdLauncher.Settings
@@ -88,10 +89,10 @@ let tests =
             Expect.equal (settings.ProductWhitelist.Contains "eda") true ""
         }
         test "Matches proton args" {
-            let protonPath = "steamapps/common/Proton"
+            let protonPath = Path.Combine("steamapps", "common", "Proton")
             let protonAction = "action"
             let launcherDir = "launchDir"
-            let launcherPath = launcherDir + "/EDLaunch.exe"
+            let launcherPath = Path.Combine(launcherDir, "EDLaunch.exe")
             let settings = parse [| protonPath; protonAction; launcherPath |]
             Expect.equal settings.Proton (Some (protonPath, protonAction)) ""
             Expect.equal settings.CbLauncherDir launcherDir ""
@@ -105,12 +106,12 @@ let tests =
             Expect.equal settings.Proton None ""
         }
         test "Uses first arg as launch dir if it points to EDLaunch.exe" {
-            let expectedDir = "test/dir"
-            let settings = parse [| $"{expectedDir}/EDLaunch.exe" |]
+            let expectedDir = Path.Combine("test", "dir")
+            let settings = parse [| Path.Combine(expectedDir, "EDLaunch.exe") |]
             Expect.equal settings.CbLauncherDir expectedDir ""
         }
         test "Non Proton uses fallback dir for cobra bay launcher dir" {
-            let expectedDir = "test/dir"
+            let expectedDir = Path.Combine("test", "dir")
             let settings = parseWithFallback (fun _ -> Ok expectedDir) [||]
             Expect.equal settings.CbLauncherDir expectedDir ""
         }
