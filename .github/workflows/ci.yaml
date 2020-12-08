@@ -62,9 +62,9 @@ jobs:
       - name: Upload Windows Artifacts
         uses: actions/upload-artifact@v2
         with:
-          path: "artifacts/*win10*"
+          path: "artifacts/*win10*/"
 
       - name: Upload Linux Artifacts
         uses: actions/upload-artifact@v2
         with:
-          path: "artifacts/*linux*"
+          path: "artifacts/*linux*/"
