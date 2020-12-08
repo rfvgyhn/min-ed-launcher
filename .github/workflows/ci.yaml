@@ -40,26 +40,23 @@ jobs:
       - name: Version
         shell: bash
         run: |
-          echo "::set-output name=version-prefix::$(grep -oPm1 "(?<=<VersionPrefix>)[^<]+" src/Directory.Build.props)"
           echo "::set-output name=version-suffix::$(echo "ci$GITHUB_RUN_ID")"
+          echo "::set-output name=version::$(echo "$(grep -oPm1 "(?<=<VersionPrefix>)[^<]+" src/Directory.Build.props)-ci$GITHUB_RUN_ID")"
           
-      - name: Publish Windows
+      - name: Publish
+        shell: bash
+        run: |
+          target="${{ matrix.target }}"
+          release_name="min-ed-launcher_${{ steps.version.outputs.version }}_$target"
+          dotnet publish src/MinEdLauncher/MinEdLauncher.fsproj -r "$target" --self-contained true -o "artifacts/$release_name" -c ${{ matrix.config }} -p:PublishSingleFile=true -p:VersionSuffix=${{ steps.version.outputs.version-suffix }}
+        
+      - name: Publish Bootstrap
         if: ${{ matrix.target == 'win10-x64' }}
         shell: bash
         run: |
           target="${{ matrix.target }}"
-          version="${{ steps.version.outputs.version-prefix }}-${{ steps.version.outputs.version-suffix }}"
-          release_name="min-ed-launcher_$version_$target"
-          dotnet publish src\MinEdLauncher\MinEdLauncher.fsproj -r "$target" --self-contained true -o "artifacts\$release_name" -c ${{ matrix.config }} -p:PublishSingleFile=true -p:VersionSuffix=${{ steps.version.outputs.version-suffix }}
-          dotnet publish src\MinEdLauncher.Bootstrap\MinEdLauncher.Bootstrap.csproj -r "$target" --self-contained true -o "artifacts\$release_name" -c ${{ matrix.config }} -p:VersionSuffix=${{ steps.version.outputs.version-suffix }}
-        
-      - name: Publish Linux
-        if: ${{ matrix.target == 'linux-x64' }}
-        run: |
-          target="${{ matrix.target }}"
-          version="${{ steps.version.outputs.version-prefix }}-${{ steps.version.outputs.version-suffix }}"
-          release_name="min-ed-launcher_$version_$target"
-          dotnet publish src/MinEdLauncher/MinEdLauncher.fsproj -r "$target" --self-contained true -o "artifacts/$release_name" -c ${{ matrix.config }} -p:PublishSingleFile=true -p:VersionSuffix=${{ steps.version.outputs.version-suffix }}
+          release_name="min-ed-launcher_${{ steps.version.outputs.version }}_$target"
+          dotnet publish src/MinEdLauncher.Bootstrap/MinEdLauncher.Bootstrap.csproj -r "$target" --self-contained true -o "artifacts/$release_name" -c Release -p:VersionSuffix=${{ steps.version.outputs.version-suffix }}
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2
