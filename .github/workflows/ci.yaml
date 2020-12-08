@@ -38,10 +38,11 @@ jobs:
         run: dotnet test -c ${{ matrix.config }} --no-build
       
       - name: Version
+        id: version
         shell: bash
         run: |
-          echo "::set-output name=version-suffix::$(echo "ci$GITHUB_RUN_ID")"
-          echo "::set-output name=version::$(echo "$(grep -oPm1 "(?<=<VersionPrefix>)[^<]+" src/Directory.Build.props)-ci$GITHUB_RUN_ID")"
+          echo ::set-output name=version-suffix::$(echo "ci$GITHUB_RUN_ID")
+          echo ::set-output name=version::$(echo "$(grep -oPm1 "(?<=<VersionPrefix>)[^<]+" src/Directory.Build.props)-ci$GITHUB_RUN_ID")
           
       - name: Publish
         shell: bash
