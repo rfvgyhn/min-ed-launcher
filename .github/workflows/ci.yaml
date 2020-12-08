@@ -48,7 +48,7 @@ jobs:
         shell: bash
         run: |
           target="${{ matrix.target }}"
-          release_name="min-ed-launcher_${{ steps.version.outputs.version }}_$target"
+          release_name="min-ed-launcher_v${{ steps.version.outputs.version }}_$target"
           dotnet publish src/MinEdLauncher/MinEdLauncher.fsproj -r "$target" --self-contained true -o "artifacts/$release_name" -c ${{ matrix.config }} -p:PublishSingleFile=true -p:VersionSuffix=${{ steps.version.outputs.version-suffix }}
         
       - name: Publish Bootstrap
@@ -56,7 +56,7 @@ jobs:
         shell: bash
         run: |
           target="${{ matrix.target }}"
-          release_name="min-ed-launcher_${{ steps.version.outputs.version }}_$target"
+          release_name="min-ed-launcher_v${{ steps.version.outputs.version }}_$target"
           dotnet publish src/MinEdLauncher.Bootstrap/MinEdLauncher.Bootstrap.csproj -r "$target" --self-contained true -o "artifacts/$release_name" -c Release -p:VersionSuffix=${{ steps.version.outputs.version-suffix }}
 
       - name: Upload Artifacts
