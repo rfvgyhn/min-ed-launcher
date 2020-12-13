@@ -131,7 +131,9 @@ let run proton args (product:RunnableProduct)  =
     else
         let fileName, arguments =
             match proton with
-            | Some (path, action) -> "python3", $"\"%s{path}\" %s{action} \"%s{product.Executable.FullName}\" %s{args}"
+            | Some details ->
+                let protonArgs = details.Args |> Array.map (fun a -> $"\"%s{a}\"") |> String.join " "
+                details.EntryPoint,  $"%s{protonArgs} \"%s{product.Executable.FullName}\" %s{args}"
             | None -> product.Executable.FullName, args
         
         let startInfo = ProcessStartInfo()

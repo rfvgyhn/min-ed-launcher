@@ -7,6 +7,7 @@
     <Configurations>Debug;Release;ReleaseWindows</Configurations>
     <Platforms>AnyCPU</Platforms>
     <RootNamespace>EdLauncher.Tests</RootNamespace>
+    <LangVersion>preview</LangVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'ReleaseWindows' ">

@@ -130,6 +130,11 @@ module Uri =
         
     let addQueryParam kvp uri = addQueryParams [ kvp ] uri
     
+module String =
+    open System
+    open System.Collections.Generic
+    let join (separator: string) (values: IEnumerable<'T>) = String.Join(separator, values)
+    
 module SHA1 =
     open System.Text
     open System.Security.Cryptography

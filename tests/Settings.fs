@@ -88,20 +88,37 @@ let tests =
             let settings = parse [| "/eda" |]
             Expect.equal (settings.ProductWhitelist.Contains "eda") true ""
         }
-        test "Matches proton args" {
+        test "Matches proton args non steam linux runtime" {
             let protonPath = Path.Combine("steamapps", "common", "Proton")
             let protonAction = "action"
             let launcherDir = "launchDir"
             let launcherPath = Path.Combine(launcherDir, "EDLaunch.exe")
-            let settings = parse [| protonPath; protonAction; launcherPath |]
-            Expect.equal settings.Proton (Some (protonPath, protonAction)) ""
+            let args = [| protonPath; protonAction; launcherPath |]
+            let settings = parse args
+            
+            let expected = { EntryPoint = "python3"; Args = args.[..^1] }
+            Expect.equal settings.Proton (Some expected) ""
+            Expect.equal settings.CbLauncherDir launcherDir ""
+        }
+        test "Matches proton args steam linux runtime" {
+            let entryPoint = Path.Combine("steamapps", "common", "SteamLinuxRuntime_soldier", "_v2-entry-point")
+            let protonPath = Path.Combine("steamapps", "common", "Proton")
+            let protonArgs = [| "--deploy=soldier"; "--suite=soldier"; "--verb=waitforexitandrun"; "--"; protonPath; "waitforexitandrun" |]
+            let launcherDir = "launchDir"
+            let launcherPath = Path.Combine(launcherDir, "EDLaunch.exe")
+            let args = seq { [| entryPoint |]; protonArgs; [| launcherPath |] } |> Array.concat
+            let settings = parse args
+            
+            let expectedArgs = seq { args.[1..4]; [| "python3" |]; args.[5..^1] } |> Array.concat
+            let expected = { EntryPoint = entryPoint; Args = expectedArgs }
+            Expect.equal settings.Proton (Some expected) ""
             Expect.equal settings.CbLauncherDir launcherDir ""
         }
         test "Fewer than three args means no Proton" {
             let settings = parse [| "asdf"; "fdsa" |]
             Expect.equal settings.Proton None ""
         }
-        test "First arg doesn't contain steamapps/common/Proton means no Proton" {
+        test "First arg doesn't contain steamapps/common/Proton or SteamRuntimeLinux means no Proton" {
             let settings = parse [| "asdf"; "fdsa"; "launchDir" |]
             Expect.equal settings.Proton None ""
         }
