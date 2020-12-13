@@ -63,11 +63,11 @@ the default launcher for this one to work.
        Linux users - The command will depend on which terminal emulator you use. Examples for
        [alacritty], [gnome-terminal] and [konsole] are below.
           
-       `alacritty -e MinEdLauncher %command% /autoquit /EDH`
+       `alacritty -e ./MinEdLauncher %command% /autoquit /EDH`
        
-       `gnome-terminal -- MinEdLauncher %command% /autoquit /EDH`
+       `gnome-terminal -- ./MinEdLauncher %command% /autoquit /EDH`
     
-       `konsole -e MinEdLauncher %command% /autoquit /EDH`
+       `konsole -e ./MinEdLauncher %command% /autoquit /EDH`
 5. Launch your game as you normally would in Steam
 #### Epic
 1. Download the [latest release] for Windows
