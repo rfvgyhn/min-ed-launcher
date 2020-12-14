@@ -52,6 +52,10 @@
     <Compile Include="App.fs" />
     <Compile Include="Program.fs" />
     <EmbeddedResource Include="settings.json" />
+    <Content Include="..\..\lib\libsteam_api.so" Condition=" '$(Configuration)' == 'Debug' OR '$(Configuration)' == 'Release' ">
+      <Link>libsteam_api.so</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>

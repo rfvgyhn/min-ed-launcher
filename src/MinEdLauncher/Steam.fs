@@ -98,8 +98,7 @@ type Steam() =
         |> Hex.toString
         
     let init() =
-        if not <| File.Exists(SteamLib) then
-            Error <| sprintf "Unable to find steam library '%s'" SteamLib
+        if initialized then Ok ()
         elif SteamAPI_Init() then
             initialized <- true
             Ok ()
