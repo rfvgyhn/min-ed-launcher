@@ -20,6 +20,7 @@ ProjectSection(SolutionItems) = preProject
 	.github\workflows\release.yaml = .github\workflows\release.yaml
 	.github\workflows\ci.yaml = .github\workflows\ci.yaml
 	src\Directory.Build.props = src\Directory.Build.props
+	CHANGELOG.md = CHANGELOG.md
 EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MinEdLauncher.Bootstrap", "src\MinEdLauncher.Bootstrap\MinEdLauncher.Bootstrap.csproj", "{7C2DC5A4-619E-4189-888E-393224E5E6A6}"
