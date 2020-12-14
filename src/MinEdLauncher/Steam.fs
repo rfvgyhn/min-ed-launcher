@@ -6,11 +6,14 @@ open System.Runtime.InteropServices
 open Types
 
 let potentialInstallPaths() =
-    let home = Environment.expandEnvVars("~")
-    let winProgFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
-    [ $"%s{winProgFiles}\Steam\steamapps\common\Elite Dangerous" 
-      $"%s{home}/.steam/steam/steamapps/common/Elite Dangerous"
-      $"%s{home}/.local/share/Steam/steamapps/common/Elite Dangerous" ]
+    if RuntimeInformation.IsOSPlatform(OSPlatform.Windows) then
+        let winProgFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
+        [ $"%s{winProgFiles}\\Steam\\steamapps\\common\\Elite Dangerous" ]
+    elif RuntimeInformation.IsOSPlatform(OSPlatform.Linux) then
+        let home = Environment.expandEnvVars("~")
+        [ $"%s{home}/.steam/steam/steamapps/common/Elite Dangerous"
+          $"%s{home}/.local/share/Steam/steamapps/common/Elite Dangerous" ]
+    else []
 
 [<Literal>]
 let SteamLib =
