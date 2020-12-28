@@ -1,6 +1,7 @@
 module MinEdLauncher.Cobra
 open System
 open System.Diagnostics
+open System.Globalization
 open System.IO
 open System.Reflection
 open System.Resources
@@ -27,10 +28,18 @@ let getVersion cbLauncherDir =
         
         Ok (cobraVersion, launcherVersion)
 
-let getGameLang cbLauncherDir =
-    let asm = Assembly.LoadFrom(Path.Combine(cbLauncherDir, "LocalResources.dll"))
+let getGameLang cbLauncherDir langCode =
+    let asm = Assembly.LoadFrom(Path.Combine(cbLauncherDir, $"LocalResources.dll"))
     let resManager = ResourceManager("LocalResources.Properties.Resources", asm)
     try
-        resManager.GetString("GameLanguage") |> Some
-    with
-    | e -> None
+        langCode
+        |> Option.bind (fun c ->
+            if Directory.Exists(Path.Combine(cbLauncherDir, c))
+               || c.Equals("en", StringComparison.OrdinalIgnoreCase)
+            then c.ToLowerInvariant() |> Some
+            else None)
+        |> Option.map (fun c ->
+            let culture = CultureInfo.CreateSpecificCulture(c)
+            resManager.GetString("GameLanguage", culture))
+        |> Option.orElseWith (fun () -> resManager.GetString("GameLanguage") |> Some)
+    with e -> None

@@ -17,6 +17,7 @@ let defaults =
       ForceLocal = false
       Proton = None
       CbLauncherDir = "."
+      PreferredLanguage = None
       ApiUri = Uri("http://localhost:8080")
       Restart = false, 0L
       Processes = List.empty }
@@ -97,6 +98,7 @@ type Config =
     { ApiUri: string
       WatchForCrashes: bool
       GameLocation: string option
+      Language: string option
       Restart: RestartConfig
       Processes: ProcessConfig list }
 let parseConfig fileName =
@@ -154,6 +156,7 @@ let getSettings args fileConfig =
     
     parseArgs defaults fallbackDirs args
     |> Result.map (fun settings -> { settings with ApiUri = apiUri
+                                                   PreferredLanguage = fileConfig.Language
                                                    Processes = processes
                                                    Restart = restart
                                                    WatchForCrashes = fileConfig.WatchForCrashes })

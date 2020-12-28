@@ -34,6 +34,7 @@ type LauncherSettings =
       ForceLocal: ForceLocal
       Proton: Proton option
       CbLauncherDir: string
+      PreferredLanguage: string option
       ApiUri: Uri
       Restart: (bool * int64)
       Processes: ProcessStartInfo list }

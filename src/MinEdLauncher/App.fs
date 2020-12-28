@@ -167,7 +167,7 @@ let run settings = task {
                         
                         match selectedProduct, true with
                         | Some product, true ->
-                            let gameLanguage = Cobra.getGameLang settings.CbLauncherDir                                 
+                            let gameLanguage = Cobra.getGameLang settings.CbLauncherDir settings.PreferredLanguage                      
                             let processArgs() = Product.createArgString settings.DisplayMode gameLanguage connection.Session machineId (runningTime()) settings.WatchForCrashes settings.Platform SHA1.hashFile product
                             
                             match Product.validateForRun settings.CbLauncherDir settings.WatchForCrashes product with

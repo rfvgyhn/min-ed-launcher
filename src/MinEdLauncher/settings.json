@@ -1,6 +1,7 @@
 {
     "apiUri": "https://api.zaonce.net",
     "watchForCrashes": false,
+    "language": null,
     "restart": {
         "enabled": false,
         "shutdownTimeout": 3

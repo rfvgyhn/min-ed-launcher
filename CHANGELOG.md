@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### New Features
+
+- Add support for specifying Elite's language instead of just using the system default
+
 ## [0.2.0] - 2020-12-13
 
 ### New Features

@@ -112,13 +112,14 @@ Windows: `%LOCALAPPDATA%\min-ed-launcher\settings.json`
 
 Linux: `$XDG_CONFIG_DIR/min-ed-launcher/settings.json` (`~/.config` if `$XDG_CONFIG_DIR` isn't set)
 
-| Settings        | Effect                                                                                    |
-|-----------------|-------------------------------------------------------------------------------------------|
-| apiUri          | FDev API base URI. Should only be changed if you are doing local development              |
-| watchForCrashes | Determines if the game should be launched by `WatchDog64.exe` or not                      |
-| gameLocation    | Path to game's install folder. Specify this if the launcher can't figure it out by itself |
-| restart         | Restart the game after it has closed                                                      |
-| processes       | Additional applications to launch before launching the game                               |
+| Settings        | Effect                                                                                                                 |
+|-----------------|------------------------------------------------------------------------------------------------------------------------|
+| apiUri          | FDev API base URI. Should only be changed if you are doing local development                                           |
+| watchForCrashes | Determines if the game should be launched by `WatchDog64.exe` or not                                                   |
+| gameLocation    | Path to game's install folder. Specify this if the launcher can't figure it out by itself                              |
+| language        | Sets the game's language. Supported values are _en_ and the names of the language folders in Elite's install directory |
+| restart         | Restart the game after it has closed                                                                                   |
+| processes       | Additional applications to launch before launching the game                                                            |
 
 When specifying a path for either `gameLocation` or `processes.fileName` on Windows, it's required to escape backslashes. Make sure to use a
 double backslash (`\\`) instead of a single backslash (`\`).
@@ -128,6 +129,7 @@ double backslash (`\\`) instead of a single backslash (`\`).
     "apiUri": "https://api.zaonce.net",
     "watchForCrashes": false,
     "gameLocation": null,
+    "language": "en",
     "restart": {
         "enabled": false,
         "shutdownTimeout": 3
