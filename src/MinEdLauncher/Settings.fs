@@ -24,10 +24,16 @@ let defaults =
 type private EpicArg = ExchangeCode of string | Type of string | AppId of string
 let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (argv: string[]) =
     let proton, cbLaunchDir, args =
-        let protonPath = Path.Combine("steamapps", "common", "Proton")
-        if argv.Length > 6 && argv.[0] <> null && argv.[0].Contains("SteamLinuxRuntime") then // Proton >= 5.13 runs via steam linux runtime
+        let isOldProton() = // Proton < 5.13 doesn't run via steam linux runtime
+            argv.Length > 2 && argv.[0] <> null
+            && [ Path.Combine("steamapps", "common", "Proton"); Path.Combine("Steam", "compatibilitytools.d", "Proton") ]
+               |> List.exists (fun p -> argv.[0].Contains(p))
+        let isNewProton() = // Proton >= 5.13 runs via steam linux runtime
+            argv.Length > 6 && argv.[0] <> null
+            && argv.[0].Contains("SteamLinuxRuntime")
+        if isNewProton() then 
             Some { EntryPoint = argv.[0]; Args = seq { argv.[1..4]; [| "python3" |]; argv.[5..6] } |> Array.concat }, Path.GetDirectoryName(argv.[7]) |> Some, argv.[7..]
-        else if argv.Length > 2 && argv.[0] <> null && argv.[0].Contains(protonPath) then // Proton < 5.13 doesn't run via steam linux runtime
+        else if isOldProton() then 
             Some { EntryPoint = "python3"; Args = argv.[..1] }, Path.GetDirectoryName(argv.[2]) |> Some, argv.[2..]
         else if argv.Length > 0 && argv.[0] <> null && argv.[0].Contains("EDLaunch.exe", StringComparison.OrdinalIgnoreCase) then
             None, Some (Path.GetDirectoryName(argv.[0])), argv.[1..]

@@ -89,16 +89,18 @@ let tests =
             Expect.equal (settings.ProductWhitelist.Contains "eda") true ""
         }
         test "Matches proton args non steam linux runtime" {
-            let protonPath = Path.Combine("steamapps", "common", "Proton")
-            let protonAction = "action"
-            let launcherDir = "launchDir"
-            let launcherPath = Path.Combine(launcherDir, "EDLaunch.exe")
-            let args = [| protonPath; protonAction; launcherPath |]
-            let settings = parse args
-            
-            let expected = { EntryPoint = "python3"; Args = args.[..^1] }
-            Expect.equal settings.Proton (Some expected) ""
-            Expect.equal settings.CbLauncherDir launcherDir ""
+            [ Path.Combine("steamapps", "common", "Proton"); Path.Combine("Steam", "compatibilitytools.d", "Proton") ]
+            |> List.iter (fun protonPath ->
+                let protonAction = "action"
+                let launcherDir = "launchDir"
+                let launcherPath = Path.Combine(launcherDir, "EDLaunch.exe")
+                let args = [| protonPath; protonAction; launcherPath |]
+                let settings = parse args
+                
+                let expected = { EntryPoint = "python3"; Args = args.[..^1] }
+                Expect.equal settings.Proton (Some expected) ""
+                Expect.equal settings.CbLauncherDir launcherDir ""
+            )
         }
         test "Matches proton args steam linux runtime" {
             let entryPoint = Path.Combine("steamapps", "common", "SteamLinuxRuntime_soldier", "_v2-entry-point")
