@@ -124,26 +124,32 @@ let isRunning (product:RunnableProduct) =
             |> Seq.cast<ProcessModule>
             |> Seq.exists (fun m -> m.ModuleName = exeName))
 
+let createProcessInfo proton args product =
+    let fileName, arguments =
+        match proton with
+        | Some details ->
+            let protonArgs = details.Args |> Array.map (fun a -> $"\"%s{a}\"") |> String.join " "
+            details.EntryPoint,  $"%s{protonArgs} \"%s{product.Executable.FullName}\" %s{args}"
+        | None -> product.Executable.FullName, args
+    
+    let startInfo = ProcessStartInfo()
+    startInfo.FileName <- fileName
+    startInfo.WorkingDirectory <- product.WorkingDir.FullName
+    startInfo.Arguments <- arguments
+    startInfo.CreateNoWindow <- true
+    startInfo.UseShellExecute <- false
+    startInfo.RedirectStandardOutput <- true
+    startInfo.RedirectStandardError <- true
+    startInfo
+
 type RunResult = Ok of Process | AlreadyRunning | Error of exn
 let run proton args (product:RunnableProduct)  =
     if isRunning product then
         AlreadyRunning
     else
-        let fileName, arguments =
-            match proton with
-            | Some details ->
-                let protonArgs = details.Args |> Array.map (fun a -> $"\"%s{a}\"") |> String.join " "
-                details.EntryPoint,  $"%s{protonArgs} \"%s{product.Executable.FullName}\" %s{args}"
-            | None -> product.Executable.FullName, args
+        let startInfo = createProcessInfo proton args product
         
-        let startInfo = ProcessStartInfo()
-        startInfo.FileName <- fileName
-        startInfo.WorkingDirectory <- product.WorkingDir.FullName
-        startInfo.Arguments <- arguments
-        startInfo.CreateNoWindow <- true
-        startInfo.UseShellExecute <- false
-        startInfo.RedirectStandardOutput <- true
-        startInfo.RedirectStandardError <- true
+        Log.debug $"Process: %s{startInfo.FileName} %s{startInfo.Arguments}"
         
         try
             Process.Start(startInfo) |> Ok

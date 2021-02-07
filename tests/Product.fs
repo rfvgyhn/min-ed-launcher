@@ -128,6 +128,66 @@ open Expecto
                     Expect.stringContains actual expectedHash ""
                 }
             ]
+            testList "Run" [
+                test "Sets correct process file name when no proton" {
+                    let product = { Executable = FileInfo("asdf")
+                                    WorkingDir = DirectoryInfo("dir")
+                                    Version = System.Version()
+                                    SteamAware = false
+                                    Mode = Online
+                                    ServerArgs = "" }
+                    let info = createProcessInfo None "arg1 arg2" product
+                    
+                    Expect.equal info.FileName product.Executable.FullName ""
+                }
+                test "Sets correct process file name when using proton" {
+                    let proton = { EntryPoint = "asdf"; Args = [| "arg1"; "arg2" |] }
+                    let product = { Executable = FileInfo("file")
+                                    WorkingDir = DirectoryInfo("dir")
+                                    Version = System.Version()
+                                    SteamAware = false
+                                    Mode = Online
+                                    ServerArgs = "" }
+                    let info = createProcessInfo (Some proton) "arg3 arg4" product
+                    
+                    Expect.equal info.FileName proton.EntryPoint ""
+                }
+                test "Sets correct process args when no proton" {
+                    let product = { Executable = FileInfo("asdf")
+                                    WorkingDir = DirectoryInfo("dir")
+                                    Version = System.Version()
+                                    SteamAware = false
+                                    Mode = Online
+                                    ServerArgs = "" }
+                    let args = "arg1 arg2"
+                    let info = createProcessInfo None args product
+                    
+                    Expect.equal info.Arguments args ""
+                }
+                test "Sets correct process args when using proton" {
+                    let proton = { EntryPoint = "asdf"; Args = [| "arg1"; "arg2" |] }
+                    let product = { Executable = FileInfo("file")
+                                    WorkingDir = DirectoryInfo("dir")
+                                    Version = System.Version()
+                                    SteamAware = false
+                                    Mode = Online
+                                    ServerArgs = "" }
+                    let info = createProcessInfo (Some proton) "arg3 arg4" product
+                    
+                    Expect.equal info.Arguments $"\"arg1\" \"arg2\" \"%s{product.Executable.FullName}\" arg3 arg4" ""
+                }
+                test "Sets correct working dir" {
+                    let product = { Executable = FileInfo("asdf")
+                                    WorkingDir = DirectoryInfo("dir")
+                                    Version = System.Version()
+                                    SteamAware = false
+                                    Mode = Online
+                                    ServerArgs = "" }
+                    let info = createProcessInfo None "arg1 arg2" product
+                    
+                    Expect.equal info.WorkingDirectory product.WorkingDir.FullName ""
+                }
+            ]
     //        testProperty "Unknown arg doesn't change any values" <|
     //            fun (args:string[]) -> parse args = Settings.defaults
         ]
