@@ -56,7 +56,10 @@ Launcher Version: %s{launcherVersion}
 Products Dir: %s{productsDir}"""
     
 let rec launchProduct proton processArgs restart productName product =
-    match Product.run proton (processArgs()) product with
+    let args = processArgs()
+    Log.info $"Launching %s{productName}"
+    
+    match Product.run proton args product with
     | Product.RunResult.Ok p ->
         let shouldRestart = restart |> fst
         let timeout = restart |> snd
@@ -80,7 +83,6 @@ let rec launchProduct proton processArgs restart productName product =
                 Console.WriteLine("Restarting...".PadRight(left))
                 false
 
-        Log.info $"Launching %s{productName}"
         use p = p
         p.WaitForExit()
         Log.info $"Shutdown %s{productName}"
