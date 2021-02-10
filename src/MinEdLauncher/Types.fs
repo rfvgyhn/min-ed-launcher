@@ -11,10 +11,12 @@ type EpicDetails =
     with static member Empty = { ExchangeCode = ""
                                  Type = ""
                                  AppId = "" }
+type Credentials = { Username: string; Password: string }
+type FrontierDetails = { Profile: string; Credentials: Credentials option; AuthToken: string option }
 type Platform =
     | Steam
     | Epic of EpicDetails
-    | Frontier
+    | Frontier of FrontierDetails
     | Oculus of string
     | Dev
     with member this.Name = Union.getCaseName this

@@ -1,8 +1,8 @@
 module MinEdLauncher.Tests.EdLauncher
 
+open MinEdLauncher
 open System.IO
 open Expecto
-open MinEdLauncher.Cobra
 
 [<Tests>]
 let tests =
@@ -10,7 +10,7 @@ let tests =
     let noWriteAccess = (fun _ -> false)
     let productsDir = "Products"
     let fallbackDir = "fallback"
-    let getProdDir = getProductsDir fallbackDir
+    let getProdDir = Cobra.getProductsDir fallbackDir
     let launcherDir = "."
     
     testList "Absolute Products Directory" [

@@ -1,12 +1,35 @@
 namespace MinEdLauncher
 
-module Result =
+open System.IO
+
+module Task =
+    open FSharp.Control.Tasks.NonAffine
+    open System.Threading.Tasks
+    open System.Collections.Generic
+    let fromResult r = Task.FromResult(r)
+    let whenAll (tasks: IEnumerable<Task<'t>>) = Task.WhenAll(tasks)
+    
+    let bindResult (f: 'T -> Task<Result<'U, 'TError>>) (result: Task<Result<'T, 'TError>>) = task { 
+        match! result with
+        | Ok v -> return! f v
+        | Error m -> return Error m 
+    }
+    let mapResult f (result: Task<Result<'T, 'TError>>) = task { 
+        match! result with
+        | Ok v -> return Ok (f v)
+        | Error m -> return Error m
+    }
+
+module Result =    
     let defaultValue value = function
         | Ok v -> v
         | Error _ -> value
     let defaultWith (defThunk: 'T -> 'U) = function
         | Ok v -> v
         | Error e -> defThunk e
+    let bindTask f = function
+        | Ok v -> f v
+        | Error v -> Error v |> Task.fromResult
 
 module Seq =
     let chooseResult r = r |> Seq.choose (fun r -> match r with | Error _ -> None | Ok v -> Some v)
@@ -40,6 +63,13 @@ module Json =
         match element.TryGetProperty(prop) with
         | true, prop -> Ok prop
         | false, _ -> Error $"Unable to find '%s{prop}' in json document"
+    let parseEitherProp (prop1:string) (prop2:string) (element:JsonElement) =
+        match element.TryGetProperty(prop1) with
+        | true, prop -> Ok prop
+        | false, _ ->
+            match element.TryGetProperty(prop2) with
+            | true, prop -> Ok prop
+            | false, _ -> Error $"Unable to find '%s{prop1}' or '%s{prop2}' in json document"
     let mapArray f (element:JsonElement) =
         try
             Ok <| element.EnumerateArray()
@@ -159,12 +189,6 @@ module Hex =
     let toString bytes = BitConverter.ToString(bytes).Replace("-","")
     let toStringTrunc length bytes = BitConverter.ToString(bytes).Replace("-","").Substring(0, length)
 
-module Task =
-    open System.Threading.Tasks
-    open System.Collections.Generic
-    let fromResult r = Task.FromResult(r)
-    let whenAll (tasks: IEnumerable<Task<'t>>) = Task.WhenAll(tasks)
-
 module FileIO =
     open System
     open System.IO
@@ -200,6 +224,21 @@ module FileIO =
         with
         | e -> return Error e.Message
     }
+    
+    let writeAllText path text = task {
+        try
+            let! result = File.WriteAllTextAsync(path, text) 
+            return Ok result
+        with
+        | e -> return Error e.Message
+    }
+    
+    let readAllLines path = task {
+        try
+            let! result = File.ReadAllLinesAsync(path) 
+            return Ok result
+        with e -> return Error e.Message
+    }
 
     let ensureFileExists path = task {
         try
@@ -221,6 +260,26 @@ module FileIO =
         | :? DirectoryNotFoundException -> Error "The specified path is invalid (for example, it is on an unmapped drive)."
         | :? IOException -> Error "The directory specified by path is a file or the network name is not known."
         | :? NotSupportedException -> Error @"Contains a colon character (:) that is not part of a drive label (""C:\"")." 
+
+module Console =
+    open System
+    let readPassword () =
+        let rec readMask pw =
+            let k = Console.ReadKey(true)
+            match k.Key with
+            | ConsoleKey.Enter -> pw
+            | ConsoleKey.Backspace ->
+                match pw with
+                | [] -> readMask []
+                | _::t ->
+                    Console.Write "\b \b"
+                    readMask t
+            | _ ->
+                Console.Write "*"
+                readMask (k.KeyChar::pw)
+        let password = readMask [] |> Seq.rev |> String.Concat
+        Console.WriteLine ()
+        password
 
 module Regex =
     open System.Text.RegularExpressions
@@ -248,13 +307,16 @@ module Environment =
             
             Environment.ExpandEnvironmentVariables(str)
     let configDir =
-        if RuntimeInformation.IsOSPlatform(OSPlatform.Windows) then
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
-        else
-            let xdgConfig = expandEnvVars("$XDG_CONFIG_HOME")
-            if String.IsNullOrEmpty(xdgConfig) then
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
+        let path =
+            if RuntimeInformation.IsOSPlatform(OSPlatform.Windows) then
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
             else
-                xdgConfig    
+                let xdgConfig = expandEnvVars("$XDG_CONFIG_HOME")
+                if String.IsNullOrEmpty(xdgConfig) then
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
+                else
+                    xdgConfig
+                
+        Path.Combine(path, "min-ed-launcher")
                 
             

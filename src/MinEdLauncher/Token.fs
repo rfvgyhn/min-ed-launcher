@@ -41,15 +41,19 @@ type RefreshableTokenManager(initialToken, refresh: (RefreshableToken -> Task<Re
     interface IDisposable with
         member _.Dispose() =
             timer.Dispose()
-            
+
+type PasswordToken = { Username: string; Password: string; Token: string }
 type AuthToken =
     | Expires of (unit -> RefreshableToken)
     | Permanent of string
+    | PasswordBased of PasswordToken
     member this.GetAccessToken() =
            match this with
            | Expires t -> t().Token
            | Permanent t -> t
+           | PasswordBased t -> t.Token
     member this.GetRefreshToken() =
            match this with
            | Expires t -> Some (t().RefreshToken)
            | Permanent _ -> None
+           | PasswordBased _ -> None

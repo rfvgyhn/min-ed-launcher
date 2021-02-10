@@ -3,13 +3,13 @@
 open System.IO
 open System.Reflection
 open FsConfig
+open FSharp.Control.Tasks.NonAffine
 open Steam
-open Rop
 
 let getSettings args =
-    let path = Path.Combine(Environment.configDir, "min-ed-launcher")
+    let path = Environment.configDir
     match FileIO.ensureDirExists path with
-    | Error msg -> Error $"Unable to find/create configuration directory at %s{path} - %s{msg}"  
+    | Error msg -> Error $"Unable to find/create configuration directory at %s{path} - %s{msg}" |> Task.fromResult
     | Ok settingsDir ->
         let settingsPath = Path.Combine(settingsDir, "settings.json")
         Log.debug $"Reading settings from '%s{settingsPath}'"
@@ -25,7 +25,11 @@ let getSettings args =
             | BadValue (key, value) -> $"Bad Value: %s{key} - %s{value}"
             | ConfigParseError.NotFound key -> $"Key not found: %s{key}"
             | NotSupported key -> $"Key not supported: %s{key}")
-        >>= Settings.getSettings args
+        |> function
+            | Ok c -> task {
+                let! settings = Settings.getSettings args c
+                return settings }
+            | Error msg -> Error msg |> Task.fromResult
 
 [<EntryPoint>]
 let main argv =
@@ -33,7 +37,7 @@ let main argv =
         try
             do! Async.SwitchToThreadPool ()
             Log.debug $"Args: %A{argv}"
-            let settings = getSettings argv
+            let! settings = getSettings argv |> Async.AwaitTask
             Log.debug $"Settings: %A{settings}"
             return! match settings with
                     | Ok settings -> App.run settings |> Async.AwaitTask
