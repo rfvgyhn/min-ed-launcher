@@ -7,7 +7,7 @@ open Steam
 open Rop
 
 let getSettings args =
-    let path = Path.Combine(Environment.configDir, "min-ed-launcher")
+    let path = Environment.configDir
     match FileIO.ensureDirExists path with
     | Error msg -> Error $"Unable to find/create configuration directory at %s{path} - %s{msg}"  
     | Ok settingsDir ->
