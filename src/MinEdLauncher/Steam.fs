@@ -10,7 +10,7 @@ let potentialInstallPaths() =
         let winProgFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
         [ $"%s{winProgFiles}\\Steam\\steamapps\\common\\Elite Dangerous" ]
     elif RuntimeInformation.IsOSPlatform(OSPlatform.Linux) then
-        let home = Environment.expandEnvVars("~")
+        let home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
         [ $"%s{home}/.steam/steam/steamapps/common/Elite Dangerous"
           $"%s{home}/.local/share/Steam/steamapps/common/Elite Dangerous" ]
     else []
