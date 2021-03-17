@@ -1,10 +1,10 @@
 module MinEdLauncher.App
 
 open System.IO
+open System.Runtime.InteropServices
 open MinEdLauncher
 open MinEdLauncher.Token
 open FSharp.Control.Tasks.NonAffine
-open Steam
 open System
 open System.Diagnostics
 open MinEdLauncher.Types
@@ -36,7 +36,7 @@ let login runningTime httpClient machineId (platform: Platform) =
         let! result = Permanent "DevAuthToken" |> Ok |> authenticate
         return result, noopDisposable }
     | Steam -> task {
-        use steam = new Steam()
+        use steam = new Steam.Steam()
         let! result = steam.Login() |> Result.map (fun steamUser -> Permanent steamUser.SessionToken) |> authenticate
         return result, noopDisposable }
     | Epic details -> task {
@@ -93,6 +93,9 @@ let rec launchProduct proton processArgs restart productName product =
     | Product.RunResult.Error e -> Log.error $"Couldn't start selected product: %s{e.ToString()}"
     
 let run settings = task {
+    if RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && settings.Platform = Steam then
+        Steam.fixLcAll()
+    
     let appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Frontier_Developments")
     let productsDir =
         Cobra.getProductsDir appDataDir FileIO.hasWriteAccess settings.ForceLocal settings.CbLauncherDir
@@ -169,7 +172,7 @@ let run settings = task {
                         
                         match selectedProduct, true with
                         | Some product, true ->
-                            let gameLanguage = Cobra.getGameLang settings.CbLauncherDir settings.PreferredLanguage                      
+                            let gameLanguage = Cobra.getGameLang settings.CbLauncherDir settings.PreferredLanguage
                             let processArgs() = Product.createArgString settings.DisplayMode gameLanguage connection.Session machineId (runningTime()) settings.WatchForCrashes settings.Platform SHA1.hashFile product
                             
                             match Product.validateForRun settings.CbLauncherDir settings.WatchForCrashes product with

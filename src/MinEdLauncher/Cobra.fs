@@ -41,5 +41,7 @@ let getGameLang cbLauncherDir langCode =
         |> Option.map (fun c ->
             let culture = CultureInfo.CreateSpecificCulture(c)
             resManager.GetString("GameLanguage", culture))
-        |> Option.orElseWith (fun () -> resManager.GetString("GameLanguage") |> Some)
+        |> Option.orElseWith (fun () ->
+            let culture = CultureInfo.GetCultureInfo(Threading.Thread.CurrentThread.CurrentUICulture.TwoLetterISOLanguageName)
+            resManager.GetString("GameLanguage", culture) |> Some)
     with e -> None

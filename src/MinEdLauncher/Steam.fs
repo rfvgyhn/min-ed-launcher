@@ -1,9 +1,8 @@
 module MinEdLauncher.Steam
 
 open System
-open System.IO
+open System.Globalization
 open System.Runtime.InteropServices
-open Types
 
 let potentialInstallPaths() =
     if RuntimeInformation.IsOSPlatform(OSPlatform.Windows) then
@@ -14,6 +13,22 @@ let potentialInstallPaths() =
         [ $"%s{home}/.steam/steam/steamapps/common/Elite Dangerous"
           $"%s{home}/.local/share/Steam/steamapps/common/Elite Dangerous" ]
     else []
+    
+// Steam sets LC_ALL=C to help some games, but we need the real value
+// in order to pass the correct language value to the elite dangerous
+// process. Steam sets HOST_LC_ALL if LC_ALL is set to allow us to use
+// the real value.
+let fixLcAll() =
+    let hostLcAll = Environment.GetEnvironmentVariable("HOST_LC_ALL")
+    if not (String.IsNullOrEmpty(hostLcAll)) then
+        Environment.SetEnvironmentVariable("LC_ALL", hostLcAll)
+        Log.debug $"Overwrote LC_ALL with HOST_LC_ALL '{hostLcAll}'"
+        Threading.Thread.CurrentThread.CurrentUICulture <- CultureInfo.GetCultureInfo(hostLcAll)
+    else
+        Environment.SetEnvironmentVariable("LC_ALL", null)
+        Log.debug "Unset LC_ALL. Using $LANG to determine correct UI culture"
+        let lang = Environment.GetEnvironmentVariable("LANG")
+        Threading.Thread.CurrentThread.CurrentUICulture <- CultureInfo.GetCultureInfo(lang)
 
 [<Literal>]
 let SteamLib =
