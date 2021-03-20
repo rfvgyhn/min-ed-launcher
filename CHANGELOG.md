@@ -8,6 +8,7 @@
 ### Bug Fixes
 * Properly parse proton when it's in `compatibilitytools.d` dir. Custom versions of proton, such as [Proton-GE], are stored here.
 * Fix `$XDG_CONFIG_DIR` not always being parsed properly
+* Fix not being able to handle a variable amount of steam linux runtime args (i.e. `--deploy=soldier --suite=soldier --verb=waitforexitandrun` vs `--verb=waitforexitandrun`)
 
 ## [0.3.0] - 2020-12-28
 

@@ -88,34 +88,40 @@ let tests =
             let settings = parse [| "/eda" |]
             Expect.equal (settings.ProductWhitelist.Contains "eda") true ""
         }
-        test "Matches proton args non steam linux runtime" {
-            [ Path.Combine("steamapps", "common", "Proton"); Path.Combine("Steam", "compatibilitytools.d", "Proton") ]
-            |> List.iter (fun protonPath ->
-                let protonAction = "action"
+        
+        yield! [
+            "non steam linux runtime",               [ Path.Combine("steamapps", "common", "Proton 5.0", "proton"); "protonAction" ]
+            "non steam linux runtime custom folder", [ Path.Combine("Steam", "compatibilitytools.d", "Proton 5.0", "proton"); "protonAction" ]
+        ] |> List.map (fun (name, protonArgs) ->
+            test $"Matches proton args {name}" {
                 let launcherDir = "launchDir"
                 let launcherPath = Path.Combine(launcherDir, "EDLaunch.exe")
-                let args = [| protonPath; protonAction; launcherPath |]
+                let args = protonArgs @ [launcherPath; "/other"; "/args"] |> List.toArray
                 let settings = parse args
                 
-                let expected = { EntryPoint = "python3"; Args = args.[..^1] }
+                let expected = { EntryPoint = "python3"; Args = args.[..^3] }
                 Expect.equal settings.Proton (Some expected) ""
                 Expect.equal settings.CbLauncherDir launcherDir ""
-            )
-        }
-        test "Matches proton args steam linux runtime" {
-            let entryPoint = Path.Combine("steamapps", "common", "SteamLinuxRuntime_soldier", "_v2-entry-point")
-            let protonPath = Path.Combine("steamapps", "common", "Proton")
-            let protonArgs = [| "--deploy=soldier"; "--suite=soldier"; "--verb=waitforexitandrun"; "--"; protonPath; "waitforexitandrun" |]
-            let launcherDir = "launchDir"
-            let launcherPath = Path.Combine(launcherDir, "EDLaunch.exe")
-            let args = seq { [| entryPoint |]; protonArgs; [| launcherPath |] } |> Array.concat
-            let settings = parse args
-            
-            let expectedArgs = seq { args.[1..4]; [| "python3" |]; args.[5..^1] } |> Array.concat
-            let expected = { EntryPoint = entryPoint; Args = expectedArgs }
-            Expect.equal settings.Proton (Some expected) ""
-            Expect.equal settings.CbLauncherDir launcherDir ""
-        }
+            }
+        )
+        
+        yield! [
+            "steam linux runtime - extra args", [ Path.Combine("steamapps", "common", "SteamLinuxRuntime_soldier", "_v2-entry-point"); "--deploy=soldier"; "--suite=soldier"; "--verb=protonAction"; "--"; Path.Combine("steamapps", "common", "Proton 5.0", "proton"); "protonAction" ]
+            "steam linux runtime",              [ Path.Combine("steamapps", "common", "SteamLinuxRuntime_soldier", "_v2-entry-point"); "--verb=protonAction"; "--"; Path.Combine("steamapps", "common", "Proton 5.0", "proton"); "protonAction" ]
+        ] |> List.map (fun (name, protonArgs) ->
+            test $"Matches proton args {name}" {
+                let launcherDir = "launchDir"
+                let launcherPath = Path.Combine(launcherDir, "EDLaunch.exe")
+                let args = protonArgs @ [launcherPath; "/other"; "/args"] |> List.toArray
+                
+                let settings = parse args
+                
+                let expectedArgs = protonArgs.[1..^2] @ [ "python3" ] @ protonArgs.[^1..] |> List.toArray
+                let expected = { EntryPoint = args.[0]; Args = expectedArgs }
+                Expect.equal settings.Proton (Some expected) ""
+                Expect.equal settings.CbLauncherDir launcherDir ""
+            }
+        )
         test "Fewer than three args means no Proton" {
             let settings = parse [| "asdf"; "fdsa" |]
             Expect.equal settings.Proton None ""
