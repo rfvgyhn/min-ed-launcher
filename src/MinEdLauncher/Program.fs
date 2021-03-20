@@ -1,5 +1,6 @@
 ﻿module MinEdLauncher.Program
 
+open System
 open System.IO
 open System.Reflection
 open FsConfig
@@ -25,7 +26,7 @@ let getSettings args =
             | BadValue (key, value) -> $"Bad Value: %s{key} - %s{value}"
             | ConfigParseError.NotFound key -> $"Key not found: %s{key}"
             | NotSupported key -> $"Key not supported: %s{key}")
-        >>= Settings.getSettings args
+        >>= Settings.getSettings args AppContext.BaseDirectory
 
 [<EntryPoint>]
 let main argv =

@@ -2,8 +2,9 @@
 
 ## [Unreleased]
 
-### New Features
+### Enhancements
 * Add workaround for Steam always setting `$LC_ALL` to `C` which prevented the correct game language from being selected
+* Include launcher's directory as potential Elite Dangerous install location
 
 ### Bug Fixes
 * Properly parse proton when it's in `compatibilitytools.d` dir. Custom versions of proton, such as [Proton-GE], are stored here.

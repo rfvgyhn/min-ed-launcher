@@ -133,13 +133,13 @@ let parseConfig fileName =
         { config with Processes = processes } |> ConfigParseResult.Ok
     | Error error -> Error error
     
-let getSettings args fileConfig =
+let getSettings args appDir fileConfig =
     let findCbLaunchDir paths =
-        paths
+        appDir :: paths
         |> List.map Some
         |> List.append [ fileConfig.GameLocation ]
         |> List.choose id
-        |> List.tryFind Directory.Exists
+        |> List.tryFind (fun path -> File.Exists(Path.Combine(path, "EDLaunch.exe")))
         |> function
             | None -> Error "Failed to find Elite Dangerous install directory"
             | Some dir -> Ok dir
