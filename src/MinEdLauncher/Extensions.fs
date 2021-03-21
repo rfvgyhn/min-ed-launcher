@@ -290,33 +290,15 @@ module Regex =
 module Environment =
     open System
     open System.Runtime.InteropServices
+    open System.IO
     
-    let expandEnvVars name =
-        if String.IsNullOrEmpty(name) then
-            name
-        else
-            // Platform checks needed until corefx supports platform specific vars
-            // https://github.com/dotnet/corefx/issues/28890
-            let str =
-                if RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX) then
-                    name
-                    |> Regex.replace @"\$(\w+)" "%$1%"
-                    |> Regex.replace "^~" "%HOME%"
-                else
-                    name
-            
-            Environment.ExpandEnvironmentVariables(str)
     let configDir =
-        let path =
+        let specialFolder =
             if RuntimeInformation.IsOSPlatform(OSPlatform.Windows) then
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
+                Environment.SpecialFolder.LocalApplicationData
             else
-                let xdgConfig = expandEnvVars("$XDG_CONFIG_HOME")
-                if String.IsNullOrEmpty(xdgConfig) then
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
-                else
-                    xdgConfig
-                
+                Environment.SpecialFolder.ApplicationData
+        
+        let path = Environment.GetFolderPath(specialFolder)
         Path.Combine(path, "min-ed-launcher")
-                
             

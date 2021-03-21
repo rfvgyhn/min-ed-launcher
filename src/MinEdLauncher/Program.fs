@@ -1,5 +1,6 @@
 ﻿module MinEdLauncher.Program
 
+open System
 open System.IO
 open System.Reflection
 open FsConfig
@@ -27,7 +28,7 @@ let getSettings args =
             | NotSupported key -> $"Key not supported: %s{key}")
         |> function
             | Ok c -> task {
-                let! settings = Settings.getSettings args c
+                let! settings = Settings.getSettings args AppContext.BaseDirectory c
                 return settings }
             | Error msg -> Error msg |> Task.fromResult
 

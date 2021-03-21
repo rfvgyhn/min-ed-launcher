@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased]
+
+### Enhancements
+* Add workaround for Steam always setting `$LC_ALL` to `C` which prevented the correct game language from being selected
+* Include launcher's directory as potential Elite Dangerous install location
+
+### Bug Fixes
+* Properly parse proton when it's in `compatibilitytools.d` dir. Custom versions of proton, such as [Proton-GE], are stored here.
+* Fix `$XDG_CONFIG_DIR` not always being parsed properly
+* Fix not being able to handle a variable amount of steam linux runtime args (i.e. `--deploy=soldier --suite=soldier --verb=waitforexitandrun` vs `--verb=waitforexitandrun`)
+
 ## [0.3.0] - 2020-12-28
 
 ### New Features
@@ -37,3 +48,4 @@ Initial release
 [0.2.0]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/rfvgyhn/min-ed-launcher/compare/67d8c3f...v0.1.0
+[Proton-GE]: https://github.com/GloriousEggroll/proton-ge-custom
