@@ -132,8 +132,8 @@ let tests =
                 Expect.equal settings.CbLauncherDir launcherDir ""
             }
         )
-        test "Fewer than three args means no Proton" {
-            let settings = parse [| "asdf"; "fdsa" |]
+        testTask "Fewer than three args means no Proton" {
+            let! settings = parse [| "asdf"; "fdsa" |]
             Expect.equal settings.Proton None ""
         }
         testTask "First arg doesn't contain steamapps/common/Proton or SteamRuntimeLinux means no Proton" {
