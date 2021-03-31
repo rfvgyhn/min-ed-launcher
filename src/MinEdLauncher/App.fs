@@ -91,6 +91,31 @@ let rec launchProduct proton processArgs restart productName product =
             launchProduct proton processArgs restart productName product
     | Product.RunResult.AlreadyRunning -> Log.info $"%s{productName} is already running"
     | Product.RunResult.Error e -> Log.error $"Couldn't start selected product: %s{e.ToString()}"
+  
+let promptForProduct (products: ProductDetails array) =
+    printfn $"Select a product to launch (default=1):"
+    products
+    |> Array.indexed
+    |> Array.iter (fun (i, product) -> printfn $"%i{i + 1}) %s{product.Name}")
+        
+    let rec readInput() =
+        printf "Product: "
+        let userInput = Console.ReadKey()
+        printfn ""
+        let couldParse, index =
+            if userInput.Key = ConsoleKey.Enter then
+                true, 1
+            else
+                Int32.TryParse(userInput.KeyChar.ToString())
+        if couldParse && index > 0 && index < products.Length then
+            let product = products.[index - 1]
+            let filters = String.Join(", ", product.Filters)
+            Log.debug $"User selected %s{product.Name} - %s{product.Sku} - %s{filters}"
+            products.[index - 1] |> Some
+        else
+            printfn "Invalid selection"
+            readInput()
+    readInput()
     
 let run settings = task {
     if RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && settings.Platform = Steam then
@@ -161,14 +186,21 @@ let run settings = task {
                             match availableProducts with
                             | [] -> "None"
                             | p -> String.Join(Environment.NewLine + "\t", p)
-                        Log.info $"Available Products:{Environment.NewLine}\t%s{availableProductsDisplay}" 
+                        Log.info $"Available Products:{Environment.NewLine}\t%s{availableProductsDisplay}"
+                        let playableProducts =
+                            products
+                            |> Result.defaultValue []
+                            |> List.choose (fun p -> match p with | Playable p -> Some p | _ -> None)
+                            |> List.toArray
                         let selectedProduct =
-                           products
-                           |> Result.defaultValue []
-                           |> List.choose (fun p -> match p with | Playable p -> Some p | _ -> None)
-                           |> List.filter (fun p -> settings.ProductWhitelist.Count = 0
-                                                    || p.Filters |> Set.union settings.ProductWhitelist |> Set.count > 0)
-                           |> List.tryHead
+                            if settings.AutoRun then
+                                playableProducts
+                                |> Array.filter (fun p -> settings.ProductWhitelist.Count = 0
+                                                          || p.Filters |> Set.union settings.ProductWhitelist |> Set.count > 0)
+                                |> Array.tryHead
+                            else if playableProducts.Length > 0 then
+                                promptForProduct playableProducts
+                            else None
                         
                         match selectedProduct, true with
                         | Some product, true ->

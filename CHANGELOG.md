@@ -2,14 +2,17 @@
 
 ## [Unreleased]
 
+## New Features
+- Add ability to select product to run
+
 ### Enhancements
-* Add workaround for Steam always setting `$LC_ALL` to `C` which prevented the correct game language from being selected
-* Include launcher's directory as potential Elite Dangerous install location
+- Add workaround for Steam always setting `$LC_ALL` to `C` which prevented the correct game language from being selected
+- Include launcher's directory as potential Elite Dangerous install location
 
 ### Bug Fixes
-* Properly parse proton when it's in `compatibilitytools.d` dir. Custom versions of proton, such as [Proton-GE], are stored here.
-* Fix `$XDG_CONFIG_DIR` not always being parsed properly
-* Fix not being able to handle a variable amount of steam linux runtime args (i.e. `--deploy=soldier --suite=soldier --verb=waitforexitandrun` vs `--verb=waitforexitandrun`)
+- Properly parse proton when it's in `compatibilitytools.d` dir. Custom versions of proton, such as [Proton-GE], are stored here.
+- Fix `$XDG_CONFIG_DIR` not always being parsed properly
+- Fix not being able to handle a variable amount of steam linux runtime args (i.e. `--deploy=soldier --suite=soldier --verb=waitforexitandrun` vs `--verb=waitforexitandrun`)
 
 ## [0.3.0] - 2020-12-28
 

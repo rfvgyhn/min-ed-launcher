@@ -58,16 +58,16 @@ the default launcher for this one to work.
     1. Right click _Elite Dangerous_ in your Steam library
     2. Select _properties_
     3. In the _general_ tab, click _Set Launch Options_
-    4. Windows users - Set the value to `cmd /c "MinEdLauncher.exe %command% /autoquit /EDH"`
+    4. Windows users - Set the value to `cmd /c "MinEdLauncher.exe %command% /autorun /autoquit /EDH"`
         
        Linux users - The command will depend on which terminal emulator you use. Examples for
        [alacritty], [gnome-terminal] and [konsole] are below.
           
-       `alacritty -e ./MinEdLauncher %command% /autoquit /EDH`
+       `alacritty -e ./MinEdLauncher %command% /autorun /autoquit /EDH`
        
-       `gnome-terminal -- ./MinEdLauncher %command% /autoquit /EDH`
+       `gnome-terminal -- ./MinEdLauncher %command% /autorun /autoquit /EDH`
     
-       `konsole -e ./MinEdLauncher %command% /autoquit /EDH`
+       `konsole -e ./MinEdLauncher %command% /autorun /autoquit /EDH`
 5. Launch your game as you normally would in Steam
 #### Epic
 1. Download the [latest release] for Windows
@@ -84,7 +84,7 @@ the default launcher for this one to work.
     1. Click _Settings_ in the Epic Games Launcher
     2. Scroll down to the _Manage Games_ section and click _Elite Dangerous_
     3. Check _Additional Command Line Arguments_
-    4. Set the value to `/autoquit /EDH`
+    4. Set the value to `/autorun /autoquit /EDH`
 8. Launch your game as you normally would in Epic
 
 ### Flags
