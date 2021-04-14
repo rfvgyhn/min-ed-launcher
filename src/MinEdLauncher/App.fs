@@ -13,11 +13,11 @@ type LoginResult =
 | Success of Api.Connection
 | ActionRequired of string
 | Failure of string
-let login runningTime httpClient machineId (platform: Platform) =
+let login runningTime httpClient machineId (platform: Platform) lang =
     let authenticate = function
         | Ok authToken -> task {
             Log.debug $"Authenticating via %s{platform.Name}"
-            match! Api.authenticate runningTime authToken platform machineId httpClient with
+            match! Api.authenticate runningTime authToken platform machineId lang httpClient with
             | Api.Authorized connection ->
                 Log.debug "Successfully authenticated"
                 return Success connection
@@ -31,10 +31,29 @@ let login runningTime httpClient machineId (platform: Platform) =
     
     match platform with
     | Oculus _ -> (Failure "Oculus not supported", noopDisposable) |> Task.fromResult
-    | Frontier-> (Failure "Frontier not supported", noopDisposable) |> Task.fromResult
     | Dev -> task {
         let! result = Permanent "DevAuthToken" |> Ok |> authenticate
         return result, noopDisposable }
+    | Frontier details -> task {
+        let promptTwoFactorCode email =
+            printf $"Enter verification code that was sent to %s{email}: "
+            Console.ReadLine()
+        let promptUserPass() =
+            printfn "Enter Frontier credentials"
+            printf "Username (Email): "
+            let username = Console.ReadLine()
+            printf "Password: "
+            let password = Console.readPassword() |> Cobra.encrypt |> Result.defaultValue ""
+            username, password
+        let credPath = Settings.frontierCredPath details.Profile
+        let! token = Api.login runningTime httpClient details machineId lang (Cobra.saveCredentials credPath) promptTwoFactorCode promptUserPass
+        match token with
+        | Ok (username, password, token) ->
+            let! result = PasswordBased { Username = username; Password = password; Token = token } |> Ok |> authenticate
+            return result, noopDisposable
+        | Error msg ->
+            let! _ = Cobra.discardToken credPath
+            return Failure msg, noopDisposable }
     | Steam -> task {
         use steam = new Steam.Steam()
         let! result = steam.Login() |> Result.map (fun steamUser -> Permanent steamUser.SessionToken) |> authenticate
@@ -158,7 +177,8 @@ let run settings = task {
             
             match machineId with
             | Ok machineId ->
-                let! loginResult, disposable = login runningTime httpClient machineId settings.Platform
+                let lang = settings.PreferredLanguage |> Option.defaultValue "en"
+                let! loginResult, disposable = login runningTime httpClient machineId settings.Platform lang
                 use _ = disposable
                 match loginResult with
                 | Success connection ->

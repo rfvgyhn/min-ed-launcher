@@ -5,6 +5,7 @@ open System
 open System.IO
 open System.Diagnostics
 open FsConfig
+open FSharp.Control.Tasks.NonAffine
 open Microsoft.Extensions.Configuration
 
 let defaults =
@@ -21,6 +22,41 @@ let defaults =
       ApiUri = Uri("http://localhost:8080")
       Restart = false, 0L
       Processes = List.empty }
+    
+[<RequireQualifiedAccess>]
+type FrontierCredResult = Found of string * string * string option | NotFound of string | UnexpectedFormat of string | Error of string
+let readFrontierAuth (profileName: string) = task {
+    let path = Path.Combine(Environment.configDir, $".frontier-%s{profileName.ToLower()}.cred")
+    if File.Exists(path) then
+        let! lines = FileIO.readAllLines(path)
+        return match lines with
+               | Ok lines ->
+                    if lines.Length = 2 then
+                        (lines.[0], lines.[1], None) |> FrontierCredResult.Found
+                    else if lines.Length = 3 then
+                        (lines.[0], lines.[1], Some lines.[2]) |> FrontierCredResult.Found
+                    else
+                       FrontierCredResult.UnexpectedFormat path
+               | Error msg -> FrontierCredResult.Error msg
+    else
+        return FrontierCredResult.NotFound path
+}
+
+let frontierCredPath (profileName: string) = Path.Combine(Environment.configDir, $".frontier-%s{profileName.ToLower()}.cred")
+
+let applyDeviceAuth settings  =
+    match settings.Platform with
+    | Frontier details -> task {
+        let path = frontierCredPath details.Profile
+        match! Cobra.readCredentials path with
+        | Cobra.CredResult.Found (user, pass, token) ->
+            return Ok { settings with Platform = Frontier { details with Credentials = Some { Username = user; Password = pass }; AuthToken = token } }
+        | Cobra.CredResult.NotFound _ ->
+            return Ok settings
+        | Cobra.CredResult.UnexpectedFormat path -> return Error $"Unable to parse credentials at '%s{path}'. Unexpected format"
+        | Cobra.CredResult.Failure msg -> return Error msg }
+    | _ -> Ok settings |> Task.fromResult
+    
 type private EpicArg = ExchangeCode of string | Type of string | AppId of string
 let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (argv: string[]) =
     let proton, cbLaunchDir, args =
@@ -79,6 +115,7 @@ let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (arg
             | "/steamid", _                   -> { s with Platform = Steam; ForceLocal = true }
             | "/steam", _                     -> { s with Platform = Steam; ForceLocal = true }
             | "/epic", _                      -> { s with Platform = applyEpicArg s.Platform None; ForceLocal = true }
+            | "/frontier", Some profileName   -> { s with Platform = Frontier { Profile = profileName; Credentials = None; AuthToken = None } }
             | "-auth_password", Some password -> { s with Platform = epicArg (ExchangeCode password) }
             | "-auth_type", Some t            -> { s with Platform = epicArg (Type t) }
             | "-epicapp", Some id             -> { s with Platform = epicArg (AppId id) }
@@ -92,9 +129,12 @@ let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (arg
             | "/eda", _                       -> { s with ProductWhitelist = s.ProductWhitelist.Add "eda" }
             | _ -> s) defaults
     
-    cbLaunchDir
-    |> Option.map Ok |> Option.defaultWith (fun () -> findCbLaunchDir settings.Platform)
-    |> Result.map (fun launchDir -> { settings with Proton = proton; CbLauncherDir = launchDir })
+    match cbLaunchDir
+          |> Option.map Ok |> Option.defaultWith (fun () -> findCbLaunchDir settings.Platform)
+          |> Result.map (fun launchDir -> { settings with Proton = proton; CbLauncherDir = launchDir }) with
+    | Ok settings ->
+        applyDeviceAuth settings
+    | Result.Error msg -> Result.Error msg |> Task.fromResult
     
 [<CLIMutable>]
 type ProcessConfig =
@@ -133,7 +173,7 @@ let parseConfig fileName =
         { config with Processes = processes } |> ConfigParseResult.Ok
     | Error error -> Error error
     
-let getSettings args appDir fileConfig =
+let getSettings args appDir fileConfig = task {
     let findCbLaunchDir paths =
         appDir :: paths
         |> List.map Some
@@ -162,12 +202,13 @@ let getSettings args appDir fileConfig =
         match platform with
         | Epic d -> Epic.potentialInstallPaths d.AppId |> findCbLaunchDir
         | Steam -> Steam.potentialInstallPaths() |> findCbLaunchDir
-        | Frontier -> raise (NotSupportedException("Frontier game version not supported"))
-        | _ -> Error "Failed to find Elite Dangerous install directory"
+        | Frontier _-> Cobra.potentialInstallPaths() @ Steam.potentialInstallPaths() |> findCbLaunchDir
+        | _ -> Error "Unknown platform. Failed to find Elite Dangerous install directory"
     
-    parseArgs defaults fallbackDirs args
-    |> Result.map (fun settings -> { settings with ApiUri = apiUri
-                                                   PreferredLanguage = fileConfig.Language
-                                                   Processes = processes
-                                                   Restart = restart
-                                                   WatchForCrashes = fileConfig.WatchForCrashes })
+    let! settings = parseArgs defaults fallbackDirs args
+    return settings
+           |> Result.map (fun settings -> { settings with ApiUri = apiUri
+                                                          PreferredLanguage = fileConfig.Language
+                                                          Processes = processes
+                                                          Restart = restart
+                                                          WatchForCrashes = fileConfig.WatchForCrashes }) }
