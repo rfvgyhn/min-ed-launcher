@@ -78,7 +78,8 @@ let mapProduct productsDir (product:AuthorizedProduct) =
                    Mode = v.Mode
                    Directory = directory
                    GameArgs = product.GameArgs
-                   ServerArgs = serverArgs }
+                   ServerArgs = serverArgs
+                   Metadata = None }
     | NotFound file ->
         Log.info $"Disabling '%s{product.Name}'. Unable to find product at '%s{file}'"
         Missing { Sku = product.Sku

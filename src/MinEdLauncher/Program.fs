@@ -3,6 +3,7 @@
 open System
 open System.IO
 open System.Reflection
+open System.Threading
 open FsConfig
 open FSharp.Control.Tasks.NonAffine
 open Steam
@@ -35,13 +36,17 @@ let getSettings args =
 [<EntryPoint>]
 let main argv =
     async {
+        use cts = new CancellationTokenSource()
+        Console.CancelKeyPress.AddHandler (fun s e ->
+            cts.Cancel()
+            e.Cancel <- true)
         try
             do! Async.SwitchToThreadPool ()
             Log.debug $"Args: %A{argv}"
             let! settings = getSettings argv |> Async.AwaitTask
             Log.debug $"Settings: %A{settings}"
             return! match settings with
-                    | Ok settings -> App.run settings |> Async.AwaitTask
+                    | Ok settings -> App.run settings cts.Token |> Async.AwaitTask
                     | Error msg -> async { Log.error msg; return 1 }
         with
         | e -> Log.error $"Unhandled exception: {e}"; return 1

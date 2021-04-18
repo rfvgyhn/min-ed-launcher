@@ -1,13 +1,18 @@
 module MinEdLauncher.App
 
 open System.IO
+open System.Net.Http
 open System.Runtime.InteropServices
+open System.Security.Cryptography
+open System.Threading
 open MinEdLauncher
 open MinEdLauncher.Token
 open FSharp.Control.Tasks.NonAffine
 open System
 open System.Diagnostics
+open System.Threading.Tasks
 open MinEdLauncher.Types
+open MinEdLauncher.HttpClientExtensions
 
 type LoginResult =
 | Success of Api.Connection
@@ -111,7 +116,7 @@ let rec launchProduct proton processArgs restart productName product =
     | Product.RunResult.AlreadyRunning -> Log.info $"%s{productName} is already running"
     | Product.RunResult.Error e -> Log.error $"Couldn't start selected product: %s{e.ToString()}"
   
-let promptForProduct (products: ProductDetails array) =
+let promptForProductToPlay (products: ProductDetails array) (cancellationToken:CancellationToken) =
     printfn $"Select a product to launch (default=1):"
     products
     |> Array.indexed
@@ -119,14 +124,16 @@ let promptForProduct (products: ProductDetails array) =
         
     let rec readInput() =
         printf "Product: "
-        let userInput = Console.ReadKey()
+        let userInput = Console.ReadKey(true)
         printfn ""
         let couldParse, index =
             if userInput.Key = ConsoleKey.Enter then
                 true, 1
             else
                 Int32.TryParse(userInput.KeyChar.ToString())
-        if couldParse && index > 0 && index < products.Length then
+        if cancellationToken.IsCancellationRequested then
+            None
+        else if couldParse && index > 0 && index < products.Length then
             let product = products.[index - 1]
             let filters = String.Join(", ", product.Filters)
             Log.debug $"User selected %s{product.Name} - %s{product.Sku} - %s{filters}"
@@ -136,7 +143,132 @@ let promptForProduct (products: ProductDetails array) =
             readInput()
     readInput()
     
-let run settings = task {
+let promptForProductsToUpdate (products: ProductDetails array) =
+    printfn $"Select product(s) to update (eg: \"1\", \"1 2 3\") (default=None):"
+    products
+    |> Array.indexed
+    |> Array.iter (fun (i, product) -> printfn $"%i{i + 1}) %s{product.Name}")
+        
+    let rec readInput() =
+        let userInput = Console.ReadLine()
+        
+        if String.IsNullOrWhiteSpace(userInput) then
+            [||]
+        else
+            let selection =
+                userInput
+                |> Regex.split @"\D+"
+                |> Array.choose (fun d ->
+                    if String.IsNullOrEmpty(d) then
+                        None
+                    else
+                        match Int32.Parse(d) with
+                        | n when n > 0 && n < products.Length -> Some n
+                        | _ -> None)
+                |> Array.map (fun i -> products.[i - 1])
+            if selection.Length > 0 then
+                selection
+            else
+                printfn "Invalid selection"
+                readInput()
+    readInput()
+
+let normalizeManifestPartialPath (path: string) =
+    if not (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) then
+        path.Replace('\\', '/')
+    else
+        path
+
+type DownloadProgress = { TotalFiles: int; BytesSoFar: int64; TotalBytes: int64; }
+let downloadFiles (httpClient: HttpClient) destDir (progress: IProgress<DownloadProgress>) cancellationToken (files: Types.ProductManifest.File[]) =
+    let combinedTotalBytes = files |> Seq.sumBy (fun f -> int64 f.Size)
+    let combinedBytesSoFar = ref 0L
+    let downloadFile (file: Types.ProductManifest.File) = task {
+        let path = normalizeManifestPartialPath file.Path
+        let dest = Path.Combine(destDir, path)
+        
+        let dirName = Path.GetDirectoryName(dest);
+        if dirName.Length > 0 then
+            Directory.CreateDirectory(dirName) |> ignore
+        
+        use sha1 = SHA1.Create()
+        use fileStream = new FileStream(dest, FileMode.Create, FileAccess.Write, FileShare.Write, 4096, FileOptions.Asynchronous)
+        use cryptoStream = new CryptoStream(fileStream, sha1, CryptoStreamMode.Write) // Calculate hash as file is downloaded
+        let totalReads = ref 0L
+        let relativeProgress = Progress<int>(fun bytesRead ->
+            let bytesSoFar = Interlocked.Add(combinedBytesSoFar, int64 bytesRead)
+            let totalReads = Interlocked.Increment(totalReads) // Hack so that the console isn't written to too fast
+            if totalReads % 100L = 0L then
+                progress.Report({ TotalFiles = files.Length
+                                  BytesSoFar = bytesSoFar
+                                  TotalBytes = combinedTotalBytes }))
+        do! httpClient.DownloadAsync(file.Download, cryptoStream, relativeProgress, cancellationToken)
+        cryptoStream.Dispose()
+        let hash = sha1.Hash |> Hex.toString |> String.toLower
+        return dest, file.Hash = hash }
+    
+    try
+        files
+        |> Array.map downloadFile
+        |> Task.whenAll
+        |> Ok
+    with e -> e.ToString() |> Error
+
+let updateProduct (httpClient: HttpClient) productDir cacheDir (product: ProductDetails) cancellationToken (manifest: Types.ProductManifest.Manifest) =
+    let manifestMap =
+        manifest.Files
+        |> Array.map (fun file -> normalizeManifestPartialPath file.Path, file)
+        |> Map.ofArray
+    let getFileHash file =
+        match SHA1.hashFile file |> Result.map Hex.toString with
+        | Ok hash -> Some (hash.ToLower())
+        | Error e ->
+           Log.warn $"Unable to get hash of file '%s{file}' - %s{e.ToString()}"
+           None
+    let getFileHashes dir =
+        Directory.EnumerateFiles(dir, "*.*", SearchOption.AllDirectories)
+        |> Seq.map (fun file -> file.Replace(dir, "").TrimStart(Path.DirectorySeparatorChar))
+        |> Seq.filter manifestMap.ContainsKey
+        |> Seq.choose (fun file -> getFileHash (Path.Combine(dir, file)) |> Option.map (fun hash -> (file, hash)))
+        |> Map.ofSeq
+
+    let verifyFiles files =
+        let invalidFiles = files |> Seq.filter (fun (path, valid) -> not valid) |> Seq.map fst
+        if Seq.isEmpty invalidFiles then Ok ()
+        else invalidFiles |> String.join Environment.NewLine |> Error
+    
+    let progress = Progress<DownloadProgress>(fun p ->
+        let total = p.TotalBytes |> Int64.toFriendlyByteString
+        let percent = float p.BytesSoFar / float p.TotalBytes
+        Console.SetCursorPosition(0, Console.CursorTop)
+        Console.Write($"Downloading %d{p.TotalFiles} files (%s{total}) - {percent:P0}"))
+
+    let findInvalidFiles() =
+        cacheDir
+        |> FileIO.ensureDirExists
+        |> Result.map (fun cacheDir ->
+            let cachedHashes = getFileHashes cacheDir
+            let validCachedFiles = cachedHashes |> Map.filter (fun file hash -> manifestMap.[file].Hash = hash) |> Map.keys
+            
+            manifestMap
+            |> Map.keys
+            |> Seq.except validCachedFiles
+            |> Seq.choose (fun file ->
+                let fullPath = Path.Combine(productDir, file)
+                
+                if File.Exists(fullPath) then 
+                    let hash = getFileHash fullPath
+                    hash |> Option.filter (fun hash -> manifestMap.[file].Hash <> hash)
+                else Some file)
+            |> Seq.map (fun file -> Map.find file manifestMap)
+            |> Seq.toArray)
+        
+    Log.info "Determining which files need to be updated. This may take a while."
+    findInvalidFiles()
+    |> Result.bind (downloadFiles httpClient cacheDir progress cancellationToken)
+    |> Result.mapTask verifyFiles
+    
+let run settings cancellationToken = task {
     if RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && settings.Platform = Steam then
         Steam.fixLcAll()
     
@@ -173,8 +305,6 @@ let run settings = task {
 #else
                 MachineId.getWineId()
 #endif
-            // TODO: Check if launcher version is compatible with current ED version
-            
             match machineId with
             | Ok machineId ->
                 let lang = settings.PreferredLanguage |> Option.defaultValue "en"
@@ -207,11 +337,62 @@ let run settings = task {
                             | [] -> "None"
                             | p -> String.Join(Environment.NewLine + "\t", p)
                         Log.info $"Available Products:{Environment.NewLine}\t%s{availableProductsDisplay}"
-                        let playableProducts =
+                        let filterProducts f products =
                             products
                             |> Result.defaultValue []
-                            |> List.choose (fun p -> match p with | Playable p -> Some p | _ -> None)
+                            |> List.choose f
                             |> List.toArray
+                        let productsRequiringUpdate = products |> filterProducts (fun p -> match p with | RequiresUpdate p -> Some p | _ -> None)
+                        
+                        let productsToUpdate =
+                            let products =
+                                if true(*settings.AutoUpdate*) then
+                                    productsRequiringUpdate
+                                else
+                                    productsRequiringUpdate |> promptForProductsToUpdate
+                            products
+                            |> Array.filter (fun p -> p.Metadata.IsNone)
+                            |> Array.iter (fun p -> Log.error $"Unknown product metadata for %s{p.Name}")
+                            
+                            products |> Array.filter (fun p -> p.Metadata.IsSome)
+                        
+//                        use tmpClient = new HttpClient()
+//                        tmpClient.Timeout <- TimeSpan.FromMinutes(5.)                        
+//                        let tmp = products |> filterProducts (fun p -> match p with | Playable p -> Some p | _ -> None)
+//                        let! asdf = Api.getProductManifest tmpClient (Uri("http://cdn.zaonce.net/elitedangerous/win/manifests/Win64_Release_3_7_7_500+%282021.01.28.254828%29.xml.gz"))
+//                        //let! fdsa = Api.getProductManifest httpClient (Uri("http://cdn.zaonce.net/elitedangerous/win/manifests/Win64_4_0_0_10_Alpha+%282021.04.09.263090%29.xml.gz"))
+//                        do! match asdf with
+//                            | Ok man -> task {
+//                                let p = tmp.[0]
+//                                Log.info $"Updating %s{p.Name}"
+//                                let productsDir = Path.Combine(settings.CbLauncherDir, "Products")
+//                                let productDir = Path.Combine(productsDir, p.Directory)
+//                                let cacheDir = Path.Combine(productsDir, $".cache-%s{man.Title}%s{man.Version}")
+//                                let! result = updateProduct tmpClient productDir cacheDir p cancellationToken man
+//                                printfn ""
+//                                match result with
+//                                | Ok () ->
+//                                    Log.info $"Finished downloading update for %s{p.Name}"
+//                                    FileIO.mergeDirectories productDir cacheDir
+//                                    Log.debug $"Moved downloaded files from '%s{cacheDir}' to '%s{productDir}'"
+//                                | Error e -> Log.error $"Unable to download update for %s{p.Name} - %s{e}" }
+//                            | Error e -> () |> Task.fromResult
+                        
+                        let! productManifestTasks =
+                            productsToUpdate
+                            |> Array.map (fun p ->
+                                p.Metadata
+                                |> Option.map (fun m -> Api.getProductManifest httpClient m.RemotePath)
+                                |> Option.defaultValue (Task.FromResult(Error $"No metadata for %s{p.Name}")))
+                            |> Task.whenAll
+                        
+                        let productManifests =
+                            productManifestTasks
+                            |> Array.zip productsToUpdate
+                            |> Array.choose (fun (_, manifest) -> match manifest with Ok m -> Some m | Error _ -> None)
+                        let failedManifests = productManifestTasks |> Array.choose (function Ok _ -> None | Error e -> Some e)
+                        
+                        let playableProducts = products |> filterProducts (fun p -> match p with | Playable p -> Some p | _ -> None)
                         let selectedProduct =
                             if settings.AutoRun then
                                 playableProducts
@@ -219,11 +400,12 @@ let run settings = task {
                                                           || p.Filters |> Set.union settings.ProductWhitelist |> Set.count > 0)
                                 |> Array.tryHead
                             else if playableProducts.Length > 0 then
-                                promptForProduct playableProducts
+                                promptForProductToPlay playableProducts cancellationToken
                             else None
                         
-                        match selectedProduct, true with
-                        | Some product, true ->
+                        match selectedProduct, cancellationToken.IsCancellationRequested with
+                        | _, true -> ()
+                        | Some product, _ ->
                             let gameLanguage = Cobra.getGameLang settings.CbLauncherDir settings.PreferredLanguage
                             let processArgs() = Product.createArgString settings.DisplayMode gameLanguage connection.Session machineId (runningTime()) settings.WatchForCrashes settings.Platform SHA1.hashFile product
                             
@@ -233,10 +415,9 @@ let run settings = task {
                                 launchProduct settings.Proton processArgs settings.Restart product.Name p
                                 Process.stopProcesses processes
                             | Error msg -> Log.error $"Couldn't start selected product: %s{msg}"
-                        | None, true -> Log.error "No selected project"
-                        | _, _ -> ()
+                        | None, _ -> Log.error "No selected project"
                         
-                        if not settings.AutoQuit then
+                        if not settings.AutoQuit && not cancellationToken.IsCancellationRequested then
                             printfn "Press any key to quit..."
                             Console.ReadKey() |> ignore
                         

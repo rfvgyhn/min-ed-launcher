@@ -1,6 +1,7 @@
 module MinEdLauncher.Api
 
 open System
+open System.IO.Compression
 open System.Net
 open System.Net.Http
 open System.Text
@@ -254,6 +255,14 @@ let getAuthorizedProducts platform lang connection = task {
        |> Result.map (fun products -> products |> Seq.sortBy (fun p -> p.SortKey) |> List.ofSeq)
 }
 
+let getProductManifest (httpClient: HttpClient) (uri: Uri) = task {
+    try
+        use! responseStream = httpClient.GetStreamAsync(uri)
+        use decompStream = new GZipStream(responseStream, CompressionMode.Decompress)
+        return ProductManifest.Load(decompStream) |> Ok
+    with e -> return e.ToString() |> Error
+}
+
 let checkForUpdate platform machineId connection product = task {
     match product with
     | Unknown name -> return Error $"{name}: Can't check updates for unknown product"
@@ -270,14 +279,26 @@ let checkForUpdate platform machineId connection product = task {
         use request = buildRequest "/3.0/user/installer" platform connection queryParams
         let! content = fetch connection.HttpClient request
         
-        return content
-            >>= Json.parseProp "version"
-            >>= Json.asVersion
-            |> Result.map (fun remoteVersion ->
-                if remoteVersion = product.Version then
-                    product |> Playable
+        let version = content >>= Json.parseProp "version" >>= Json.asVersion
+        let remotePath = content >>= Json.parseProp "remotePath" >>= Json.toString |> (Result.map Hex.parseIso88591String)
+        let localFile = content >>= Json.parseProp "localFile" >>= Json.toString |> (Result.map System.IO.Path.GetFileName)
+        let hash = content >>= Json.parseProp "md5" >>= Json.toString
+        let size = content >>= Json.parseProp "size" >>= Json.toInt64
+        
+        return
+            match version, remotePath, localFile, hash, size with
+            | Ok version, Ok remotePath, Ok localFile, Ok hash, Ok size ->
+                let metadata = { Hash = hash; LocalFile = localFile; RemotePath = Uri(remotePath); Size = size; Version = version }
+                let product = { product with Metadata = Some metadata }
+                if version = product.Version then
+                    product |> Playable |> Ok
                 else
-                    product |> RequiresUpdate)
+                    product |> RequiresUpdate |> Ok
+            | _ ->
+                let content = content >>= Json.toString |> Result.defaultWith id
+                let msg = $"Unexpected json object %s{content}"
+                Log.debug msg
+                Error msg
 }
 
 let checkForUpdates platform machineId connection (products: Product list) = task {

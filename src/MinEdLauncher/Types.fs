@@ -1,5 +1,6 @@
 module MinEdLauncher.Types
 
+open FSharp.Data
 open System
 open System.Diagnostics
 open Token
@@ -77,6 +78,12 @@ type VersionInfo =
       SteamAware: bool
       Version: Version
       Mode: ProductMode }
+type ProductMetadata =
+    { Hash: string
+      LocalFile: string
+      RemotePath: Uri
+      Size: int64
+      Version: Version }
 type ProductDetails =
     { Sku: string
       Name: string
@@ -88,12 +95,14 @@ type ProductDetails =
       Mode: ProductMode
       Directory: string
       GameArgs: string
-      ServerArgs: string }
+      ServerArgs: string
+      Metadata: ProductMetadata option }
 type MissingProductDetails =
     { Sku: string
       Name: string
       Filters: Set<string>
       Directory: string }
+type ProductManifest = XmlProvider<"""<Manifest title="Win64_4_0_0_10_Alpha" version="2021.04.09.263090"><File><Path>AppConfig.xml</Path><Hash>b73379436461d1596b39f6aa07dd6d83724cca6d</Hash><Size>3366</Size><Download>http://path.to/file</Download></File><File><Path>AudioConfiguration.xml</Path><Hash>ad79d0c6ca5988175b45c929ec039e86cd6967f3</Hash><Size>2233</Size><Download>http://path.to/file2</Download></File></Manifest>""">
 type Product =
     | Playable of ProductDetails
     | RequiresUpdate of ProductDetails

@@ -20,7 +20,10 @@ module Task =
         | Error m -> return Error m
     }
 
-module Result =    
+module Result =
+    open FSharp.Control.Tasks.NonAffine
+    open System.Threading.Tasks
+    
     let defaultValue value = function
         | Ok v -> v
         | Error _ -> value
@@ -30,9 +33,22 @@ module Result =
     let bindTask f = function
         | Ok v -> f v
         | Error v -> Error v |> Task.fromResult
+    let mapTask f (result: Result<Task<'T>, 'TError>) =
+        match result with
+        | Ok v -> task {
+            let! result = v
+            return f result }
+        | Error v -> Error v |> Task.fromResult
+        
 
 module Seq =
     let chooseResult r = r |> Seq.choose (fun r -> match r with | Error _ -> None | Ok v -> Some v)
+    
+module Map =
+    // https://stackoverflow.com/a/50925864/182821
+    let keys<'k, 'v when 'k : comparison> (map : Map<'k, 'v>) =
+        Map.fold (fun s k _ -> Set.add k s) Set.empty map
+    
 module Rop =
     let (>>=) switchFunction twoTrackInput = Result.bind twoTrackInput switchFunction
 
@@ -96,6 +112,11 @@ module Json =
         match Int32.TryParse(str) with
         | true, value -> Ok value
         | false, _ -> Error $"Unable to convert string to int '%s{str}'"
+    let toInt64 (prop:JsonElement) =
+        let str = prop.ToString()
+        match Int64.TryParse(str) with
+        | true, value -> Ok value
+        | false, _ -> Error $"Unable to convert string to long '%s{str}'"
     let asDateTime (prop:JsonElement) =
         let str = prop.ToString()
         match DateTime.TryParse(str) with
@@ -164,7 +185,71 @@ module String =
     open System
     open System.Collections.Generic
     let join (separator: string) (values: IEnumerable<'T>) = String.Join(separator, values)
+    let toLower (str: string) = str.ToLower()
     
+module Int64 =
+    open System
+    
+    let toFriendlyByteString (n: int64) =
+        let suf = [| "B"; "KB"; "MB"; "GB"; "TB"; "PB"; "EB" |] //Longs run out around EB
+        if n = 0L then
+            "0" + suf.[0]
+        else
+            let bytes = float (Math.Abs(n))
+            let place = Convert.ToInt32(Math.Floor(Math.Log(bytes, float 1024)))
+            let num = Math.Round(bytes / Math.Pow(float 1024, float place), 1)
+            (Math.Sign(n) * int num).ToString() + suf.[place];
+    
+module StreamExtensions =
+    open System
+    open System.Threading
+    open FSharp.Control.Tasks.NonAffine
+    
+    type Stream with
+        member source.CopyToAsync(destination: Stream, bufferSize: int, ?progress: IProgress<int>, ?cancellationToken: CancellationToken) = task {
+            let cancellationToken = defaultArg cancellationToken CancellationToken.None
+            if source = null then
+                raise (ArgumentNullException(nameof source))
+            if not source.CanRead then
+                raise (ArgumentException("Source stream must be readable", nameof source))
+            if destination = null then
+                raise (ArgumentNullException(nameof(destination)));
+            if not destination.CanWrite then
+                raise (ArgumentException("Destination stream must be writable", nameof destination))
+            if bufferSize < 0 then
+                raise (ArgumentOutOfRangeException(nameof bufferSize))
+            
+            let buffer = Array.zeroCreate bufferSize
+            
+            // Tasks don't support tail call optimization so use a while loop instead of recursion
+            // https://github.com/crowded/ply/issues/14
+            let mutable write = true
+            while write do
+                let! bytesRead = source.ReadAsync(buffer, 0, buffer.Length, cancellationToken)
+                if bytesRead > 0 then
+                    do! destination.WriteAsync(buffer, 0, bytesRead, cancellationToken)
+                    progress |> Option.iter (fun p -> p.Report(bytesRead))
+                else
+                    write <- false }
+
+module HttpClientExtensions =
+    open StreamExtensions
+    open FSharp.Control.Tasks.NonAffine
+    open System
+    open System.Net.Http
+    open System.Threading
+    
+    type HttpClient with
+        member client.DownloadAsync(requestUri: string, destination: Stream, ?progress: IProgress<int>, ?cancellationToken: CancellationToken) = task {
+            let cancellationToken = defaultArg cancellationToken CancellationToken.None
+            
+            use! response = client.GetAsync(requestUri, HttpCompletionOption.ResponseHeadersRead)
+            use! download = response.Content.ReadAsStreamAsync()
+
+            match progress with
+            | Some progress -> do! download.CopyToAsync(destination, 81920, progress, cancellationToken)
+            | None -> do! download.CopyToAsync(destination, cancellationToken) }
+
 module SHA1 =
     open System.Text
     open System.Security.Cryptography
@@ -185,9 +270,17 @@ module SHA1 =
 
 module Hex =
     open System
+    open System.Text
     
     let toString bytes = BitConverter.ToString(bytes).Replace("-","")
     let toStringTrunc length bytes = BitConverter.ToString(bytes).Replace("-","").Substring(0, length)
+    let private iso88591GetString (bytes: byte[]) = Encoding.GetEncoding("ISO-8859-1").GetString(bytes) 
+    let parseIso88591String (str: string) =
+        str
+        |> Seq.chunkBySize 2
+        |> Seq.map (fun chars -> Convert.ToByte(String(chars), 16))
+        |> Seq.toArray
+        |> iso88591GetString
 
 module FileIO =
     open System
@@ -259,7 +352,23 @@ module FileIO =
         | :? PathTooLongException -> Error "Exceeds maximum length"
         | :? DirectoryNotFoundException -> Error "The specified path is invalid (for example, it is on an unmapped drive)."
         | :? IOException -> Error "The directory specified by path is a file or the network name is not known."
-        | :? NotSupportedException -> Error @"Contains a colon character (:) that is not part of a drive label (""C:\"")." 
+        | :? NotSupportedException -> Error @"Contains a colon character (:) that is not part of a drive label (""C:\"")."
+        
+    // https://stackoverflow.com/a/2553245/182821
+    let mergeDirectories (target: string) (source: string) =
+        let sourcePath = source.TrimEnd(Path.DirectorySeparatorChar, ' ')
+        let targetPath = target.TrimEnd(Path.DirectorySeparatorChar, ' ')
+        Directory.EnumerateFiles(sourcePath, "*", SearchOption.AllDirectories)
+        |> Seq.groupBy (fun s -> Path.GetDirectoryName(s))
+        |> Seq.iter (fun (folder, files) ->
+            let targetFolder = folder.Replace(sourcePath, targetPath)
+            Directory.CreateDirectory(targetFolder) |> ignore
+            files
+            |> Seq.iter (fun file ->
+                let targetFile = Path.Combine(targetFolder, Path.GetFileName(file))
+                if File.Exists(targetFile) then File.Delete(targetFile)
+                File.Move(file, targetFile)))
+        Directory.Delete(source, true);
 
 module Console =
     open System
@@ -284,8 +393,8 @@ module Console =
 module Regex =
     open System.Text.RegularExpressions
     
-    let replace pattern (replacement: string) input =
-        Regex.Replace(input, pattern, replacement)
+    let replace pattern (replacement: string) input = Regex.Replace(input, pattern, replacement)
+    let split pattern input = Regex.Split(input, pattern)
 
 module Environment =
     open System
