@@ -179,8 +179,19 @@ let normalizeManifestPartialPath (path: string) =
     else
         path
 
+let throttledDownload (semaphore: SemaphoreSlim) (download: 'a -> Task<'b>) input =
+    input
+    |> Array.map (fun file -> task {
+        do! semaphore.WaitAsync()
+        try
+             return! download(file)
+        finally
+            semaphore.Release() |> ignore
+        })
+    |> Task.whenAll
+
 type DownloadProgress = { TotalFiles: int; BytesSoFar: int64; TotalBytes: int64; }
-let downloadFiles (httpClient: HttpClient) destDir (progress: IProgress<DownloadProgress>) cancellationToken (files: Types.ProductManifest.File[]) =
+let downloadFiles (httpClient: HttpClient) (throttler: SemaphoreSlim) destDir (progress: IProgress<DownloadProgress>) cancellationToken (files: Types.ProductManifest.File[]) =
     let combinedTotalBytes = files |> Seq.sumBy (fun f -> int64 f.Size)
     let combinedBytesSoFar = ref 0L
     let downloadFile (file: Types.ProductManifest.File) = task {
@@ -209,12 +220,11 @@ let downloadFiles (httpClient: HttpClient) destDir (progress: IProgress<Download
     
     try
         files
-        |> Array.map downloadFile
-        |> Task.whenAll
+        |> (throttledDownload throttler downloadFile)
         |> Ok
     with e -> e.ToString() |> Error
 
-let updateProduct (httpClient: HttpClient) productDir cacheDir (product: ProductDetails) cancellationToken (manifest: Types.ProductManifest.Manifest) =
+let updateProduct (httpClient: HttpClient) (throttler: SemaphoreSlim) productDir cacheDir (product: ProductDetails) cancellationToken (manifest: Types.ProductManifest.Manifest) =
     let manifestMap =
         manifest.Files
         |> Array.map (fun file -> normalizeManifestPartialPath file.Path, file)
@@ -262,10 +272,10 @@ let updateProduct (httpClient: HttpClient) productDir cacheDir (product: Product
                 else Some file)
             |> Seq.map (fun file -> Map.find file manifestMap)
             |> Seq.toArray)
-        
+    
     Log.info "Determining which files need to be updated. This may take a while."
     findInvalidFiles()
-    |> Result.bind (downloadFiles httpClient cacheDir progress cancellationToken)
+    |> Result.bind (downloadFiles httpClient throttler cacheDir progress cancellationToken)
     |> Result.mapTask verifyFiles
     
 let run settings cancellationToken = task {
@@ -356,28 +366,29 @@ let run settings cancellationToken = task {
                             
                             products |> Array.filter (fun p -> p.Metadata.IsSome)
                         
-//                        use tmpClient = new HttpClient()
-//                        tmpClient.Timeout <- TimeSpan.FromMinutes(5.)                        
-//                        let tmp = products |> filterProducts (fun p -> match p with | Playable p -> Some p | _ -> None)
-//                        let! asdf = Api.getProductManifest tmpClient (Uri("http://cdn.zaonce.net/elitedangerous/win/manifests/Win64_Release_3_7_7_500+%282021.01.28.254828%29.xml.gz"))
-//                        //let! fdsa = Api.getProductManifest httpClient (Uri("http://cdn.zaonce.net/elitedangerous/win/manifests/Win64_4_0_0_10_Alpha+%282021.04.09.263090%29.xml.gz"))
-//                        do! match asdf with
-//                            | Ok man -> task {
-//                                let p = tmp.[0]
-//                                Log.info $"Updating %s{p.Name}"
-//                                let productsDir = Path.Combine(settings.CbLauncherDir, "Products")
-//                                let productDir = Path.Combine(productsDir, p.Directory)
-//                                let cacheDir = Path.Combine(productsDir, $".cache-%s{man.Title}%s{man.Version}")
-//                                let! result = updateProduct tmpClient productDir cacheDir p cancellationToken man
-//                                printfn ""
-//                                match result with
-//                                | Ok () ->
-//                                    Log.info $"Finished downloading update for %s{p.Name}"
-//                                    FileIO.mergeDirectories productDir cacheDir
-//                                    Log.debug $"Moved downloaded files from '%s{cacheDir}' to '%s{productDir}'"
-//                                | Error e -> Log.error $"Unable to download update for %s{p.Name} - %s{e}" }
-//                            | Error e -> () |> Task.fromResult
-                        
+                        use tmpClient = new HttpClient()
+                        tmpClient.Timeout <- TimeSpan.FromMinutes(5.)                        
+                        let tmp = products |> filterProducts (fun p -> match p with | Playable p -> Some p | _ -> None)
+                        let! asdf = Api.getProductManifest tmpClient (Uri("http://cdn.zaonce.net/elitedangerous/win/manifests/Win64_Release_3_7_7_500+%282021.01.28.254828%29.xml.gz"))
+                        //let! fdsa = Api.getProductManifest httpClient (Uri("http://cdn.zaonce.net/elitedangerous/win/manifests/Win64_4_0_0_10_Alpha+%282021.04.09.263090%29.xml.gz"))
+                        do! match asdf with
+                            | Ok man -> task {
+                                let p = tmp.[0]
+                                Log.info $"Updating %s{p.Name}"
+                                let productsDir = Path.Combine(settings.CbLauncherDir, "Products")
+                                let productDir = Path.Combine(productsDir, p.Directory)
+                                let cacheDir = Path.Combine(productsDir, $".cache-%s{man.Title}%s{man.Version}")
+                                use throttler = new SemaphoreSlim(4, 4)
+                                let! result = updateProduct tmpClient throttler productDir cacheDir p cancellationToken man
+                                printfn ""
+                                match result with
+                                | Ok () ->
+                                    Log.info $"Finished downloading update for %s{p.Name}"
+                                    FileIO.mergeDirectories productDir cacheDir
+                                    Log.debug $"Moved downloaded files from '%s{cacheDir}' to '%s{productDir}'"
+                                | Error e -> Log.error $"Unable to download update for %s{p.Name} - %s{e}" }
+                            | Error e -> () |> Task.fromResult
+
                         let! productManifestTasks =
                             productsToUpdate
                             |> Array.map (fun p ->
