@@ -214,7 +214,7 @@ let downloadFiles (httpClient: HttpClient) (throttler: SemaphoreSlim) destDir (p
         do! httpClient.DownloadAsync(file.Download, cryptoStream, bufferSize, relativeProgress, cancellationToken)
         cryptoStream.Dispose()
         let hash = sha1.Hash |> Hex.toString |> String.toLower
-        return dest, file.Hash = hash }
+        return dest, hash, file.Hash = hash }
     
     try
         let! result = files |> (throttledDownload throttler downloadFile)
@@ -260,7 +260,7 @@ let updateProduct (httpClient: HttpClient) (throttler: SemaphoreSlim) cancellati
         |> Map.ofSeq
 
     let verifyFiles files =
-        let invalidFiles = files |> Seq.filter (fun (path, valid) -> not valid) |> Seq.map fst
+        let invalidFiles = files |> Seq.filter (fun (_, _, valid) -> not valid) |> Seq.map (fun (path, _, _) -> path)
         if Seq.isEmpty invalidFiles then Ok ()
         else invalidFiles |> String.join Environment.NewLine |> Error
     
@@ -269,12 +269,13 @@ let updateProduct (httpClient: HttpClient) (throttler: SemaphoreSlim) cancellati
         let percent = float p.BytesSoFar / float p.TotalBytes
         Console.Write($"\rDownloading %d{p.TotalFiles} files (%s{total}) - {percent:P0}"))
 
-    let writeHashCache path hashMap = task {
+    let writeHashCache append path hashMap = task {
+        let writeAllLines = if append then FileIO.appendAllLines else FileIO.writeAllLines
         let! write =
             hashMap
             |> Map.toSeq
             |> Seq.map (fun (file, hash) -> $"%s{file}|%s{hash}")
-            |> FileIO.writeAllLines path
+            |> writeAllLines path
         match write with
         | Ok () -> Log.debug $"Wrote hash cache to '%s{path}'"
         | Error e -> Log.warn $"Unable to write hash cache at '%s{paths.ProductHashMap}' - %s{e}" }
@@ -319,11 +320,21 @@ let updateProduct (httpClient: HttpClient) (throttler: SemaphoreSlim) cancellati
     return!
         processFiles productHashes cacheHashes
         |> Result.bindTask (fun (invalidFiles, productHashes, cacheHashes) -> task {
-            do! writeHashCache paths.ProductHashMap productHashes
-            do! writeHashCache paths.CacheHashMap cacheHashes
+            let write = writeHashCache false
+            do! write paths.ProductHashMap productHashes
+            do! write paths.CacheHashMap cacheHashes
             return Ok invalidFiles })
         |> Task.bindTaskResult (downloadFiles httpClient throttler paths.ProductCacheDir progress cancellationToken)
-        |> Task.bindResult verifyFiles }
+        |> Task.bindTaskResult (fun files -> task {
+            printfn ""
+            do!
+                files
+                |> Seq.map (fun (path, hash, _) ->
+                    let trim = paths.ProductCacheDir |> String.ensureEndsWith Path.DirectorySeparatorChar
+                    path.Replace(trim, ""), hash)
+                |> Map.ofSeq
+                |> writeHashCache true paths.ProductHashMap
+            return verifyFiles files }) }
     
 let run settings cancellationToken = task {
     if RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && settings.Platform = Steam then
@@ -431,9 +442,7 @@ let run settings cancellationToken = task {
                                                  ProductCacheDir = productCacheDir
                                                  CacheHashMap = Path.Combine(productCacheDir, "hashmap.txt")
                                                  ProductHashMap = Path.Combine(Environment.cacheDir, $"hashmap.%s{Path.GetFileName(productDir)}.txt") }
-                                let! result = updateProduct tmpClient throttler cancellationToken pathInfo man.Files
-                                printfn ""
-                                match result with
+                                match! updateProduct tmpClient throttler cancellationToken pathInfo man.Files with
                                 | Ok () ->
                                     Log.info $"Finished downloading update for %s{p.Name}"
                                     File.Delete(pathInfo.CacheHashMap)

@@ -191,6 +191,7 @@ module String =
     open System.Collections.Generic
     let join (separator: string) (values: IEnumerable<'T>) = String.Join(separator, values)
     let toLower (str: string) = str.ToLower()
+    let ensureEndsWith (value: char) (str: string) = if str.EndsWith(value) then str else $"%s{str}%c{value}"
     
 module Int64 =
     open System
@@ -335,6 +336,14 @@ module FileIO =
     let writeAllLines path lines = task {
         try
             let! result = File.WriteAllLinesAsync(path, lines) 
+            return Ok result
+        with
+        | e -> return Error e.Message
+    }
+    
+    let appendAllLines path lines = task {
+        try
+            let! result = File.AppendAllLinesAsync(path, lines) 
             return Ok result
         with
         | e -> return Error e.Message
