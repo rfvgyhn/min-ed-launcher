@@ -205,14 +205,11 @@ let downloadFiles (httpClient: HttpClient) (throttler: SemaphoreSlim) destDir (p
         use sha1 = SHA1.Create()
         use fileStream = new FileStream(dest, FileMode.Create, FileAccess.Write, FileShare.Write, 4096, FileOptions.Asynchronous)
         use cryptoStream = new CryptoStream(fileStream, sha1, CryptoStreamMode.Write) // Calculate hash as file is downloaded
-        let totalReads = ref 0L
         let relativeProgress = Progress<int>(fun bytesRead ->
             let bytesSoFar = Interlocked.Add(combinedBytesSoFar, int64 bytesRead)
-            let totalReads = Interlocked.Increment(totalReads) // Hack so that the console isn't written to too fast
-            if totalReads % 100L = 0L then
-                progress.Report({ TotalFiles = files.Length
-                                  BytesSoFar = bytesSoFar
-                                  TotalBytes = combinedTotalBytes }))
+            progress.Report({ TotalFiles = files.Length
+                              BytesSoFar = bytesSoFar
+                              TotalBytes = combinedTotalBytes }))
         do! httpClient.DownloadAsync(file.Download, cryptoStream, relativeProgress, cancellationToken)
         cryptoStream.Dispose()
         let hash = sha1.Hash |> Hex.toString |> String.toLower
@@ -269,8 +266,7 @@ let updateProduct (httpClient: HttpClient) (throttler: SemaphoreSlim) cancellati
     let progress = Progress<DownloadProgress>(fun p ->
         let total = p.TotalBytes |> Int64.toFriendlyByteString
         let percent = float p.BytesSoFar / float p.TotalBytes
-        Console.SetCursorPosition(0, Console.CursorTop)
-        Console.Write($"Downloading %d{p.TotalFiles} files (%s{total}) - {percent:P0}"))
+        Console.Write($"\rDownloading %d{p.TotalFiles} files (%s{total}) - {percent:P0}"))
 
     let writeHashCache path hashMap = task {
         let! write =
