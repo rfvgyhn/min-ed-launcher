@@ -117,10 +117,10 @@ let rec login (runningTime: unit -> double) (httpClient:HttpClient) details mach
         login runningTime httpClient { details with Credentials = Some { Username = user; Password = pass } } machineId lang saveCredentials getTwoFactor getUserPass
     | Some cred, None ->
         firstTimeSignin runningTime httpClient cred machineId lang
-        |> Task.bindResult (fun twoFactorToken ->
+        |> Task.bindTaskResult (fun twoFactorToken ->
             getTwoFactor cred.Username |> requestMachineToken httpClient machineId lang twoFactorToken)
-        |> Task.bindResult (fun machineToken ->
-            saveCredentials cred (Some machineToken) |> Task.bindResult (fun () -> Ok machineToken |> Task.fromResult))
+        |> Task.bindTaskResult (fun machineToken ->
+            saveCredentials cred (Some machineToken) |> Task.bindTaskResult (fun () -> Ok machineToken |> Task.fromResult))
         |> Task.mapResult (fun token -> (cred.Username, cred.Password, token))
     | Some cred, Some authToken -> (cred.Username, cred.Password, authToken) |> Ok |> Task.fromResult
 

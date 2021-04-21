@@ -9,9 +9,14 @@ module Task =
     let fromResult r = Task.FromResult(r)
     let whenAll (tasks: IEnumerable<Task<'t>>) = Task.WhenAll(tasks)
     
-    let bindResult (f: 'T -> Task<Result<'U, 'TError>>) (result: Task<Result<'T, 'TError>>) = task { 
+    let bindTaskResult (f: 'T -> Task<Result<'U, 'TError>>) (result: Task<Result<'T, 'TError>>) = task { 
         match! result with
         | Ok v -> return! f v
+        | Error m -> return Error m 
+    }
+    let bindResult (f: 'T -> Result<'U, 'TError>) (result: Task<Result<'T, 'TError>>) = task { 
+        match! result with
+        | Ok v -> return f v
         | Error m -> return Error m 
     }
     let mapResult f (result: Task<Result<'T, 'TError>>) = task { 
@@ -326,6 +331,14 @@ module FileIO =
         | e -> return Error e.Message
     }
     
+    let writeAllLines path lines = task {
+        try
+            let! result = File.WriteAllLinesAsync(path, lines) 
+            return Ok result
+        with
+        | e -> return Error e.Message
+    }
+    
     let readAllLines path = task {
         try
             let! result = File.ReadAllLinesAsync(path) 
@@ -399,7 +412,9 @@ module Regex =
 module Environment =
     open System
     open System.Runtime.InteropServices
-    open System.IO
+    
+    [<Literal>]
+    let private AppFolderName = "min-ed-launcher"
     
     let configDir =
         let specialFolder =
@@ -409,5 +424,17 @@ module Environment =
                 Environment.SpecialFolder.ApplicationData
         
         let path = Environment.GetFolderPath(specialFolder)
-        Path.Combine(path, "min-ed-launcher")
-            
+        Path.Combine(path, AppFolderName)
+        
+    let cacheDir =
+        if RuntimeInformation.IsOSPlatform(OSPlatform.Windows) then
+            let appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
+            Path.Combine(appData, AppFolderName, "cache")
+        else
+            let xdgCacheHome = Environment.GetEnvironmentVariable("XDG_CACHE_HOME")
+            if String.IsNullOrEmpty(xdgCacheHome) then
+                let home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+                Path.Combine(home, ".cache", AppFolderName)
+            else
+                Path.Combine(xdgCacheHome, AppFolderName)
+        

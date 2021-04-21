@@ -117,14 +117,14 @@ let saveCredentials path credentials machineToken =
         |> Result.bindTask (fun encryptedToken ->
             $"{credentials.Username}{nl}{credentials.Password}{nl}{encryptedToken}" |> FileIO.writeAllText path)
     | None -> $"{credentials.Username}{nl}{credentials.Password}" |> FileIO.writeAllText path
-    |> Task.bindResult (fun () -> setUserOnly path |> Task.fromResult)
+    |> Task.bindTaskResult (fun () -> setUserOnly path |> Task.fromResult)
     
 let discardToken path =
     FileIO.readAllLines path
-    |> Task.bindResult (fun lines ->
+    |> Task.bindTaskResult (fun lines ->
         String.Join(Environment.NewLine, lines |> Seq.take 2)
         |> FileIO.writeAllText path)
-    |> Task.bindResult (fun () -> setUserOnly path |> Task.fromResult)
+    |> Task.bindTaskResult (fun () -> setUserOnly path |> Task.fromResult)
 
 let getGameLang cbLauncherDir langCode =
     let asm = Assembly.LoadFrom(Path.Combine(cbLauncherDir, $"LocalResources.dll"))
