@@ -245,14 +245,15 @@ module HttpClientExtensions =
     open System.Threading
     
     type HttpClient with
-        member client.DownloadAsync(requestUri: string, destination: Stream, ?progress: IProgress<int>, ?cancellationToken: CancellationToken) = task {
+        member client.DownloadAsync(requestUri: string, destination: Stream, ?bufferSize: int, ?progress: IProgress<int>, ?cancellationToken: CancellationToken) = task {
             let cancellationToken = defaultArg cancellationToken CancellationToken.None
+            let bufferSize = defaultArg bufferSize 8192
             
             use! response = client.GetAsync(requestUri, HttpCompletionOption.ResponseHeadersRead)
             use! download = response.Content.ReadAsStreamAsync()
 
             match progress with
-            | Some progress -> do! download.CopyToAsync(destination, 81920, progress, cancellationToken)
+            | Some progress -> do! download.CopyToAsync(destination, bufferSize, progress, cancellationToken)
             | None -> do! download.CopyToAsync(destination, cancellationToken) }
 
 module SHA1 =

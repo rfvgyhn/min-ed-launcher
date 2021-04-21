@@ -202,15 +202,16 @@ let downloadFiles (httpClient: HttpClient) (throttler: SemaphoreSlim) destDir (p
         if dirName.Length > 0 then
             Directory.CreateDirectory(dirName) |> ignore
         
+        let bufferSize = 8192
         use sha1 = SHA1.Create()
-        use fileStream = new FileStream(dest, FileMode.Create, FileAccess.Write, FileShare.Write, 4096, FileOptions.Asynchronous)
+        use fileStream = new FileStream(dest, FileMode.Create, FileAccess.Write, FileShare.Write, bufferSize, FileOptions.Asynchronous)
         use cryptoStream = new CryptoStream(fileStream, sha1, CryptoStreamMode.Write) // Calculate hash as file is downloaded
         let relativeProgress = Progress<int>(fun bytesRead ->
             let bytesSoFar = Interlocked.Add(combinedBytesSoFar, int64 bytesRead)
             progress.Report({ TotalFiles = files.Length
                               BytesSoFar = bytesSoFar
                               TotalBytes = combinedTotalBytes }))
-        do! httpClient.DownloadAsync(file.Download, cryptoStream, relativeProgress, cancellationToken)
+        do! httpClient.DownloadAsync(file.Download, cryptoStream, bufferSize, relativeProgress, cancellationToken)
         cryptoStream.Dispose()
         let hash = sha1.Hash |> Hex.toString |> String.toLower
         return dest, file.Hash = hash }
