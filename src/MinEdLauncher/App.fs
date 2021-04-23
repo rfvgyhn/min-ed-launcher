@@ -379,8 +379,7 @@ let run settings cancellationToken = task {
                                     Console.Write($"\rDownloading %d{p.TotalFiles} files (%s{total}) - {percent:P0}")) :> IProgress<DownloadProgress>
 
                                 use semaphore = new SemaphoreSlim(4, 4)
-                                use sha1 = SHA1.Create()
-                                let throttled progress = throttledAction semaphore (downloadFile tmpClient sha1 cancellationToken progress)
+                                let throttled progress = throttledAction semaphore (downloadFile tmpClient Product.createHashAlgorithm cancellationToken progress)
                                 let downloader = { Download = throttled; Progress = progress }
                                 match! updateProduct downloader pathInfo man.Files with
                                 | Ok () ->

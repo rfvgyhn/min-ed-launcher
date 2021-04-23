@@ -4,6 +4,7 @@ open System
 open System.Diagnostics
 open System.IO
 open System.Runtime.InteropServices
+open System.Security.Cryptography
 open System.Threading
 open System.Threading.Tasks
 open FSharp.Control.Tasks.NonAffine
@@ -16,6 +17,7 @@ let generateFileHashStr (hashFile: string -> Result<byte[], 'TError>) (file: str
     |> Result.map (Hex.toString >> String.toLower)
 
 let hashFile = SHA1.hashFile
+let createHashAlgorithm() = SHA1.Create() :> HashAlgorithm
 
 let private mapHashPair file hash = (file, hash)
 let private getFileRelativeDirectory relativeTo (file: string) = file.Replace(relativeTo, "").TrimStart(Path.DirectorySeparatorChar)

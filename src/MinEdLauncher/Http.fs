@@ -17,8 +17,9 @@ module FileIntegrity =
     let fromBool = function true -> Valid | false -> Invalid
 type FileDownloadResponse = { FilePath: string; Hash: string; Integrity: FileIntegrity }
 
-let downloadFile (httpClient: HttpClient) (hashAlgorithm: HashAlgorithm) cancellationToken progress request = task {
+let downloadFile (httpClient: HttpClient) (createHash: unit -> HashAlgorithm) cancellationToken progress request = task {
     let bufferSize = 8192
+    use hashAlgorithm = createHash()
     use fileStream = new FileStream(request.TargetPath, FileMode.Create, FileAccess.Write, FileShare.Write, bufferSize, FileOptions.Asynchronous)
     use cryptoStream = new CryptoStream(fileStream, hashAlgorithm, CryptoStreamMode.Write) // Calculate hash as file is downloaded
     
