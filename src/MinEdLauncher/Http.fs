@@ -8,7 +8,7 @@ open System.Threading.Tasks
 open FSharp.Control.Tasks.NonAffine
 open HttpClientExtensions
 
-type DownloadProgress = { TotalFiles: int; BytesSoFar: int64; TotalBytes: int64; }
+type DownloadProgress = { TotalFiles: int; BytesSoFar: int64; Elapsed: TimeSpan; TotalBytes: int64; }
 type DownloadAll<'a, 'b> = IProgress<int> -> 'a[] -> Task<'b[]>
 type Downloader<'a, 'b> = { Download: DownloadAll<'a, 'b>; Progress: IProgress<DownloadProgress> }
 type FileDownloadRequest = { RemotePath: string; TargetPath: string; ExpectedHash: string }

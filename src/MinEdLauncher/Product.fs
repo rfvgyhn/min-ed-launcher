@@ -84,11 +84,12 @@ let mapFileToRequest destDir (file: Types.ProductManifest.File) =
 let downloadFiles downloader destDir (files: Types.ProductManifest.File[]) : Task<Result<FileDownloadResponse[], string>> = task {
     let combinedTotalBytes = files |> Seq.sumBy (fun f -> int64 f.Size)
     let combinedBytesSoFar = ref 0L
-    
+    let stopWatch = Stopwatch()
     let relativeProgress = Progress<int>(fun bytesRead ->
         let bytesSoFar = Interlocked.Add(combinedBytesSoFar, int64 bytesRead)
         downloader.Progress.Report({ TotalFiles = files.Length
                                      BytesSoFar = bytesSoFar
+                                     Elapsed = stopWatch.Elapsed
                                      TotalBytes = combinedTotalBytes })) :> IProgress<int>
         
     let ensureDirectories requests =
@@ -102,7 +103,9 @@ let downloadFiles downloader destDir (files: Types.ProductManifest.File[]) : Tas
     
     try
         ensureDirectories requests
+        stopWatch.Start()
         let! result = downloader.Download relativeProgress requests
+        stopWatch.Stop()
         return Ok result
     with e -> return e.ToString() |> Error }
 

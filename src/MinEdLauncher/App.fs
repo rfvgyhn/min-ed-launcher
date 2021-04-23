@@ -374,10 +374,16 @@ let run settings cancellationToken = task {
                                                  ProductCacheDir = productCacheDir
                                                  CacheHashMap = Path.Combine(productCacheDir, "hashmap.txt")
                                                  ProductHashMap = Path.Combine(Environment.cacheDir, $"hashmap.%s{Path.GetFileName(productDir)}.txt") }
+                                let mutable lastProgress = 0.
                                 let progress = Progress<DownloadProgress>(fun p ->
+                                    lastProgress <- p.Elapsed.TotalMilliseconds
                                     let total = p.TotalBytes |> Int64.toFriendlyByteString
+                                    let speed =  (p.BytesSoFar / (int64 p.Elapsed.TotalMilliseconds) * 1000L |> Int64.toFriendlyByteString).PadLeft(6)
                                     let percent = float p.BytesSoFar / float p.TotalBytes
-                                    Console.Write($"\rDownloading %d{p.TotalFiles} files (%s{total}) - {percent:P0}")) :> IProgress<DownloadProgress>
+                                    let barLength = 30
+                                    let blocks = int (float barLength * percent)
+                                    let bar = String.replicate blocks "#" + String.replicate (barLength - blocks) "-"
+                                    Console.Write($"\r\tDownloading %s{total} %s{speed}/s [%s{bar}] {percent:P0}")) :> IProgress<DownloadProgress>
 
                                 use semaphore = new SemaphoreSlim(4, 4)
                                 let throttled progress = throttledAction semaphore (downloadFile tmpClient Product.createHashAlgorithm cancellationToken progress)
