@@ -236,6 +236,7 @@ let updateProduct downloader paths (manifest: Types.ProductManifest.File[]) = ta
     
     let downloadFiles downloader cacheDir (files: Types.ProductManifest.File[]) =
         Log.info $"Downloading %d{files.Length} files"
+        Console.CursorVisible <- false
         Product.downloadFiles downloader cacheDir files
 
     let! cacheHashes = task {
@@ -376,14 +377,15 @@ let run settings cancellationToken = task {
                                                  ProductHashMap = Path.Combine(Environment.cacheDir, $"hashmap.%s{Path.GetFileName(productDir)}.txt") }
                                 let mutable lastProgress = 0.
                                 let progress = Progress<DownloadProgress>(fun p ->
-                                    lastProgress <- p.Elapsed.TotalMilliseconds
-                                    let total = p.TotalBytes |> Int64.toFriendlyByteString
-                                    let speed =  (p.BytesSoFar / (int64 p.Elapsed.TotalMilliseconds) * 1000L |> Int64.toFriendlyByteString).PadLeft(6)
-                                    let percent = float p.BytesSoFar / float p.TotalBytes
-                                    let barLength = 30
-                                    let blocks = int (float barLength * percent)
-                                    let bar = String.replicate blocks "#" + String.replicate (barLength - blocks) "-"
-                                    Console.Write($"\r\tDownloading %s{total} %s{speed}/s [%s{bar}] {percent:P0}")) :> IProgress<DownloadProgress>
+                                    if p.Elapsed.TotalMilliseconds - lastProgress >= 200. || p.BytesSoFar = p.TotalBytes then
+                                        lastProgress <- p.Elapsed.TotalMilliseconds
+                                        let total = p.TotalBytes |> Int64.toFriendlyByteString
+                                        let speed =  (p.BytesSoFar / (int64 p.Elapsed.TotalMilliseconds) * 1000L |> Int64.toFriendlyByteString).PadLeft(6)
+                                        let percent = float p.BytesSoFar / float p.TotalBytes
+                                        let barLength = 30
+                                        let blocks = int (float barLength * percent)
+                                        let bar = String.replicate blocks "#" + String.replicate (barLength - blocks) "-"
+                                        Console.Write($"\r\tDownloading %s{total} %s{speed}/s [%s{bar}] {percent:P0}")) :> IProgress<DownloadProgress>
 
                                 use semaphore = new SemaphoreSlim(4, 4)
                                 let throttled progress = throttledAction semaphore (downloadFile tmpClient Product.createHashAlgorithm cancellationToken progress)
@@ -391,6 +393,7 @@ let run settings cancellationToken = task {
                                 match! updateProduct downloader pathInfo man.Files with
                                 | Ok () ->
                                     Log.info $"Finished downloading update for %s{p.Name}"
+                                    Console.CursorVisible <- true
                                     File.Delete(pathInfo.CacheHashMap)
                                     FileIO.mergeDirectories productDir productCacheDir
                                     Log.debug $"Moved downloaded files from '%s{Environment.cacheDir}' to '%s{productDir}'"
