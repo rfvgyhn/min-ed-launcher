@@ -1,6 +1,9 @@
 module MinEdLauncher.Tests.Product
 
+open System
 open System.IO
+open MinEdLauncher
+open MinEdLauncher.Http
 open MinEdLauncher.Product
 open MinEdLauncher.Token
 open MinEdLauncher.Types
@@ -11,6 +14,9 @@ open Expecto
           if (subject.Contains(substring)) then
             failtestf "%s. Expected subject string '%s' to not contain substring '%s'."
                             message subject substring
+        let stringEqual (actual: string) (expected: string) comparisonType message =
+            if not (String.Equals(actual, expected, comparisonType)) then
+                failtest $"%s{message}. Actual value was %s{actual} but had expected it to be %s{expected}."
 
     [<Tests>]
     let tests =
@@ -189,6 +195,151 @@ open Expecto
                     Expect.equal info.WorkingDirectory product.WorkingDir.FullName ""
                 }
             ]
-    //        testProperty "Unknown arg doesn't change any values" <|
-    //            fun (args:string[]) -> parse args = Settings.defaults
+            testList "generateFileHashStr" [
+                test "converts to hex representation" {
+                    let hashFile = (fun _ -> Result.Ok [| 10uy; 2uy; 15uy; 11uy |])
+                    let expected = "0A020F0B"
+                    
+                    let result = generateFileHashStr hashFile "" |> Result.defaultValue ""
+                    
+                    Expect.stringEqual result expected StringComparison.OrdinalIgnoreCase ""
+                }
+                test "converts to all lowercase string" {
+                    let hashFile = (fun _ -> Result.Ok [| 10uy; 2uy; 15uy; 11uy |])
+                    
+                    let result = (generateFileHashStr hashFile "") |> Result.defaultValue ""
+                    
+                    Expect.all result (fun c -> Char.IsDigit(c) || Char.IsLower(c)) ""
+                } ]
+            testList "getFileHashes" [
+                test "skips files that don't exist" {
+                    let tryGenHash = (fun _ -> Some "hash")
+                    let fileExists = (fun _ -> false)
+                    let baseDir = Path.Combine("the", "directory")
+                    let manifestFiles = [ Path.Combine("file", "path") ] |> Set.ofList
+                    let cache = Map.empty<string, string> 
+                    let filePaths = [ Path.Combine(baseDir, "file", "path") ]
+                    
+                    let result = getFileHashes tryGenHash fileExists manifestFiles cache baseDir filePaths
+                    
+                    Expect.isEmpty result ""
+                }
+                test "tries to get hash of absolute path" {
+                    let baseDir = Path.Combine("the", "directory")
+                    let absolutePath = Path.Combine(baseDir, "file", "path")
+                    let tryGenHash = (fun path -> if path = absolutePath then Some "hash" else None)
+                    let fileExists = (fun _ -> true)
+                    let manifestFiles = [ Path.Combine("file", "path") ] |> Set.ofList
+                    let cache = Map.empty<string, string> 
+                    let filePaths = [ absolutePath ]
+                    
+                    let result = getFileHashes tryGenHash fileExists manifestFiles cache baseDir filePaths
+                    
+                    Expect.hasLength result filePaths.Length ""
+                }
+                test "ignores files not in manifest" {
+                    let tryGenHash = (fun _ -> Some "hash")
+                    let fileExists = (fun _ -> true)
+                    let baseDir = Path.Combine("the", "directory")
+                    let manifestFile = Path.Combine("manifest", "file")
+                    let nonManifestFile = Path.Combine("nonmanifest", "file")
+                    let manifestFiles = [ manifestFile ] |> Set.ofList
+                    let cache = Map.empty<string, string> 
+                    let filePaths = [ manifestFile; nonManifestFile ] |> List.map (fun path -> Path.Combine(baseDir, path))
+                    
+                    let result = getFileHashes tryGenHash fileExists manifestFiles cache baseDir filePaths
+                    
+                    Expect.hasLength result 1 ""
+                }
+                test "uses relative path to check manifest" {
+                    let tryGenHash = (fun _ -> Some "hash")
+                    let fileExists = (fun _ -> true)
+                    let baseDir = Path.Combine("the", "directory")
+                    let manifestFile = Path.Combine("manifest", "file")
+                    let manifestFiles = [ manifestFile ] |> Set.ofList
+                    let cache = Map.empty<string, string> 
+                    let filePaths = [ Path.Combine(baseDir, manifestFile) ]
+                    
+                    let result = getFileHashes tryGenHash fileExists manifestFiles cache baseDir filePaths
+                    
+                    Expect.hasLength result 1 ""
+                }
+                test "skips files that weren't able to generate a hash" {
+                    let tryGenHash = (fun _ -> None)
+                    let fileExists = (fun _ -> true)
+                    let baseDir = Path.Combine("the", "directory")
+                    let manifestFiles = [ Path.Combine("file", "path") ] |> Set.ofList
+                    let cache = Map.empty<string, string> 
+                    let filePaths = [ Path.Combine(baseDir, "file", "path") ]
+                    
+                    let result = getFileHashes tryGenHash fileExists manifestFiles cache baseDir filePaths
+                    
+                    Expect.isEmpty result ""
+                }
+                test "skips files if they are cached" {
+                    let tryGenHash = (fun _ -> failtest "Shouldn't try to hash file")
+                    let fileExists = (fun _ -> false)
+                    let baseDir = Path.Combine("the", "directory")
+                    let manifestFile = Path.Combine("manifest", "file")
+                    let manifestFiles = [ manifestFile ] |> Set.ofList
+                    let cache = [ (manifestFile, "hash") ] |> Map.ofList
+                    let filePaths = [ Path.Combine(baseDir, manifestFile) ]
+                    
+                    let result = getFileHashes tryGenHash fileExists manifestFiles cache baseDir filePaths
+                    
+                    Expect.hasLength result 0 ""
+                }
+            ]
+            testList "parseHashCacheLines" [
+                test "skips if line has fewer than two parts" {
+                    let lines = seq { "path"; "path|" }
+                    
+                    let result = parseHashCacheLines lines
+                    
+                    Expect.isEmpty result ""
+                }
+                test "skips if lines has more than two parts" {
+                    let lines = seq { "path|hash|something" }
+                    
+                    let result = parseHashCacheLines lines
+                    
+                    Expect.isEmpty result ""
+                }
+                test "can parse valid line" {
+                    let lines = seq { "path|hash" }
+                    let expected = [ ("path", "hash") ] |> Map.ofList
+                    
+                    let result = parseHashCacheLines lines
+                    
+                    Expect.equal result expected ""
+                } ]
+            testList "mapHashMapToLines" [
+                test "can parse valid line" {
+                    let map = [ ("path", "hash") ] |> Map.ofList
+                    let expected = seq { "path|hash" }
+                    
+                    let result = mapHashMapToLines map
+                    
+                    Expect.sequenceEqual result expected ""
+                } ]
+            testList "normalizeManifestPartialPath" [
+                test "results in correct path separator" {
+                    let path = "a\\windows\\dir"
+                    let expected = Path.Combine("a", "windows", "dir")
+                    let result = normalizeManifestPartialPath path
+                    
+                    Expect.equal result expected ""
+                } ]
+            testList "mapFileToRequest" [
+                test "maps correctly" {
+                    let hash = "hash"
+                    let remotePath = "http://remote.path"
+                    let destDir = "dest"
+                    let file = ProductManifest.File("a\\windows\\dir", hash, 0, remotePath)
+                    let expected = { RemotePath = remotePath; TargetPath = Path.Combine(destDir, "a", "windows", "dir"); ExpectedHash = hash }
+                    
+                    let result = mapFileToRequest destDir file
+                    
+                    Expect.equal result expected ""
+                } ]
         ]

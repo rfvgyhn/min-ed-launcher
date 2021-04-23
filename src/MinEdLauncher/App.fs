@@ -6,13 +6,13 @@ open System.Runtime.InteropServices
 open System.Security.Cryptography
 open System.Threading
 open MinEdLauncher
+open MinEdLauncher.Http
 open MinEdLauncher.Token
 open FSharp.Control.Tasks.NonAffine
 open System
 open System.Diagnostics
 open System.Threading.Tasks
 open MinEdLauncher.Types
-open MinEdLauncher.HttpClientExtensions
 
 type LoginResult =
 | Success of Api.Connection
@@ -173,117 +173,47 @@ let promptForProductsToUpdate (products: ProductDetails array) =
                 readInput()
     readInput()
 
-let normalizeManifestPartialPath (path: string) =
-    if not (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) then
-        path.Replace('\\', '/')
-    else
-        path
-
-let throttledDownload (semaphore: SemaphoreSlim) (download: 'a -> Task<'b>) input =
+let throttledAction (semaphore: SemaphoreSlim) (action: 'a -> Task<'b>) input =
     input
-    |> Array.map (fun file -> task {
+    |> Array.map (fun item -> task {
         do! semaphore.WaitAsync()
         try
-             return! download(file)
+             return! action(item)
         finally
             semaphore.Release() |> ignore
         })
     |> Task.whenAll
 
-type DownloadProgress = { TotalFiles: int; BytesSoFar: int64; TotalBytes: int64; }
-let downloadFiles (httpClient: HttpClient) (throttler: SemaphoreSlim) destDir (progress: IProgress<DownloadProgress>) cancellationToken (files: Types.ProductManifest.File[]) = task {
-    let combinedTotalBytes = files |> Seq.sumBy (fun f -> int64 f.Size)
-    let combinedBytesSoFar = ref 0L
-    let downloadFile (file: Types.ProductManifest.File) = task {
-        let path = normalizeManifestPartialPath file.Path
-        let dest = Path.Combine(destDir, path)
-        
-        let dirName = Path.GetDirectoryName(dest);
-        if dirName.Length > 0 then
-            Directory.CreateDirectory(dirName) |> ignore
-        
-        let bufferSize = 8192
-        use sha1 = SHA1.Create()
-        use fileStream = new FileStream(dest, FileMode.Create, FileAccess.Write, FileShare.Write, bufferSize, FileOptions.Asynchronous)
-        use cryptoStream = new CryptoStream(fileStream, sha1, CryptoStreamMode.Write) // Calculate hash as file is downloaded
-        let relativeProgress = Progress<int>(fun bytesRead ->
-            let bytesSoFar = Interlocked.Add(combinedBytesSoFar, int64 bytesRead)
-            progress.Report({ TotalFiles = files.Length
-                              BytesSoFar = bytesSoFar
-                              TotalBytes = combinedTotalBytes }))
-        do! httpClient.DownloadAsync(file.Download, cryptoStream, bufferSize, relativeProgress, cancellationToken)
-        cryptoStream.Dispose()
-        let hash = sha1.Hash |> Hex.toString |> String.toLower
-        return dest, hash, file.Hash = hash }
-    
-    try
-        let! result = files |> (throttledDownload throttler downloadFile)
-        return Ok result
-    with e -> return e.ToString() |> Error }
-
 type UpdateProductPaths = { ProductDir: string; ProductCacheDir: string; CacheHashMap: string; ProductHashMap: string }
-let updateProduct (httpClient: HttpClient) (throttler: SemaphoreSlim) cancellationToken paths (manifest: Types.ProductManifest.File[]) = task {
+let updateProduct downloader paths (manifest: Types.ProductManifest.File[]) = task {
     let manifestMap =
         manifest
-        |> Array.map (fun file -> normalizeManifestPartialPath file.Path, file)
+        |> Array.map (fun file -> Product.normalizeManifestPartialPath file.Path, file)
         |> Map.ofArray
-    let getFileHash file =
-        match SHA1.hashFile file |> Result.map Hex.toString with
-        | Ok hash -> Some (hash.ToLower())
+    
+    let tryGenHash file =
+        match Product.generateFileHashStr Product.hashFile file with
+        | Ok hash -> Some hash
         | Error e ->
            Log.warn $"Unable to get hash of file '%s{file}' - %s{e.ToString()}"
            None
-    let parseHashCache hashMapPath =
-        if File.Exists(hashMapPath) then
-            FileIO.readAllLines hashMapPath
-            |> Task.mapResult (fun (lines: string[]) ->
-                lines
-                |> Array.choose (fun line ->
-                    let parts = line.Split("|", StringSplitOptions.RemoveEmptyEntries)
-                    if parts.Length = 2 then
-                        Some (parts.[0], parts.[1])
-                    else
-                        None)
-                |> Map.ofArray)
-        else Map.empty |> Ok |> Task.fromResult
-           
-    let getFileHashes cache dir (filePaths: string seq) =
-        filePaths
-        |> Seq.filter File.Exists
-        |> Seq.map (fun file -> file.Replace(dir, "").TrimStart(Path.DirectorySeparatorChar))
-        |> Seq.filter manifestMap.ContainsKey
-        |> Seq.choose (fun file ->
-            cache
-            |> Map.tryFind file
-            |> Option.orElseWith (fun () -> getFileHash (Path.Combine(dir, file)))
-            |> Option.map (fun hash -> (file, hash)))
-        |> Map.ofSeq
 
-    let verifyFiles files =
-        let invalidFiles = files |> Seq.filter (fun (_, _, valid) -> not valid) |> Seq.map (fun (path, _, _) -> path)
+    let verifyFiles (files: Http.FileDownloadResponse[]) =
+        let invalidFiles = files |> Seq.filter (fun file -> file.Integrity = Http.Invalid) |> Seq.map (fun file -> file.FilePath)
         if Seq.isEmpty invalidFiles then Ok ()
         else invalidFiles |> String.join Environment.NewLine |> Error
-    
-    let progress = Progress<DownloadProgress>(fun p ->
-        let total = p.TotalBytes |> Int64.toFriendlyByteString
-        let percent = float p.BytesSoFar / float p.TotalBytes
-        Console.Write($"\rDownloading %d{p.TotalFiles} files (%s{total}) - {percent:P0}"))
 
-    let writeHashCache append path hashMap = task {
-        let writeAllLines = if append then FileIO.appendAllLines else FileIO.writeAllLines
-        let! write =
-            hashMap
-            |> Map.toSeq
-            |> Seq.map (fun (file, hash) -> $"%s{file}|%s{hash}")
-            |> writeAllLines path
-        match write with
+    let writeHashCache append path hashMap = task { 
+        match! Product.writeHashCache append path hashMap with
         | Ok () -> Log.debug $"Wrote hash cache to '%s{path}'"
-        | Error e -> Log.warn $"Unable to write hash cache at '%s{paths.ProductHashMap}' - %s{e}" }
+        | Error e -> Log.warn $"Unable to write hash cache at '%s{path}' - %s{e}" }
     
+    let getFileHashes = Product.getFileHashes tryGenHash File.Exists (manifestMap |> Map.keys)
     let processFiles productHashMap cacheHashMap =
         paths.ProductCacheDir
         |> FileIO.ensureDirExists
         |> Result.map (fun cacheDir ->
+            Log.info "Determining which files need to be updated. This may take a while."
             let cachedHashes = getFileHashes cacheHashMap cacheDir (Directory.EnumerateFiles(cacheDir, "*.*", SearchOption.AllDirectories))
             let validCachedFiles = cachedHashes |> Map.filter (fun file hash -> manifestMap.[file].Hash = hash) |> Map.keys
             let manifestKeys = manifestMap |> Map.keys
@@ -303,15 +233,18 @@ let updateProduct (httpClient: HttpClient) (throttler: SemaphoreSlim) cancellati
             |> Seq.map (fun file -> Map.find file manifestMap)
             |> Seq.toArray, productHashes, cachedHashes)
     
-    Log.info "Determining which files need to be updated. This may take a while."
+    let downloadFiles downloader cacheDir (files: Types.ProductManifest.File[]) =
+        Log.info $"Downloading %d{files.Length} files"
+        Product.downloadFiles downloader cacheDir files
+
     let! cacheHashes = task {
-        match! parseHashCache paths.CacheHashMap with
+        match! Product.parseHashCache paths.CacheHashMap with
         | Ok hashes -> return hashes
         | Error e ->
             Log.warn $"Unable to parse hash map at '%s{paths.CacheHashMap}' - %s{e}"
             return Map.empty }
     let! productHashes = task {
-        match! parseHashCache paths.ProductHashMap with
+        match! Product.parseHashCache paths.ProductHashMap with
         | Ok hashes -> return hashes
         | Error e ->
             Log.warn $"Unable to parse hash map at '%s{paths.ProductHashMap}' - %s{e}"
@@ -324,14 +257,14 @@ let updateProduct (httpClient: HttpClient) (throttler: SemaphoreSlim) cancellati
             do! write paths.ProductHashMap productHashes
             do! write paths.CacheHashMap cacheHashes
             return Ok invalidFiles })
-        |> Task.bindTaskResult (downloadFiles httpClient throttler paths.ProductCacheDir progress cancellationToken)
+        |> Task.bindTaskResult (downloadFiles downloader paths.ProductCacheDir)
         |> Task.bindTaskResult (fun files -> task {
             printfn ""
             do!
                 files
-                |> Seq.map (fun (path, hash, _) ->
+                |> Seq.map (fun response ->
                     let trim = paths.ProductCacheDir |> String.ensureEndsWith Path.DirectorySeparatorChar
-                    path.Replace(trim, ""), hash)
+                    response.FilePath.Replace(trim, ""), response.Hash)
                 |> Map.ofSeq
                 |> writeHashCache true paths.ProductHashMap
             return verifyFiles files }) }
@@ -428,21 +361,28 @@ let run settings cancellationToken = task {
                         tmpClient.Timeout <- TimeSpan.FromMinutes(5.)                        
                         let tmp = products |> filterProducts (fun p -> match p with | Playable p -> Some p | _ -> None)
                         let! asdf = Api.getProductManifest tmpClient (Uri("http://cdn.zaonce.net/elitedangerous/win/manifests/Win64_Release_3_7_7_500+%282021.01.28.254828%29.xml.gz"))
-                        //let! fdsa = Api.getProductManifest httpClient (Uri("http://cdn.zaonce.net/elitedangerous/win/manifests/Win64_4_0_0_10_Alpha+%282021.04.09.263090%29.xml.gz"))
                         do! match asdf with
                             | Ok man -> task {
                                 let p = tmp.[0]
                                 Log.info $"Updating %s{p.Name}"
                                 let productsDir = Path.Combine(settings.CbLauncherDir, "Products")
                                 let productDir = Path.Combine(productsDir, p.Directory)
-                                use throttler = new SemaphoreSlim(4, 4)
                                 
                                 let productCacheDir = Path.Combine(Environment.cacheDir, $"%s{man.Title}%s{man.Version}")
                                 let pathInfo = { ProductDir = productDir
                                                  ProductCacheDir = productCacheDir
                                                  CacheHashMap = Path.Combine(productCacheDir, "hashmap.txt")
                                                  ProductHashMap = Path.Combine(Environment.cacheDir, $"hashmap.%s{Path.GetFileName(productDir)}.txt") }
-                                match! updateProduct tmpClient throttler cancellationToken pathInfo man.Files with
+                                let progress = Progress<DownloadProgress>(fun p ->
+                                    let total = p.TotalBytes |> Int64.toFriendlyByteString
+                                    let percent = float p.BytesSoFar / float p.TotalBytes
+                                    Console.Write($"\rDownloading %d{p.TotalFiles} files (%s{total}) - {percent:P0}")) :> IProgress<DownloadProgress>
+
+                                use semaphore = new SemaphoreSlim(4, 4)
+                                use sha1 = SHA1.Create()
+                                let throttled progress = throttledAction semaphore (downloadFile tmpClient sha1 cancellationToken progress)
+                                let downloader = { Download = throttled; Progress = progress }
+                                match! updateProduct downloader pathInfo man.Files with
                                 | Ok () ->
                                     Log.info $"Finished downloading update for %s{p.Name}"
                                     File.Delete(pathInfo.CacheHashMap)
@@ -451,7 +391,7 @@ let run settings cancellationToken = task {
                                 | Error e -> Log.error $"Unable to download update for %s{p.Name} - %s{e}" }
                             | Error e -> () |> Task.fromResult
 
-                        let! productManifestTasks =
+                        let! productManifests =
                             productsToUpdate
                             |> Array.map (fun p ->
                                 p.Metadata
@@ -459,11 +399,11 @@ let run settings cancellationToken = task {
                                 |> Option.defaultValue (Task.FromResult(Error $"No metadata for %s{p.Name}")))
                             |> Task.whenAll
                         
-                        let productManifests =
-                            productManifestTasks
+                        let productsToUpdate =
+                            productManifests
                             |> Array.zip productsToUpdate
                             |> Array.choose (fun (_, manifest) -> match manifest with Ok m -> Some m | Error _ -> None)
-                        let failedManifests = productManifestTasks |> Array.choose (function Ok _ -> None | Error e -> Some e)
+                        let failedManifests = productManifests |> Array.choose (function Ok _ -> None | Error e -> Some e)
                         
                         let playableProducts = products |> filterProducts (fun p -> match p with | Playable p -> Some p | _ -> None)
                         let selectedProduct =

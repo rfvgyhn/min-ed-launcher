@@ -47,7 +47,10 @@ module Result =
         
 
 module Seq =
+    open System.Linq
+    
     let chooseResult r = r |> Seq.choose (fun r -> match r with | Error _ -> None | Ok v -> Some v)
+    let intersect (itemsToInclude: seq<'T>) (source: seq<'T>) = source.Intersect(itemsToInclude)
     
 module Map =
     // https://stackoverflow.com/a/50925864/182821

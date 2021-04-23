@@ -4,8 +4,103 @@ open System
 open System.Diagnostics
 open System.IO
 open System.Runtime.InteropServices
+open System.Threading
+open System.Threading.Tasks
+open FSharp.Control.Tasks.NonAffine
+open MinEdLauncher.Http
 open MinEdLauncher.Rop
 open MinEdLauncher.Types
+
+let generateFileHashStr (hashFile: string -> Result<byte[], 'TError>) (file: string) =
+    hashFile file
+    |> Result.map (Hex.toString >> String.toLower)
+
+let hashFile = SHA1.hashFile
+
+let private mapHashPair file hash = (file, hash)
+let private getFileRelativeDirectory relativeTo (file: string) = file.Replace(relativeTo, "").TrimStart(Path.DirectorySeparatorChar)
+
+let private generateFileHashes tryGenHash productDir (manifestFiles: string Set) (filePaths: string seq) =
+    let tryGetHash file =
+        let getFileAbsoluteDirectory file = Path.Combine(productDir, file)
+        tryGenHash (getFileAbsoluteDirectory file) |> Option.map (mapHashPair file)
+        
+    filePaths
+    |> Seq.map (getFileRelativeDirectory productDir)
+    |> Seq.intersect manifestFiles
+    |> Seq.choose tryGetHash
+    |> Map.ofSeq
+
+let getFileHashes tryGenHash fileExists (manifestFiles: string Set) cache productDir (filePaths: string seq) =
+    let getHashFromCache cache file =
+        cache
+        |> Map.tryFind (getFileRelativeDirectory productDir file)
+        |> Option.map (mapHashPair file)
+
+    let cachedHashes = filePaths |> Seq.choose (getHashFromCache cache)
+    let missingHashes = filePaths |> Seq.except (cachedHashes |> Seq.map fst) |> Seq.filter fileExists
+    generateFileHashes tryGenHash productDir manifestFiles missingHashes
+
+let parseHashCacheLines (lines: string seq) =
+    lines
+    |> Seq.choose (fun line ->
+        let parts = line.Split("|", StringSplitOptions.RemoveEmptyEntries)
+        if parts.Length = 2 then
+            Some (parts.[0], parts.[1])
+        else
+            None)
+    |> Map.ofSeq
+    
+let parseHashCache filePath =
+    if File.Exists(filePath) then
+        FileIO.readAllLines filePath
+        |> Task.mapResult parseHashCacheLines
+    else Map.empty |> Ok |> Task.fromResult
+
+let mapHashMapToLines hashMap =
+    hashMap
+    |> Map.toSeq
+    |> Seq.map (fun (file, hash) -> $"%s{file}|%s{hash}")
+    
+let writeHashCache append path hashMap =
+    let writeAllLines = if append then FileIO.appendAllLines else FileIO.writeAllLines
+    mapHashMapToLines hashMap |> writeAllLines path
+
+let normalizeManifestPartialPath (path: string) =
+    if not (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) then
+        path.Replace('\\', '/')
+    else
+        path
+
+let mapFileToRequest destDir (file: Types.ProductManifest.File) =
+    let path = normalizeManifestPartialPath file.Path
+    let targetPath = Path.Combine(destDir, path)
+    { RemotePath = file.Download; TargetPath = targetPath; ExpectedHash = file.Hash }
+
+let downloadFiles downloader destDir (files: Types.ProductManifest.File[]) : Task<Result<FileDownloadResponse[], string>> = task {
+    let combinedTotalBytes = files |> Seq.sumBy (fun f -> int64 f.Size)
+    let combinedBytesSoFar = ref 0L
+    
+    let relativeProgress = Progress<int>(fun bytesRead ->
+        let bytesSoFar = Interlocked.Add(combinedBytesSoFar, int64 bytesRead)
+        downloader.Progress.Report({ TotalFiles = files.Length
+                                     BytesSoFar = bytesSoFar
+                                     TotalBytes = combinedTotalBytes })) :> IProgress<int>
+        
+    let ensureDirectories requests =
+        requests
+        |> Seq.iter (fun request ->
+            let dirName = Path.GetDirectoryName(request.TargetPath);
+            if dirName.Length > 0 then
+                Directory.CreateDirectory(dirName) |> ignore )
+        
+    let requests = files |> Array.map (mapFileToRequest destDir)
+    
+    try
+        ensureDirectories requests
+        let! result = downloader.Download relativeProgress requests
+        return Ok result
+    with e -> return e.ToString() |> Error }
 
 let createArgString vr (lang: string option) edSession machineId timestamp watchForCrashes platform hashFile (product:ProductDetails) =
     let targetOptions = String.Join(" ", [

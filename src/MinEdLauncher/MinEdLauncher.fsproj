@@ -41,6 +41,7 @@
     <Compile Include="Token.fs" />
     <Compile Include="Types.fs" />
     <Compile Include="Interop.fs" />
+    <Compile Include="Http.fs" />
     <Compile Include="Product.fs" />
     <Compile Include="Process.fs" />
     <Compile Include="Steam.fs" />
