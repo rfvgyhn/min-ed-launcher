@@ -56,6 +56,9 @@ module Map =
     // https://stackoverflow.com/a/50925864/182821
     let keys<'k, 'v when 'k : comparison> (map : Map<'k, 'v>) =
         Map.fold (fun s k _ -> Set.add k s) Set.empty map
+    // https://stackoverflow.com/a/3974842/182821
+    let merge map1 map2 =
+        Map.fold (fun acc key value -> Map.add key value acc) map1 map2
     
 module Rop =
     let (>>=) switchFunction twoTrackInput = Result.bind twoTrackInput switchFunction

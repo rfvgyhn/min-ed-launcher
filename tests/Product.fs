@@ -276,7 +276,21 @@ open Expecto
                     
                     Expect.isEmpty result ""
                 }
-                test "skips files if they are cached" {
+                test "merges cached hashes with generated" {
+                    let tryGenHash = (fun _ -> Some "hash2")
+                    let fileExists = (fun _ -> true)
+                    let baseDir = Path.Combine("the", "directory")
+                    let cachedFile = Path.Combine("manifest", "file")
+                    let nonCachedFile = Path.Combine("manifest", "file2")
+                    let manifestFiles = [ cachedFile; nonCachedFile ] |> Set.ofList
+                    let cache = [ (cachedFile, "hash") ] |> Map.ofList
+                    let filePaths = [ cachedFile; nonCachedFile ] |> List.map (fun path -> Path.Combine(baseDir, path))
+                    let expected = cache |> Map.add nonCachedFile "hash2"
+                    let result = getFileHashes tryGenHash fileExists manifestFiles cache baseDir filePaths
+                    
+                    Expect.sequenceEqual result expected ""
+                }
+                test "skips generating hash if available in cache" {
                     let tryGenHash = (fun _ -> failtest "Shouldn't try to hash file")
                     let fileExists = (fun _ -> false)
                     let baseDir = Path.Combine("the", "directory")
@@ -287,7 +301,7 @@ open Expecto
                     
                     let result = getFileHashes tryGenHash fileExists manifestFiles cache baseDir filePaths
                     
-                    Expect.hasLength result 0 ""
+                    Expect.hasLength result 1 ""
                 }
             ]
             testList "parseHashCacheLines" [

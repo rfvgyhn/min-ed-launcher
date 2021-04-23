@@ -39,9 +39,11 @@ let getFileHashes tryGenHash fileExists (manifestFiles: string Set) cache produc
         |> Map.tryFind (getFileRelativeDirectory productDir file)
         |> Option.map (mapHashPair file)
 
-    let cachedHashes = filePaths |> Seq.choose (getHashFromCache cache)
-    let missingHashes = filePaths |> Seq.except (cachedHashes |> Seq.map fst) |> Seq.filter fileExists
+    let filePaths = filePaths |> Seq.toArray 
+    let cachedHashes = filePaths |> Array.choose (getHashFromCache cache)
+    let missingHashes = filePaths |> Array.except (cachedHashes |> Array.map fst) |> Seq.filter fileExists
     generateFileHashes tryGenHash productDir manifestFiles missingHashes
+    |> Map.merge cache
 
 let parseHashCacheLines (lines: string seq) =
     lines

@@ -222,7 +222,7 @@ let updateProduct downloader paths (manifest: Types.ProductManifest.File[]) = ta
                 |> Seq.except validCachedFiles
                 |> Seq.map (fun path -> Path.Combine(paths.ProductDir, path))
                 |> getFileHashes productHashMap paths.ProductDir
-                |> Map.fold (fun acc key value -> Map.add key value acc) cachedHashes
+                |> Map.merge cachedHashes
                 
             manifestKeys
             |> Set.filter (fun file ->
