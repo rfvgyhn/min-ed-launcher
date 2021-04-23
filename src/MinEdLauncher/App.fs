@@ -217,6 +217,7 @@ let updateProduct downloader paths (manifest: Types.ProductManifest.File[]) = ta
             let cachedHashes = getFileHashes cacheHashMap cacheDir (Directory.EnumerateFiles(cacheDir, "*.*", SearchOption.AllDirectories))
             let validCachedFiles = cachedHashes |> Map.filter (fun file hash -> manifestMap.[file].Hash = hash) |> Map.keys
             let manifestKeys = manifestMap |> Map.keys
+            let productHashMap = productHashMap |> Map.filter (fun path _ -> File.Exists(Path.Combine(paths.ProductDir, path)))
             let productHashes =
                 manifestKeys
                 |> Seq.except validCachedFiles
