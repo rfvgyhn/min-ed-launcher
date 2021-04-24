@@ -40,6 +40,7 @@ type LauncherSettings =
       PreferredLanguage: string option
       ApiUri: Uri
       Restart: (bool * int64)
+      AutoUpdate: bool
       Processes: ProcessStartInfo list }
 type ServerStatus = Healthy
 type LocalVersion = Version

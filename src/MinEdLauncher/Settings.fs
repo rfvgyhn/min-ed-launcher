@@ -21,6 +21,7 @@ let defaults =
       PreferredLanguage = None
       ApiUri = Uri("http://localhost:8080")
       Restart = false, 0L
+      AutoUpdate = true
       Processes = List.empty }
     
 [<RequireQualifiedAccess>]
@@ -151,6 +152,7 @@ type Config =
       GameLocation: string option
       Language: string option
       Restart: RestartConfig
+      AutoUpdate: bool option
       Processes: ProcessConfig list }
 let parseConfig fileName =
     let configRoot = ConfigurationBuilder()
@@ -208,6 +210,7 @@ let getSettings args appDir fileConfig = task {
     let! settings = parseArgs defaults fallbackDirs args
     return settings
            |> Result.map (fun settings -> { settings with ApiUri = apiUri
+                                                          AutoUpdate = fileConfig.AutoUpdate |> Option.defaultValue true
                                                           PreferredLanguage = fileConfig.Language
                                                           Processes = processes
                                                           Restart = restart

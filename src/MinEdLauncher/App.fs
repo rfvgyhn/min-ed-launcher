@@ -348,7 +348,7 @@ let run settings cancellationToken = task {
                         let productsRequiringUpdate = products |> filterProducts (fun p -> match p with | RequiresUpdate p -> Some p | _ -> None)
                         let productsToUpdate =
                             let products =
-                                if true(*settings.AutoUpdate*) then
+                                if settings.AutoUpdate then
                                     productsRequiringUpdate
                                 else
                                     productsRequiringUpdate |> promptForProductsToUpdate

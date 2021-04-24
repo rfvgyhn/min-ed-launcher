@@ -6,5 +6,6 @@
         "enabled": false,
         "shutdownTimeout": 3
     },
+    "autoUpdate": true,
     "processes": []
 }
