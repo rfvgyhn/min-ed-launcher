@@ -402,7 +402,7 @@ let run settings cancellationToken = task {
                                         let bar = String.replicate blocks "#" + String.replicate (barLength - blocks) "-"
                                         Console.Write($"\r\tDownloading %s{total} %s{speed}/s [%s{bar}] {percent:P0}")) :> IProgress<DownloadProgress>
 
-                                use semaphore = new SemaphoreSlim(4, 4)
+                                use semaphore = new SemaphoreSlim(settings.MaxConcurrentDownloads, settings.MaxConcurrentDownloads)
                                 let throttled progress = throttledAction semaphore (downloadFile httpClient Product.createHashAlgorithm cancellationToken progress)
                                 let downloader = { Download = throttled; Progress = progress }
                                 match! updateProduct downloader pathInfo manifest.Files with

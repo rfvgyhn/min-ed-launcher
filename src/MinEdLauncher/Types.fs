@@ -41,6 +41,7 @@ type LauncherSettings =
       ApiUri: Uri
       Restart: (bool * int64)
       AutoUpdate: bool
+      MaxConcurrentDownloads: int
       Processes: ProcessStartInfo list }
 type ServerStatus = Healthy
 type LocalVersion = Version

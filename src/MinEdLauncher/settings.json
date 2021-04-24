@@ -7,5 +7,6 @@
         "shutdownTimeout": 3
     },
     "autoUpdate": true,
+    "maxConcurrentDownloads": 4,
     "processes": []
 }
