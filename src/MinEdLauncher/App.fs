@@ -214,16 +214,17 @@ let updateProduct downloader paths (manifest: Types.ProductManifest.File[]) = ta
         |> FileIO.ensureDirExists
         |> Result.map (fun cacheDir ->
             Log.info "Determining which files need to be updated. This may take a while."
-            let cachedHashes = getFileHashes cacheHashMap cacheDir (Directory.EnumerateFiles(cacheDir, "*.*", SearchOption.AllDirectories))
-            let validCachedFiles = cachedHashes |> Map.filter (fun file hash -> manifestMap.[file].Hash = hash) |> Map.keys
+            let validCachedHashes =
+                getFileHashes cacheHashMap cacheDir (Directory.EnumerateFiles(cacheDir, "*.*", SearchOption.AllDirectories))
+                |> Map.filter (fun file hash -> manifestMap.[file].Hash = hash)
             let manifestKeys = manifestMap |> Map.keys
             let productHashMap = productHashMap |> Map.filter (fun path _ -> File.Exists(Path.Combine(paths.ProductDir, path)))
             let productHashes =
                 manifestKeys
-                |> Seq.except validCachedFiles
+                |> Seq.except (validCachedHashes |> Map.keys)
                 |> Seq.map (fun path -> Path.Combine(paths.ProductDir, path))
                 |> getFileHashes productHashMap paths.ProductDir
-                |> Map.merge cachedHashes
+                |> Map.merge validCachedHashes
                 
             manifestKeys
             |> Set.filter (fun file ->
@@ -232,7 +233,7 @@ let updateProduct downloader paths (manifest: Types.ProductManifest.File[]) = ta
                 |> Option.map (fun hash -> manifestMap.[file].Hash <> hash)
                 |> Option.isNone)
             |> Seq.map (fun file -> Map.find file manifestMap)
-            |> Seq.toArray, productHashes, cachedHashes)
+            |> Seq.toArray, productHashes, validCachedHashes)
     
     let downloadFiles downloader cacheDir (files: Types.ProductManifest.File[]) =
         if files.Length > 0 then
