@@ -346,7 +346,6 @@ let run settings cancellationToken = task {
                             |> List.choose f
                             |> List.toArray
                         let productsRequiringUpdate = products |> filterProducts (fun p -> match p with | RequiresUpdate p -> Some p | _ -> None)
-                        
                         let productsToUpdate =
                             let products =
                                 if true(*settings.AutoUpdate*) then
@@ -358,19 +357,35 @@ let run settings cancellationToken = task {
                             |> Array.iter (fun p -> Log.error $"Unknown product metadata for %s{p.Name}")
                             
                             products |> Array.filter (fun p -> p.Metadata.IsSome)
+
+                        let! productManifests =
+                            productsToUpdate
+                            |> Array.map (fun p ->
+                                p.Metadata
+                                |> Option.map (fun m -> Api.getProductManifest httpClient m.RemotePath)
+                                |> Option.defaultValue (Task.FromResult(Error $"No metadata for %s{p.Name}")))
+                            |> Task.whenAll
+                        let productsToUpdate, failedManifests =
+                            productManifests
+                            |> Array.zip productsToUpdate
+                            |> Array.fold (fun (success, failed) (product, manifest) ->
+                                match manifest with
+                                | Ok m -> ((product, m) :: success, failed)
+                                | Error e -> (success, (product.Name, e) :: failed)) ([], [])
+                            
+                        if not failedManifests.IsEmpty then
+                            let separator = $"{Environment.NewLine}\t"
+                            let messages = failedManifests |> List.map (fun (name, error) -> $"%s{name} - %s{error}") |> String.join separator
+                            Log.error $"Unable to update the following products. Failed to get their manifests:%s{separator}%s{messages}"
                         
-                        use tmpClient = new HttpClient()
-                        tmpClient.Timeout <- TimeSpan.FromMinutes(5.)                        
-                        let tmp = products |> filterProducts (fun p -> match p with | Playable p -> Some p | _ -> None)
-                        let! asdf = Api.getProductManifest tmpClient (Uri("http://cdn.zaonce.net/elitedangerous/win/manifests/Win64_Release_3_7_7_500+%282021.01.28.254828%29.xml.gz"))
-                        do! match asdf with
-                            | Ok man -> task {
-                                let p = tmp.[0]
-                                Log.info $"Updating %s{p.Name}"
-                                let productsDir = Path.Combine(settings.CbLauncherDir, "Products")
-                                let productDir = Path.Combine(productsDir, p.Directory)
-                                
-                                let productCacheDir = Path.Combine(Environment.cacheDir, $"%s{man.Title}%s{man.Version}")
+                        let! updated =
+                            let productsDir = Path.Combine(settings.CbLauncherDir, "Products")
+                            
+                            productsToUpdate
+                            |> List.chooseTasksSequential (fun (product, manifest) -> task {
+                                Log.info $"Updating %s{product.Name}"
+                                let productDir = Path.Combine(productsDir, product.Directory)
+                                let productCacheDir = Path.Combine(Environment.cacheDir, $"%s{manifest.Title}%s{manifest.Version}")
                                 let pathInfo = { ProductDir = productDir
                                                  ProductCacheDir = productCacheDir
                                                  CacheHashMap = Path.Combine(productCacheDir, "hashmap.txt")
@@ -388,33 +403,26 @@ let run settings cancellationToken = task {
                                         Console.Write($"\r\tDownloading %s{total} %s{speed}/s [%s{bar}] {percent:P0}")) :> IProgress<DownloadProgress>
 
                                 use semaphore = new SemaphoreSlim(4, 4)
-                                let throttled progress = throttledAction semaphore (downloadFile tmpClient Product.createHashAlgorithm cancellationToken progress)
+                                let throttled progress = throttledAction semaphore (downloadFile httpClient Product.createHashAlgorithm cancellationToken progress)
                                 let downloader = { Download = throttled; Progress = progress }
-                                match! updateProduct downloader pathInfo man.Files with
+                                match! updateProduct downloader pathInfo manifest.Files with
                                 | Ok () ->
-                                    Log.info $"Finished downloading update for %s{p.Name}"
+                                    Log.info $"Finished downloading update for %s{product.Name}"
                                     Console.CursorVisible <- true
                                     File.Delete(pathInfo.CacheHashMap)
                                     FileIO.mergeDirectories productDir productCacheDir
                                     Log.debug $"Moved downloaded files from '%s{Environment.cacheDir}' to '%s{productDir}'"
-                                | Error e -> Log.error $"Unable to download update for %s{p.Name} - %s{e}" }
-                            | Error e -> () |> Task.fromResult
-
-                        let! productManifests =
-                            productsToUpdate
-                            |> Array.map (fun p ->
-                                p.Metadata
-                                |> Option.map (fun m -> Api.getProductManifest httpClient m.RemotePath)
-                                |> Option.defaultValue (Task.FromResult(Error $"No metadata for %s{p.Name}")))
-                            |> Task.whenAll
+                                    return Some product
+                                | Error e ->
+                                    Log.error $"Unable to download update for %s{product.Name} - %s{e}"
+                                    return None
+                                })
                         
-                        let productsToUpdate =
-                            productManifests
-                            |> Array.zip productsToUpdate
-                            |> Array.choose (fun (_, manifest) -> match manifest with Ok m -> Some m | Error _ -> None)
-                        let failedManifests = productManifests |> Array.choose (function Ok _ -> None | Error e -> Some e)
-                        
-                        let playableProducts = products |> filterProducts (fun p -> match p with | Playable p -> Some p | _ -> None)
+                        let playableProducts =
+                            products
+                            |> filterProducts (fun p -> match p with | Playable p -> Some p | _ -> None)
+                            |> Seq.append updated
+                            |> Seq.toArray
                         let selectedProduct =
                             if settings.AutoRun then
                                 playableProducts

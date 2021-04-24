@@ -52,6 +52,34 @@ module Seq =
     let chooseResult r = r |> Seq.choose (fun r -> match r with | Error _ -> None | Ok v -> Some v)
     let intersect (itemsToInclude: seq<'T>) (source: seq<'T>) = source.Intersect(itemsToInclude)
     
+module List =
+    open System.Threading.Tasks
+    open FSharp.Control.Tasks.NonAffine
+    
+    let mapTasksSequential (mapping: 'T -> Task<'U>) list = task {
+        let! result =
+            match list with
+            | [] -> [] |> Task.fromResult
+            | head :: tail -> task {
+                let firstTask = task {
+                    let! result = mapping head
+                    return ([], result) }
+
+                let! tasks, lastTask =
+                    List.fold (fun prevTask arg -> task {
+                        let! accum, prev = prevTask
+                        let accum = prev :: accum
+
+                        let! result = mapping arg
+
+                        return (accum, result) }) firstTask tail
+                return (lastTask :: tasks) }
+        return (result |> Seq.toList) }
+    let chooseTasksSequential (chooser: 'T -> Task<'U option>) list = task {
+        let! items = list |> mapTasksSequential chooser
+        return items |> List.choose id
+    }
+    
 module Map =
     // https://stackoverflow.com/a/50925864/182821
     let keys<'k, 'v when 'k : comparison> (map : Map<'k, 'v>) =
