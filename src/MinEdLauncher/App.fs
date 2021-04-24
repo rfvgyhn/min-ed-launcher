@@ -364,6 +364,9 @@ let run settings cancellationToken = task {
                             products |> Array.filter (fun p -> p.Metadata.IsSome)
 
                         let! productManifests =
+                            if productsToUpdate.Length > 0 then
+                                Log.info "Fetching product manifest(s)"
+                            
                             productsToUpdate
                             |> Array.map (fun p ->
                                 p.Metadata
