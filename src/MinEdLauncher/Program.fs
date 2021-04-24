@@ -37,9 +37,7 @@ let getSettings args =
 let main argv =
     async {
         use cts = new CancellationTokenSource()
-        Console.CancelKeyPress.AddHandler (fun s e ->
-            cts.Cancel()
-            e.Cancel <- true)
+
         try
             do! Async.SwitchToThreadPool ()
             Log.debug $"Args: %A{argv}"
