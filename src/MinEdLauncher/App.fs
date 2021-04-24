@@ -200,7 +200,7 @@ let updateProduct downloader paths (manifest: Types.ProductManifest.File[]) = ta
 
     let verifyFiles (files: Http.FileDownloadResponse[]) =
         let invalidFiles = files |> Seq.filter (fun file -> file.Integrity = Http.Invalid) |> Seq.map (fun file -> file.FilePath)
-        if Seq.isEmpty invalidFiles then Ok ()
+        if Seq.isEmpty invalidFiles then Ok files.Length
         else invalidFiles |> String.join Environment.NewLine |> Error
 
     let writeHashCache append path hashMap = task { 
@@ -235,9 +235,13 @@ let updateProduct downloader paths (manifest: Types.ProductManifest.File[]) = ta
             |> Seq.toArray, productHashes, cachedHashes)
     
     let downloadFiles downloader cacheDir (files: Types.ProductManifest.File[]) =
-        Log.info $"Downloading %d{files.Length} files"
-        Console.CursorVisible <- false
-        Product.downloadFiles downloader cacheDir files
+        if files.Length > 0 then
+            Log.info $"Downloading %d{files.Length} files"
+            Console.CursorVisible <- false
+            Product.downloadFiles downloader cacheDir files
+        else
+            Log.info "All files already up to date"
+            [||] |> Ok |> Task.fromResult
 
     let! cacheHashes = task {
         match! Product.parseHashCache paths.CacheHashMap with
@@ -261,15 +265,16 @@ let updateProduct downloader paths (manifest: Types.ProductManifest.File[]) = ta
             return Ok invalidFiles })
         |> Task.bindTaskResult (downloadFiles downloader paths.ProductCacheDir)
         |> Task.bindTaskResult (fun files -> task {
-            printfn ""
-            do!
-                files
-                |> Seq.map (fun response ->
-                    let trim = paths.ProductCacheDir |> String.ensureEndsWith Path.DirectorySeparatorChar
-                    response.FilePath.Replace(trim, ""), response.Hash)
-                |> Map.ofSeq
-                |> writeHashCache true paths.ProductHashMap
-            return verifyFiles files }) }
+            if files.Length > 0 then
+                do! files
+                    |> Seq.map (fun response ->
+                        let trim = paths.ProductCacheDir |> String.ensureEndsWith Path.DirectorySeparatorChar
+                        response.FilePath.Replace(trim, ""), response.Hash)
+                    |> Map.ofSeq
+                    |> writeHashCache true paths.ProductHashMap
+                return verifyFiles files
+            else
+                return Ok 0 }) }
     
 let run settings cancellationToken = task {
     if RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && settings.Platform = Steam then
@@ -392,7 +397,8 @@ let run settings cancellationToken = task {
                                                  ProductHashMap = Path.Combine(Environment.cacheDir, $"hashmap.%s{Path.GetFileName(productDir)}.txt") }
                                 let mutable lastProgress = 0.
                                 let progress = Progress<DownloadProgress>(fun p ->
-                                    if p.Elapsed.TotalMilliseconds - lastProgress >= 200. || p.BytesSoFar = p.TotalBytes then
+                                    let completed = p.BytesSoFar = p.TotalBytes
+                                    if p.Elapsed.TotalMilliseconds - lastProgress >= 200. || completed then
                                         lastProgress <- p.Elapsed.TotalMilliseconds
                                         let total = p.TotalBytes |> Int64.toFriendlyByteString
                                         let speed =  (p.BytesSoFar / (int64 p.Elapsed.TotalMilliseconds) * 1000L |> Int64.toFriendlyByteString).PadLeft(6)
@@ -400,18 +406,21 @@ let run settings cancellationToken = task {
                                         let barLength = 30
                                         let blocks = int (float barLength * percent)
                                         let bar = String.replicate blocks "#" + String.replicate (barLength - blocks) "-"
-                                        Console.Write($"\r\tDownloading %s{total} %s{speed}/s [%s{bar}] {percent:P0}")) :> IProgress<DownloadProgress>
+                                        Console.Write($"\r\tDownloading %s{total} %s{speed}/s [%s{bar}] {percent:P0}")
+                                        if completed then Console.WriteLine()) :> IProgress<DownloadProgress>
+                                        
 
                                 use semaphore = new SemaphoreSlim(settings.MaxConcurrentDownloads, settings.MaxConcurrentDownloads)
                                 let throttled progress = throttledAction semaphore (downloadFile httpClient Product.createHashAlgorithm cancellationToken progress)
                                 let downloader = { Download = throttled; Progress = progress }
                                 match! updateProduct downloader pathInfo manifest.Files with
-                                | Ok () ->
-                                    Log.info $"Finished downloading update for %s{product.Name}"
+                                | Ok 0 -> return Some product
+                                | Ok _ ->
                                     Console.CursorVisible <- true
                                     File.Delete(pathInfo.CacheHashMap)
                                     FileIO.mergeDirectories productDir productCacheDir
                                     Log.debug $"Moved downloaded files from '%s{Environment.cacheDir}' to '%s{productDir}'"
+                                    Log.info $"Finished updating %s{product.Name}"
                                     return Some product
                                 | Error e ->
                                     Log.error $"Unable to download update for %s{product.Name} - %s{e}"
