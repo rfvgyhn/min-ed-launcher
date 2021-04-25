@@ -328,13 +328,17 @@ let run settings cancellationToken = task {
                         let names = authorizedProducts |> List.map (fun p -> p.Name)
                         Log.debug $"Authorized Products: %s{String.Join(',', names)}"
                         Log.info "Checking for updates"
-                        let! products = authorizedProducts
-                                        |> List.map (Product.mapProduct productsDir)
-                                        |> List.filter (function | Playable _ -> true | _ -> false)
-                                        |> Api.checkForUpdates settings.Platform machineId connection
+                        let checkForUpdates = authorizedProducts
+                                              |> List.map (Product.mapProduct productsDir)
+                                              |> List.filter (function | Playable _ -> true | _ -> false)
+                                              |> Api.checkForUpdates settings.Platform machineId connection
+                        let! products = task {
+                            match! checkForUpdates with
+                            | Ok p -> return p
+                            | Error e -> Log.warn $"{e}"; return [] }
+                        
                         let availableProducts =
                             products
-                            |> Result.defaultWith (fun e -> Log.warn $"{e}"; [])
                             |> List.map (fun p -> match p with
                                                   | Playable p -> Some (p.Name, "Up to date")
                                                   | RequiresUpdate p -> Some (p.Name, "Requires Update")
@@ -346,12 +350,8 @@ let run settings cancellationToken = task {
                             | [] -> "None"
                             | p -> String.Join(Environment.NewLine + "\t", p)
                         Log.info $"Available Products:{Environment.NewLine}\t%s{availableProductsDisplay}"
-                        let filterProducts f products =
-                            products
-                            |> Result.defaultValue []
-                            |> List.choose f
-                            |> List.toArray
-                        let productsRequiringUpdate = products |> filterProducts (fun p -> match p with | RequiresUpdate p -> Some p | _ -> None)
+
+                        let productsRequiringUpdate = Product.filterByUpdateRequired settings.Platform settings.ForceUpdate products |> List.toArray
                         let productsToUpdate =
                             let products =
                                 if settings.AutoUpdate then
@@ -433,9 +433,9 @@ let run settings cancellationToken = task {
                         
                         let playableProducts =
                             products
-                            |> filterProducts (fun p -> match p with | Playable p -> Some p | _ -> None)
-                            |> Seq.append updated
-                            |> Seq.toArray
+                            |> List.choose (fun p -> match p with | Playable p -> Some p | _ -> None)
+                            |> List.append updated
+                            |> List.toArray
                         let selectedProduct =
                             if settings.AutoRun then
                                 playableProducts

@@ -109,6 +109,19 @@ let downloadFiles downloader destDir (files: Types.ProductManifest.File[]) : Tas
         return Ok result
     with e -> return e.ToString() |> Error }
 
+let filterByUpdateRequired platform updateOverride (products: Product list) =
+    // Steam and Epic updates should be handled by their CDNs.
+    // Sometimes FDev doesn't release updates through them though (e.g. Odyssey alpha)
+    // so allow users to specify if they want to override that behavior
+    let updateable (details: ProductDetails list) =
+        match platform with
+        | Steam | Epic _ -> details |> List.filter (fun p -> updateOverride |> Set.contains p.Sku)
+        | Frontier _ | Oculus _ | Dev -> details
+
+    products
+    |> List.choose (fun p -> match p with | RequiresUpdate p -> Some p | _ -> None)
+    |> updateable
+
 let createArgString vr (lang: string option) edSession machineId timestamp watchForCrashes platform hashFile (product:ProductDetails) =
     let targetOptions = String.Join(" ", [
         if lang.IsSome then "/language " + lang.Value 

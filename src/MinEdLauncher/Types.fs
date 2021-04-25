@@ -42,6 +42,7 @@ type LauncherSettings =
       Restart: (bool * int64)
       AutoUpdate: bool
       MaxConcurrentDownloads: int
+      ForceUpdate: string Set
       Processes: ProcessStartInfo list }
 type ServerStatus = Healthy
 type LocalVersion = Version

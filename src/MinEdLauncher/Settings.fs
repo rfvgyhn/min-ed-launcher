@@ -23,6 +23,7 @@ let defaults =
       Restart = false, 0L
       AutoUpdate = true
       MaxConcurrentDownloads = 4
+      ForceUpdate = Set.empty
       Processes = List.empty }
     
 [<RequireQualifiedAccess>]
@@ -157,6 +158,7 @@ type Config =
       AutoUpdate: bool
       [<DefaultValue("4")>]
       MaxConcurrentDownloads: int
+      ForceUpdate: string list
       Processes: ProcessConfig list }
 let parseConfig fileName =
     let configRoot = ConfigurationBuilder()
@@ -215,6 +217,7 @@ let getSettings args appDir fileConfig = task {
     return settings
            |> Result.map (fun settings -> { settings with ApiUri = apiUri
                                                           AutoUpdate = fileConfig.AutoUpdate
+                                                          ForceUpdate = fileConfig.ForceUpdate |> Set.ofList
                                                           MaxConcurrentDownloads = fileConfig.MaxConcurrentDownloads
                                                           PreferredLanguage = fileConfig.Language
                                                           Processes = processes

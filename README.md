@@ -118,7 +118,8 @@ Linux: `$XDG_CONFIG_DIR/min-ed-launcher/settings.json` (`~/.config` if `$XDG_CON
 | watchForCrashes | Determines if the game should be launched by `WatchDog64.exe` or not                                                   |
 | gameLocation    | Path to game's install folder. Specify this if the launcher can't figure it out by itself                              |
 | language        | Sets the game's language. Supported values are _en_ and the names of the language folders in Elite's install directory |
-| restart         | Restart the game after it has closed                                                                                   |
+| restart         | Restart the game after it has closed                                                                                   |          
+| forceUpdate     | Be default, Steam and Epic updates are handled by their respective platform. In cases like the Odyssey alpha, FDev doesn't provide updates through Steam or Epic. This allows the launcher to force updates to be done via FDev servers by providing a comma delimited list of SKUs |
 | processes       | Additional applications to launch before launching the game                                                            |
 
 When specifying a path for either `gameLocation` or `processes.fileName` on Windows, it's required to escape backslashes. Make sure to use a
@@ -134,6 +135,7 @@ double backslash (`\\`) instead of a single backslash (`\`).
         "enabled": false,
         "shutdownTimeout": 3
     },
+    "forceUpdate": "PUBLIC_TEST_SERVER_OD",
     "processes": [
         {
             "fileName": "C:\\path\\to\\app",

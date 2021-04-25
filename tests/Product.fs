@@ -356,4 +356,61 @@ open Expecto
                     
                     Expect.equal result expected ""
                 } ]
+            testList "filterByUpdateRequired" [
+                test "only returns products that require update" {
+                    let playable = { product with Sku = "Playable" }
+                    let needsUpdate = { product with Sku = "NeedsUpdate" }
+                    let products = [ Playable playable ; RequiresUpdate needsUpdate ]
+                    
+                    let result = filterByUpdateRequired Dev Set.empty products
+                    
+                    Expect.hasLength result 1 ""
+                    Expect.allEqual result needsUpdate ""
+                }
+                test "epic excludes all if no override specified" {
+                    let products = [ RequiresUpdate product ]
+                    
+                    let result = filterByUpdateRequired (Epic EpicDetails.Empty) Set.empty products
+                    
+                    Expect.isEmpty result ""
+                }
+                test "epic excludes all except override" {
+                    let override1 = { product with Sku = "1" }
+                    let override2 = { product with Sku = "2" }
+                    let notOverride = { product with Sku = "3" }
+                    let products = [ override1; override2; notOverride ] |> List.map RequiresUpdate
+                    let force = [ override1; override2 ] |> List.map (fun p -> p.Sku) |> Set.ofList 
+                    
+                    let result = filterByUpdateRequired (Epic EpicDetails.Empty) force products
+                    
+                    Expect.hasLength result 2 ""
+                    Expect.all result (fun p -> p.Sku <> notOverride.Sku) ""
+                }
+                test "steam excludes all if no override specified" {
+                    let products = [ RequiresUpdate product ]
+                    
+                    let result = filterByUpdateRequired Steam Set.empty products
+                    
+                    Expect.isEmpty result ""
+                }
+                test "steam excludes all except override" {
+                    let override1 = { product with Sku = "1" }
+                    let override2 = { product with Sku = "2" }
+                    let notOverride = { product with Sku = "3" }
+                    let products = [ override1; override2; notOverride ] |> List.map RequiresUpdate
+                    let force = [ override1; override2 ] |> List.map (fun p -> p.Sku) |> Set.ofList 
+                    
+                    let result = filterByUpdateRequired Steam force products
+                    
+                    Expect.hasLength result 2 ""
+                    Expect.all result (fun p -> p.Sku <> notOverride.Sku) ""
+                }
+                test "frontier includes all" {
+                    let products = [ product; product ]
+                    let platform = Frontier { Profile = ""; Credentials = None; AuthToken = None }
+                    
+                    let result = filterByUpdateRequired platform Set.empty (products |> List.map RequiresUpdate)
+                    
+                    Expect.sequenceEqual result products ""
+                } ]
         ]
