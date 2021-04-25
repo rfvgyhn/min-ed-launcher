@@ -339,16 +339,20 @@ let run settings cancellationToken = task {
                             match! checkForUpdates with
                             | Ok p -> return p
                             | Error e -> Log.warn $"{e}"; return [] }
-                        
-                        let availableProducts =
-                            products
-                            |> List.map (fun p -> match p with
-                                                  | Playable p -> Some (p.Name, "Up to date")
-                                                  | RequiresUpdate p -> Some (p.Name, "Requires Update")
-                                                  | Missing _ -> None
-                                                  | Product.Unknown _ -> None)
-                            |> List.choose id
+
                         let availableProductsDisplay =
+                            let max (f: ProductDetails -> string) =
+                                products
+                                |> List.map (function | Playable p | RequiresUpdate p -> (f(p)).Length | _ -> 0)
+                                |> List.max
+                            let maxName = max (fun p -> p.Name)
+                            let maxSku = max (fun p -> p.Sku)
+                            let map msg (p: ProductDetails) = $"{p.Name.PadRight(maxName)} {p.Sku.PadRight(maxSku)} %s{msg}" 
+                            let availableProducts =
+                                products
+                                |> List.choose (function | Playable p -> map "Up to Date" p |> Some
+                                                         | RequiresUpdate p -> map "Requires Update" p |> Some
+                                                         | Missing _ | Product.Unknown _ -> None)
                             match availableProducts with
                             | [] -> "None"
                             | p -> String.Join(Environment.NewLine + "\t", p)
