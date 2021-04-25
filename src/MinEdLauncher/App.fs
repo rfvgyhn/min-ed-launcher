@@ -144,34 +144,37 @@ let promptForProductToPlay (products: ProductDetails array) (cancellationToken:C
     readInput()
     
 let promptForProductsToUpdate (products: ProductDetails array) =
-    printfn $"Select product(s) to update (eg: \"1\", \"1 2 3\") (default=None):"
-    products
-    |> Array.indexed
-    |> Array.iter (fun (i, product) -> printfn $"%i{i + 1}) %s{product.Name}")
-        
-    let rec readInput() =
-        let userInput = Console.ReadLine()
-        
-        if String.IsNullOrWhiteSpace(userInput) then
-            [||]
-        else
-            let selection =
-                userInput
-                |> Regex.split @"\D+"
-                |> Array.choose (fun d ->
-                    if String.IsNullOrEmpty(d) then
-                        None
-                    else
-                        match Int32.Parse(d) with
-                        | n when n > 0 && n < products.Length -> Some n
-                        | _ -> None)
-                |> Array.map (fun i -> products.[i - 1])
-            if selection.Length > 0 then
-                selection
+    if products.Length > 0 then
+        printfn $"Select product(s) to update (eg: \"1\", \"1 2 3\") (default=None):"
+        products
+        |> Array.indexed
+        |> Array.iter (fun (i, product) -> printfn $"%i{i + 1}) %s{product.Name}")
+            
+        let rec readInput() =
+            let userInput = Console.ReadLine()
+            
+            if String.IsNullOrWhiteSpace(userInput) then
+                [||]
             else
-                printfn "Invalid selection"
-                readInput()
-    readInput()
+                let selection =
+                    userInput
+                    |> Regex.split @"\D+"
+                    |> Array.choose (fun d ->
+                        if String.IsNullOrEmpty(d) then
+                            None
+                        else
+                            match Int32.Parse(d) with
+                            | n when n > 0 && n < products.Length -> Some n
+                            | _ -> None)
+                    |> Array.map (fun i -> products.[i - 1])
+                if selection.Length > 0 then
+                    selection
+                else
+                    printfn "Invalid selection"
+                    readInput()
+        readInput()
+    else
+        [||]
 
 let throttledAction (semaphore: SemaphoreSlim) (action: 'a -> Task<'b>) input =
     input
