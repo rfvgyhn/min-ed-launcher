@@ -1,9 +1,27 @@
 # Minimal Elite Dangerous Launcher
 Cross-platform launcher for the game Elite Dangerous. Created mainly to avoid the long startup
-time of the default launcher when running on Linux. Can be used with Steam and Epic on both
-Windows and Linux. Game accounts purchased via Frontier or Oculus are not supported.
+time of the default launcher when running on Linux. Can be used with Steam, Epic and Frontier
+accounts on both Windows and Linux.
 
 ![preview-gif]
+
+## Table of Contents
+* [Features]
+* [Usage]
+    * [Setup]
+        * [Steam]
+        * [Epic]
+    * [Arguments]
+        * [Shared]
+        * [Min-Launcher-Specific]
+    * [Settings]
+    * [Multi-Account]
+        * [Frontier account via Steam or Epic]
+        * [Epic account via Steam]
+    * [Logs]
+    * [Cache]
+* [Build]
+    * [Release Artifacts]    
 
 ## Features
 * **Minimal Interface**
@@ -36,8 +54,8 @@ Windows and Linux. Game accounts purchased via Frontier or Oculus are not suppor
 
 * **Multi-Account**
 
-  Rudimentary support for playing with both your Steam and Epic accounts with one game
-  installation. See [details] for how this works.
+  Supports running your Steam, Epic and Frontier Store accounts with one game installation.
+  See [details] for how this works.
   
 ## Usage
 
@@ -87,26 +105,34 @@ the default launcher for this one to work.
     4. Set the value to `/autorun /autoquit /EDH`
 8. Launch your game as you normally would in Epic
 
-### Flags
-Flags are strings that are sent to the launcher via command line arguments. The following flags
-are understood by the default launcher and their meaning is the same for the minimal launcher.
+### Arguments
+#### Shared
+The following arguments are understood by both the vanilla launcher and the minimal launcher.
 Note that specifying a product flag will override whatever option you select when Steam prompts
 you to select a version of the game.
 
-| Flag           | Effect                                                    |
+| Argument       | Effect                                                    |
 |----------------|-----------------------------------------------------------|
 | /autoquit      | Automatically close the launcher when the game closes     |
 | /autorun       | Automatically start selected product when launcher starts |
-| /ed            | Select Elite Dangerous as the startup product            |
-| /edh           | Select Elite Dangerous Horizons as the startup product   |
-| /eda           | Select Elite Dangerous Arena as the startup product      |
+| /ed            | Select Elite Dangerous as the startup product             |
+| /edh           | Select Elite Dangerous Horizons as the startup product    |
+| /eda           | Select Elite Dangerous Arena as the startup product       |
+| /edo           | Select Elite Dangerous Odyssey as the startup product     |
 | /vr            | Tell the game that you want to play in VR mode            |
 | -auth_password | Epic exchange code. Used for authenticating with Epic     |
+
+#### Min Launcher Specific
+The following arguments are in addition to the above:
+
+| Argument               | Effect                                                    |
+|------------------------|-----------------------------------------------------------|
+| /frontier profile-name | Use this argument to login with a Frontier Store account. Keep the profile name to letters, numbers, dashes and underscores only |
 
 ### Settings
 The settings file controls additional settings for the launcher that go beyond what the default
 launcher supports. The location of this file is in the standard config location for your
-operating system.
+operating system. If this file doesn't exist, it will be created on launcher startup.
 
 Windows: `%LOCALAPPDATA%\min-ed-launcher\settings.json`
 
@@ -142,11 +168,11 @@ double backslash (`\\`) instead of a single backslash (`\`).
     "forceUpdate": "PUBLIC_TEST_SERVER_OD",
     "processes": [
         {
-            "fileName": "C:\\path\\to\\app",
+            "fileName": "C:\\path\\to\\app.exe",
             "arguments": "--arg1 --arg2"
         },
         {
-            "fileName": "C:\\path\\to\\app2",
+            "fileName": "C:\\path\\to\\app2.exe",
             "arguments": "--arg1 --arg2"
         }
     ]
@@ -154,6 +180,24 @@ double backslash (`\\`) instead of a single backslash (`\`).
 ```
 
 ### Multi-Account
+#### Frontier account via Steam or Epic
+By using the `/frontier profile-name` argument, you can login with any number of Frontier accounts with a
+single game installation. Your launch command might look like the following
+
+Windows: `cmd /c "MinEdLauncher.exe %command% /frontier profile-name /autorun /autoquit /EDH"`
+
+Linux: `alacritty -e ./MinEdLauncher %command% /frontier profile-name /autorun /autoquit /EDH`
+
+See the [setup] section above for how you might run this on your platform.
+
+If you have multiple frontier accounts, use a different profile name for each of them. After successfully
+logging in, there will be a `.cred` file created in either `%LOCALAPPDATA%\min-ed-launcher\` or 
+`$XDG_CONFIG_DIR/min-ed-launcher/` (depending on OS). This file stores your username, password and machine
+token. On Windows, the password and machine token are encrypted via DPAPI (same as the vanilla launcher).
+On Linux, no encryption happens but the file permissions are set to 600. If you login once and then decide
+you want to login again (refresh machine token), you can delete the appropriate `.cred` file.
+
+#### Epic account via Steam
 There is rudimentary support for running your Epic account via Steam. Running a Steam account without Steam installed and running is not supported.
 
 In order to authenticate with an Epic account:
@@ -175,6 +219,14 @@ In order to authenticate with an Epic account:
 ### Logs
 Debug logging is placed in the file `logs/min-ed-launcher.log`
 
+### Cache
+When updating your game files, the launcher downloads updates into a temporary directory. You may delete these files at any time.
+The location of these files are in the standard cache location for your operating system.
+
+Windows: `%LOCALAPPDATA%\min-ed-launcher\cache`
+
+Linux: `$XDG_CACHE_HOME/min-ed-launcher` (`~/.cache` if `$XDG_CACHE_HOME` isn't set)
+
 ## Build
 1. Install the [.Net 5 SDK]
 2. Run `dotnet build`
@@ -187,7 +239,8 @@ specifically targets Windows and won't publish on a non-Windows machine.
 
 [preview-gif]: https://rfvgyhn.blob.core.windows.net/elite-dangerous/min-ed-launcher-demo.gif
 [Settings]: #settings
-[flag]: #flags
+[flag]: #arguments
+[setup]: #setup
 [Elite Log Agent]: https://github.com/DarkWanderer/Elite-Log-Agent
 [VoiceAttack]: https://voiceattack.com/
 [details]: #multi-account
@@ -199,3 +252,17 @@ specifically targets Windows and won't publish on a non-Windows machine.
 [konsole]: https://konsole.kde.org/
 [.Net 5 SDK]: https://dotnet.microsoft.com/download/dotnet/5.0
 [NativeAOT]: https://github.com/dotnet/runtimelab/tree/feature/NativeAOT
+[Features]: #features
+[Usage]: #usage
+[Steam]: #steam
+[Epic]: #epic
+[Arguments]: #arguments
+[Shared]: #shared
+[Min-Launcher-Specific]: #min-launcher-specific
+[Multi-Account]: #multi-account
+[Frontier account via Steam or Epic]: #frontier-account-via-steam-or-epic
+[Epic account via Steam]: #epic-account-via-steam
+[Logs]: #logs
+[Cache]: #cache
+[Build]: #build
+[Release Artifacts]: #release-artifacts
