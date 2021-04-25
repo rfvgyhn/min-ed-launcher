@@ -130,6 +130,7 @@ let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (arg
             | "/ed", _                        -> { s with ProductWhitelist = s.ProductWhitelist.Add "ed" }
             | "/edh", _                       -> { s with ProductWhitelist = s.ProductWhitelist.Add "edh" }
             | "/eda", _                       -> { s with ProductWhitelist = s.ProductWhitelist.Add "eda" }
+            | "/edo", _                       -> { s with ProductWhitelist = s.ProductWhitelist.Add "edo" }
             | _ -> s) defaults
     
     match cbLaunchDir

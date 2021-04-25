@@ -98,6 +98,10 @@ let tests =
             let! settings = parse [| "/eda" |]
             Expect.equal (settings.ProductWhitelist.Contains "eda") true ""
         }
+        testTask "Matches /edo" {
+            let! settings = parse [| "/edo" |]
+            Expect.equal (settings.ProductWhitelist.Contains "edo") true ""
+        }
         
         yield! [
             "non steam linux runtime",               [ Path.Combine("steamapps", "common", "Proton 5.0", "proton"); "protonAction" ]
