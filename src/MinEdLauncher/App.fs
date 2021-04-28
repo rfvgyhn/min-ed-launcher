@@ -227,16 +227,17 @@ let updateProduct downloader paths (manifest: Types.ProductManifest.File[]) = ta
                 |> Seq.except (validCachedHashes |> Map.keys)
                 |> Seq.map (fun path -> Path.Combine(paths.ProductDir, path))
                 |> getFileHashes productHashMap paths.ProductDir
-                |> Map.merge validCachedHashes
-                
-            manifestKeys
-            |> Set.filter (fun file ->
-                productHashes
-                |> Map.tryFind file
-                |> Option.map (fun hash -> manifestMap.[file].Hash <> hash)
-                |> Option.isNone)
-            |> Seq.map (fun file -> Map.find file manifestMap)
-            |> Seq.toArray, productHashes, validCachedHashes)
+                |> Map.merge validCachedHashes 
+            let invalidFiles =
+                manifestKeys
+                |> Set.filter (fun file ->
+                    productHashes
+                    |> Map.tryFind file
+                    |> Option.filter (fun hash -> manifestMap.[file].Hash = hash)
+                    |> Option.isNone)
+                |> Seq.map (fun file -> Map.find file manifestMap)
+                |> Seq.toArray
+            invalidFiles, productHashes, validCachedHashes)
     
     let downloadFiles downloader cacheDir (files: Types.ProductManifest.File[]) =
         if files.Length > 0 then
