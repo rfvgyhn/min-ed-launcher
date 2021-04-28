@@ -99,6 +99,7 @@ type ProductDetails =
       Directory: string
       GameArgs: string
       ServerArgs: string
+      SortKey: int
       Metadata: ProductMetadata option }
 type MissingProductDetails =
     { Sku: string

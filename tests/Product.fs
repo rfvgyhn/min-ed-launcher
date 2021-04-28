@@ -32,6 +32,7 @@ open Expecto
               Directory = ""
               GameArgs = ""
               ServerArgs = ""
+              SortKey = 0
               Metadata = None }
         let getTimestamp = fun () -> (double)1
         let hashFile = fun str -> Result.Ok Array.empty<byte>

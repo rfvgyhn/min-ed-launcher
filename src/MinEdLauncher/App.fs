@@ -443,6 +443,7 @@ let run settings cancellationToken = task {
                             products
                             |> List.choose (fun p -> match p with | Playable p -> Some p | _ -> None)
                             |> List.append updated
+                            |> List.sortBy (fun p -> p.SortKey)
                             |> List.toArray
                         let selectedProduct =
                             if settings.AutoRun then

@@ -194,6 +194,7 @@ let mapProduct productsDir (product:AuthorizedProduct) =
                    Directory = directory
                    GameArgs = product.GameArgs
                    ServerArgs = serverArgs
+                   SortKey = product.SortKey
                    Metadata = None }
     | NotFound file ->
         Log.info $"Disabling '%s{product.Name}'. Unable to find product at '%s{file}'"
