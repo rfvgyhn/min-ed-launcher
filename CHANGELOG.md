@@ -2,9 +2,13 @@
 
 ## [Unreleased]
 
+### New Features
+- Add support for Frontier accounts via the `/frontier` argument. This includes logging in with a single game installation (e.g. Steam) and
+  keeping the game up-to-date if you don't use Steam or Epic. See the readme for instructions on how to use this feature.
+
 ## [0.3.1] - 2021-03-31
 
-## New Features
+### New Features
 - Add ability to select product to run
 
 ### Enhancements
