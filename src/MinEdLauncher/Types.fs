@@ -13,7 +13,9 @@ type EpicDetails =
                                  Type = ""
                                  AppId = "" }
 type Credentials = { Username: string; Password: string }
-type FrontierDetails = { Profile: string; Credentials: Credentials option; AuthToken: string option }
+type FrontierDetails =
+    { Profile: string; Credentials: Credentials option; AuthToken: string option }
+    with static member Empty = { Profile = ""; Credentials = None; AuthToken = None }
 type Platform =
     | Steam
     | Epic of EpicDetails

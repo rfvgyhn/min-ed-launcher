@@ -329,6 +329,7 @@ let run settings cancellationToken = task {
                     Log.debug "Getting authorized products"
                     match! Api.getAuthorizedProducts settings.Platform None connection with
                     | Ok authorizedProducts ->
+                        let authorizedProducts = authorizedProducts |> List.map (AuthorizedProduct.fixDirectoryPath productsDir settings.Platform Directory.Exists)
                         let names = authorizedProducts |> List.map (fun p -> p.Name)
                         Log.debug $"Authorized Products: %s{String.Join(',', names)}"
                         Log.info "Checking for updates"

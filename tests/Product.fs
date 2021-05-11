@@ -408,7 +408,7 @@ open Expecto
                 }
                 test "frontier includes all" {
                     let products = [ product; product ]
-                    let platform = Frontier { Profile = ""; Credentials = None; AuthToken = None }
+                    let platform = Frontier FrontierDetails.Empty
                     
                     let result = filterByUpdateRequired platform Set.empty (products |> List.map RequiresUpdate)
                     

@@ -43,6 +43,7 @@
     <Compile Include="Interop.fs" />
     <Compile Include="Http.fs" />
     <Compile Include="Product.fs" />
+    <Compile Include="AuthorizedProduct.fs" />
     <Compile Include="Process.fs" />
     <Compile Include="Steam.fs" />
     <Compile Include="Cobra.fs" />
