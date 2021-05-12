@@ -5,6 +5,9 @@
 ### New Features
 - Add support for Frontier accounts via the `/frontier` argument. This includes logging in with a single game installation (e.g. Steam) and
   keeping the game up-to-date if you don't use Steam or Epic. See the readme for instructions on how to use this feature.
+  
+### Security
+- Address [CVE-2021-31204] by building with latest version of .net (5.0.6)
 
 ## [0.3.1] - 2021-03-31
 
@@ -59,3 +62,4 @@ Initial release
 [0.1.1]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/rfvgyhn/min-ed-launcher/compare/67d8c3f...v0.1.0
 [Proton-GE]: https://github.com/GloriousEggroll/proton-ge-custom
+[CVE-2021-31204]: https://github.com/dotnet/announcements/issues/185
