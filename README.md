@@ -11,6 +11,7 @@ accounts on both Windows and Linux.
     * [Setup]
         * [Steam]
         * [Epic]
+        * [Frontier]
     * [Arguments]
         * [Shared]
         * [Min-Launcher-Specific]
@@ -59,8 +60,8 @@ accounts on both Windows and Linux.
   
 ## Usage
 
-This launcher doesn't setup/link new accounts. You'll need to launch Elite Dangerous at least once with
-the default launcher for this one to work.
+This launcher doesn't setup/link new accounts. You'll need to either launch Elite Dangerous at least once with
+the default launcher or manually create and link your account(s).
 
 ### Setup
 #### Steam
@@ -104,6 +105,17 @@ the default launcher for this one to work.
     3. Check _Additional Command Line Arguments_
     4. Set the value to `/autorun /autoquit /EDH`
 8. Launch your game as you normally would in Epic
+#### Frontier
+1. Download the [latest release] for Windows
+2. Extract executables from the zip archive
+3. Place `MinEdLauncher.exe` in your Elite Dangerous install location so that it's in the same folder as `EDLaunch.exe`.
+   `MinEdLauncher.Bootstrap` is for Epic only and may be ignored.
+4. Create a shortcut to `MinEdLauncher.exe` by right-clicking it and selecting _create shortcut_
+5. Right-click the newly made shortcut and select _properties_
+6. Add the `/frontier profile-name` argument + your other desired arguments to the end of the _Target_ textbox (e.g. `C:\path\to\MinEdLauncher.exe /frontier profile-name /autorun /autoquit /edh`)
+7. Click _Ok_
+
+You can place this shortcut anywhere. It doesn't have to live in the Elite Dangerous install folder.
 
 ### Arguments
 #### Shared
@@ -256,6 +268,7 @@ specifically targets Windows and won't publish on a non-Windows machine.
 [Usage]: #usage
 [Steam]: #steam
 [Epic]: #epic
+[Frontier]: #frontier
 [Arguments]: #arguments
 [Shared]: #shared
 [Min-Launcher-Specific]: #min-launcher-specific
