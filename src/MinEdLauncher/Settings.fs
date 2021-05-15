@@ -20,7 +20,7 @@ let defaults =
       CbLauncherDir = "."
       PreferredLanguage = None
       ApiUri = Uri("http://localhost:8080")
-      Restart = false, 0L
+      Restart = None
       AutoUpdate = true
       MaxConcurrentDownloads = 4
       ForceUpdate = Set.empty
@@ -108,6 +108,13 @@ let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (arg
         | Epic d -> apply arg d
         | _ -> apply arg EpicDetails.Empty
     
+    let (|PosDouble|_|) (str: string option) =
+        str
+        |> Option.bind (fun str ->
+            match Double.TryParse(str) with
+            | true, v when v >= 0. -> Some v
+            | _ -> None)
+    
     let settings =
         args
         |> Array.mapi (fun index value -> index, value)
@@ -123,6 +130,7 @@ let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (arg
             | "-auth_type", Some t            -> { s with Platform = epicArg (Type t) }
             | "-epicapp", Some id             -> { s with Platform = epicArg (AppId id) }
             | "/oculus", Some nonce           -> { s with Platform = Oculus nonce; ForceLocal = true }
+            | "/restart", PosDouble delay     -> { s with Restart = delay * 1000. |> int64 |> Some }
             | "/vr", _                        -> { s with DisplayMode = Vr; AutoRun = true }
             | "/autorun", _                   -> { s with AutoRun = true }
             | "/autoquit", _                  -> { s with AutoQuit = true }
@@ -145,16 +153,11 @@ type ProcessConfig =
     { FileName: string
       Arguments: string option }
 [<CLIMutable>]
-type RestartConfig =
-    { Enabled: bool
-      ShutdownTimeout: int64 }
-[<CLIMutable>]
 type Config =
     { ApiUri: string
       WatchForCrashes: bool
       GameLocation: string option
       Language: string option
-      Restart: RestartConfig
       [<DefaultValue("true")>]
       AutoUpdate: bool
       [<DefaultValue("4")>]
@@ -193,7 +196,6 @@ let getSettings args appDir fileConfig = task {
             | None -> Error "Failed to find Elite Dangerous install directory"
             | Some dir -> Ok dir
     let apiUri = Uri(fileConfig.ApiUri)
-    let restart = fileConfig.Restart.Enabled, fileConfig.Restart.ShutdownTimeout * 1000L
     let processes =
         fileConfig.Processes
         |> List.map (fun p ->
@@ -222,5 +224,4 @@ let getSettings args appDir fileConfig = task {
                                                           MaxConcurrentDownloads = fileConfig.MaxConcurrentDownloads
                                                           PreferredLanguage = fileConfig.Language
                                                           Processes = processes
-                                                          Restart = restart
                                                           WatchForCrashes = fileConfig.WatchForCrashes }) }

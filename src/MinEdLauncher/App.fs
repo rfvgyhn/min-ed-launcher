@@ -85,8 +85,7 @@ let rec launchProduct proton processArgs restart productName product =
     
     match Product.run proton args product with
     | Product.RunResult.Ok p ->
-        let shouldRestart = restart |> fst
-        let timeout = restart |> snd
+        let timeout = restart |> Option.defaultValue 3000L
         let cancelRestart() =
             let interval = 250
             let stopwatch = Stopwatch()
@@ -111,7 +110,7 @@ let rec launchProduct proton processArgs restart productName product =
         p.WaitForExit()
         Log.info $"Shutdown %s{productName}"
         
-        if shouldRestart && not (cancelRestart()) then
+        if restart.IsSome && not (cancelRestart()) then
             launchProduct proton processArgs restart productName product
     | Product.RunResult.AlreadyRunning -> Log.info $"%s{productName} is already running"
     | Product.RunResult.Error e -> Log.error $"Couldn't start selected product: %s{e.ToString()}"

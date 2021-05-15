@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+### Breaking Changes
+- Restart option has moved to the `/restart delay` argument and is no longer specified in the config file.
+  This allows for creating separate shortcuts, one for normal gameplay and one for restarting.
+  
+  Instead of specifying `restart: { enabled: true, shutdownTimeout: 3 }`, modify your launch options to include `/restart 3`.
+
 ## [0.4.0] - 2021-05-11
 
 ### New Features

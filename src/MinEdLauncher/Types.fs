@@ -41,7 +41,7 @@ type LauncherSettings =
       CbLauncherDir: string
       PreferredLanguage: string option
       ApiUri: Uri
-      Restart: (bool * int64)
+      Restart: int64 option
       AutoUpdate: bool
       MaxConcurrentDownloads: int
       ForceUpdate: string Set

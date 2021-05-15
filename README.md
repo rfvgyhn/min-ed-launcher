@@ -140,6 +140,7 @@ The following arguments are in addition to the above:
 | Argument               | Effect                                                    |
 |------------------------|-----------------------------------------------------------|
 | /frontier profile-name | Use this argument to login with a Frontier Store account. Keep the profile name to letters, numbers, dashes and underscores only |
+| /restart delay         | Restart the game after it has closed with _delay_ being the number of seconds given to cancel the restart (i.e `/restart 3`) |
 
 ### Settings
 The settings file controls additional settings for the launcher that go beyond what the default
@@ -156,7 +157,6 @@ Linux: `$XDG_CONFIG_DIR/min-ed-launcher/settings.json` (`~/.config` if `$XDG_CON
 | watchForCrashes        | Determines if the game should be launched by `WatchDog64.exe` or not                                                   |
 | gameLocation           | Path to game's install folder. Specify this if the launcher can't figure it out by itself                              |
 | language               | Sets the game's language. Supported values are _en_ and the names of the language folders in Elite's install directory |
-| restart                | Restart the game after it has closed                                                                                   |
 | autoUpdate             | Automatically update games that are out of date                                                                        |
 | maxConcurrentDownloads | Maximum number of simultaneous downloads when downloading updates                                                      |
 | forceUpdate            | Be default, Steam and Epic updates are handled by their respective platform. In cases like the Odyssey alpha, FDev doesn't provide updates through Steam or Epic. This allows the launcher to force updates to be done via FDev servers by providing a comma delimited list of SKUs |
@@ -171,10 +171,6 @@ double backslash (`\\`) instead of a single backslash (`\`).
     "watchForCrashes": false,
     "gameLocation": null,
     "language": "en",
-    "restart": {
-        "enabled": false,
-        "shutdownTimeout": 3
-    },
     "autoUpdate": true,
     "maxConcurrentDownloads": 4,
     "forceUpdate": "PUBLIC_TEST_SERVER_OD",

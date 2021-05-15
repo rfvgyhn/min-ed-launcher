@@ -86,6 +86,23 @@ let tests =
             let! settings = parse [| "/forcelocal" |]
             Expect.equal settings.ForceLocal true ""
         }
+        testTask "Matches /restart delay" {
+            let! settings = parse [| "/restart"; "2" |]
+            
+            Expect.equal settings.Restart (Some 2000L) ""
+        }
+        testTask "Ignores /restart with missing delay" {
+            let! settings = parse [| "/restart" |]
+            Expect.equal settings.Restart None ""
+        }
+        testTask "Ignores /restart when delay isn't a number" {
+            let! settings = parse [| "/restart"; "a" |]
+            Expect.equal settings.Restart None ""
+        }
+        testTask "Ignores /restart when delay is negative" {
+            let! settings = parse [| "/restart"; "-1" |]
+            Expect.equal settings.Restart None ""
+        }
         testTask "Matches /ed" {
             let! settings = parse [| "/ed" |]
             Expect.equal (settings.ProductWhitelist.Contains "ed") true ""
