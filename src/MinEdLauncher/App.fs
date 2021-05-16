@@ -467,12 +467,7 @@ let run settings cancellationToken = task {
                                 launchProduct settings.Proton processArgs settings.Restart product.Name p
                                 Process.stopProcesses processes
                             | Error msg -> Log.error $"Couldn't start selected product: %s{msg}"
-                        | None, _ -> Log.error "No selected project"
-                        
-                        if not settings.AutoQuit && not cancellationToken.IsCancellationRequested then
-                            printfn "Press any key to quit..."
-                            Console.ReadKey() |> ignore
-                        
+                        | None, _ -> Log.error "No selected project"                        
                     | Error msg ->
                         Log.error $"Couldn't get available products: %s{msg}"
                 | ActionRequired msg ->

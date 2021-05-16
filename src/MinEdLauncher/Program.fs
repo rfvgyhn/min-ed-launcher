@@ -44,7 +44,16 @@ let main argv =
             let! settings = getSettings argv |> Async.AwaitTask
             Log.debug $"Settings: %A{settings}"
             return! match settings with
-                    | Ok settings -> App.run settings cts.Token |> Async.AwaitTask
+                    | Ok settings ->
+                        task {
+                            let! runResult = App.run settings cts.Token
+
+                            if not settings.AutoQuit && not cts.Token.IsCancellationRequested then
+                                printfn "Press any key to quit..."
+                                Console.ReadKey() |> ignore
+                                
+                            return runResult
+                        } |> Async.AwaitTask
                     | Error msg -> async { Log.error msg; return 1 }
         with
         | e -> Log.error $"Unhandled exception: {e}"; return 1
