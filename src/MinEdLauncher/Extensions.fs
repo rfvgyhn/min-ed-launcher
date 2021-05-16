@@ -106,13 +106,22 @@ module Json =
             use file = File.OpenRead(path)
             JsonDocument.Parse(file) |> Ok
         with
-        | :? JsonException -> Error "Invalid json document"
+        | :? JsonException as e -> Error $"Couldn't parse json - {e.Message}"
         | e -> Error $"Couldn't open file at {path} - {e}"
     let parseStream (stream:Stream) =
         try
             Ok <| JsonDocument.Parse(stream)
         with
-        | :? JsonException -> Error "Invalid json document"
+        | :? JsonException as e ->
+            let content =
+                try
+                    if stream.CanSeek then
+                        stream.Seek(0L, SeekOrigin.Begin) |> ignore
+                        use reader = new StreamReader(stream)
+                        $"{Environment.NewLine}{reader.ReadToEnd()}"
+                    else ""
+                with _ -> ""
+            Error $"Couldn't parse json - {e.Message}{content}"
     let rootElement (doc:JsonDocument) = Ok doc.RootElement
     let parseProp (prop:string) (element:JsonElement) =
         match element.TryGetProperty(prop) with
