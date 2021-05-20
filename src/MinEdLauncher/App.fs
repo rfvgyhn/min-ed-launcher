@@ -87,6 +87,7 @@ let rec launchProduct proton processArgs restart productName product =
         let cancelRestart() =
             let interval = 250
             let stopwatch = Stopwatch()
+            Console.consumeAvailableKeys()
             stopwatch.Start()
             while Console.KeyAvailable = false && stopwatch.ElapsedMilliseconds < timeout do
                 System.Threading.Thread.Sleep interval

@@ -455,6 +455,9 @@ module Console =
         let password = readMask [] |> Seq.rev |> String.Concat
         Console.WriteLine ()
         password
+    let consumeAvailableKeys () =
+        while Console.KeyAvailable do
+            Console.ReadKey() |> ignore
 
 module Regex =
     open System.Text.RegularExpressions
