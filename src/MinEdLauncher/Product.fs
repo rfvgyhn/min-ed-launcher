@@ -197,7 +197,7 @@ let mapProduct productsDir (product:AuthorizedProduct) =
                    SortKey = product.SortKey
                    Metadata = None }
     | NotFound file ->
-        Log.info $"Disabling '%s{product.Name}'. Unable to find product at '%s{file}'"
+        Log.debug $"Disabling '%s{product.Name}'. Unable to find product at '%s{file}'"
         Missing { Sku = product.Sku
                   Name = product.Name
                   Filters = filters
