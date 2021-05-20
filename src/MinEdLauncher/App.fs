@@ -71,13 +71,11 @@ let login runningTime httpClient machineId (platform: Platform) lang =
             return result, (tokenManager :> IDisposable)
         | Error msg -> return Failure msg, noopDisposable }
 
-let printInfo (platform: Platform) productsDir cobraVersion launcherVersion =
-    Log.info $"""Elite Dangerous - Minimal Launcher
-Platform: %s{platform.Name}
-OS: %s{RuntimeInformation.getOsIdent()}
-CobraBay Version: %s{cobraVersion}
-Launcher Version: %s{launcherVersion}
-Products Dir: %s{productsDir}"""
+let printInfo (platform: Platform) productsDir cobraVersion =
+    Log.info $"""Elite Runtime
+    Platform: %s{platform.Name}
+    CobraBay Version: %s{cobraVersion}
+    Products Dir: %s{productsDir}"""
     
 let rec launchProduct proton processArgs restart productName product =
     let args = processArgs()
@@ -280,7 +278,7 @@ let updateProduct downloader paths (manifest: Types.ProductManifest.File[]) = ta
             else
                 return Ok 0 }) }
     
-let run settings cancellationToken = task {
+let run settings launcherVersion cancellationToken = task {
     if RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && settings.Platform = Steam then
         Steam.fixLcAll()
     
@@ -297,8 +295,8 @@ let run settings cancellationToken = task {
         | Error msg, _ -> task { 
             Log.error $"Unable to get products directory: %s{msg}"
             return 1 }
-        | Ok productsDir, Ok (cbVersion, launcherVersion) -> task {
-            printInfo settings.Platform productsDir cbVersion launcherVersion
+        | Ok productsDir, Ok cbVersion -> task {
+            printInfo settings.Platform productsDir cbVersion
             use httpClient = Api.createClient settings.ApiUri launcherVersion (RuntimeInformation.getOsIdent())
             let localTime = DateTime.UtcNow
             let! remoteTime = task {

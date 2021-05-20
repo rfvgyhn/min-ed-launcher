@@ -30,9 +30,8 @@ let getVersion cbLauncherDir =
         let cobraVersion =
             let version = FileVersionInfo.GetVersionInfo(cobraPath)
             if String.IsNullOrEmpty(version.FileVersion) then version.ProductVersion else version.FileVersion
-        let launcherVersion = typeof<Steam>.Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion
         
-        Ok (cobraVersion, launcherVersion)
+        Ok cobraVersion
 
 let potentialInstallPaths() =
     if RuntimeInformation.IsOSPlatform(OSPlatform.Windows) then

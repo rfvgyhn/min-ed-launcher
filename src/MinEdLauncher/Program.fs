@@ -8,6 +8,7 @@ open FsConfig
 open FSharp.Control.Tasks.NonAffine
 open Steam
 
+let assembly = typeof<Steam>.GetTypeInfo().Assembly
 let getSettings args =
     let path = Environment.configDir
     match FileIO.ensureDirExists path with
@@ -16,7 +17,7 @@ let getSettings args =
         let settingsPath = Path.Combine(settingsDir, "settings.json")
         Log.debug $"Reading settings from '%s{settingsPath}'"
         if not (File.Exists(settingsPath)) then
-            use settings = typeof<Steam>.GetTypeInfo().Assembly.GetManifestResourceStream("MinEdLauncher.settings.json")
+            use settings = assembly.GetManifestResourceStream("MinEdLauncher.settings.json")
             use file = File.OpenWrite(settingsPath)
             settings.CopyTo(file)
         |> ignore
@@ -33,6 +34,13 @@ let getSettings args =
                 return settings }
             | Error msg -> Error msg |> Task.fromResult
 
+let logRuntimeInfo version args =
+    Log.info $"Elite Dangerous: Minimal Launcher - v{version}"
+    Log.debug $"""
+    Args: %A{args}
+    OS: %s{RuntimeInformation.getOsIdent()}
+    """
+
 [<EntryPoint>]
 let main argv =
     async {
@@ -40,13 +48,15 @@ let main argv =
 
         try
             do! Async.SwitchToThreadPool ()
-            Log.debug $"Args: %A{argv}"
+            let version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion
+            logRuntimeInfo version argv
+            
             let! settings = getSettings argv |> Async.AwaitTask
             Log.debug $"Settings: %A{settings}"
             return! match settings with
                     | Ok settings ->
                         task {
-                            let! runResult = App.run settings cts.Token
+                            let! runResult = App.run settings version cts.Token
 
                             if not settings.AutoQuit && not cts.Token.IsCancellationRequested then
                                 printfn "Press any key to quit..."
