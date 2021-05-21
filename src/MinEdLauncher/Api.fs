@@ -227,7 +227,8 @@ let getAuthorizedProducts platform lang connection = task {
         
     let! content = fetch connection.HttpClient request
     return content
-       >>= Json.parseProp "purchases"
+       >>= ((fun json -> Log.debug $"Purchases Response:{Environment.NewLine}%s{json.ToString()}"; json)
+            >> Json.parseProp "purchases")
        >>= Json.mapArray (fun (element) ->
               let filter = element |> Json.parseProp "filter" >>= Json.toString |> Result.defaultValue ""
               let directory = element |> Json.parseProp "directory" >>= Json.toString
