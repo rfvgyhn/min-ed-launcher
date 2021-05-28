@@ -149,7 +149,7 @@ operating system. If this file doesn't exist, it will be created on launcher sta
 
 Windows: `%LOCALAPPDATA%\min-ed-launcher\settings.json`
 
-Linux: `$XDG_CONFIG_DIR/min-ed-launcher/settings.json` (`~/.config` if `$XDG_CONFIG_DIR` isn't set)
+Linux: `$XDG_CONFIG_HOME/min-ed-launcher/settings.json` (`~/.config` if `$XDG_CONFIG_HOME` isn't set)
 
 | Settings               | Effect                                                                                                                 |
 |------------------------|------------------------------------------------------------------------------------------------------------------------|
