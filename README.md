@@ -51,7 +51,8 @@ accounts on both Windows and Linux.
 * **Auto-restart**
 
   Automatically restart your game. This can be useful if you're [grinding] for manufactured 
-  engineering materials. Off by default.
+  engineering materials. Off by default. This feature isn't supported on the Epic platform as
+  the game invalidates the launcher's authorization token.
 
 * **Multi-Account**
 
