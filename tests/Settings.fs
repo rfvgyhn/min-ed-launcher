@@ -74,6 +74,10 @@ let tests =
             Expect.equal settings.DisplayMode Vr ""
             Expect.equal settings.AutoRun true "VR mode should autorun the game"
         }
+        testTask "Matches /novr" {
+            let! settings = parse [| "/novr" |]
+            Expect.equal settings.DisplayMode Pancake ""
+        }
         testTask "Matches /autorun" {
             let! settings = parse [| "/autorun" |]
             Expect.equal settings.AutoRun true ""
@@ -170,6 +174,13 @@ let tests =
             let expectedDir = Path.Combine("test", "dir")
             let! settings = parseWithFallback (fun _ -> Ok expectedDir) [||]
             Expect.equal settings.CbLauncherDir expectedDir ""
+        }
+        testTask "Known flag shouldn't be treated as whitelist filter" {
+            let knownFlags = [| "/steamid"; "/steam"; "/epic"; "/frontier"; "profile"; "/oculus"; "nonce"; "/restart"; "1"; "/vr"; "/novr"; "/autorun"; "/autoquit"; "/forcelocal" |]
+            
+            let! settings = parse knownFlags
+            
+            Expect.isEmpty settings.ProductWhitelist ""
         }
 
         testProperty "Unknown arg doesn't change any values" <|
