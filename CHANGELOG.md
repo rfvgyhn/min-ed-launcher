@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.5.0] - 2021-06-03
 
 ### Breaking Changes
 - Restart option has moved to the `/restart delay` argument and is no longer specified in the config file.
@@ -69,7 +69,8 @@
 
 Initial release
 
-[unreleased]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.4.0...HEAD
+[unreleased]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.2.0...v0.3.0
