@@ -51,8 +51,8 @@ accounts on both Windows and Linux.
 * **Auto-restart**
 
   Automatically restart your game. This can be useful if you're [grinding] for manufactured 
-  engineering materials. Off by default. This feature isn't supported on the Epic platform as
-  the game invalidates the launcher's authorization token.
+  engineering materials. Off by default. This feature isn't supported on the Epic platform.
+  See the [Min-Launcher-Specific] section for more details.
 
 * **Multi-Account**
 
@@ -142,6 +142,10 @@ The following arguments are in addition to the above:
 |------------------------|-----------------------------------------------------------|
 | /frontier profile-name | Use this argument to login with a Frontier Store account. Keep the profile name to letters, numbers, dashes and underscores only |
 | /restart delay         | Restart the game after it has closed with _delay_ being the number of seconds given to cancel the restart (i.e `/restart 3`) |
+
+Note that the restart feature doesn't work with Epic accounts. After Elite launches, it invalidates
+the launcher's auth token and doesn't communicate the new token which then prevents the ability to
+login with FDev servers a second time.
 
 ### Settings
 The settings file controls additional settings for the launcher that go beyond what the default
