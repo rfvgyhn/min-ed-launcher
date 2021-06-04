@@ -327,7 +327,9 @@ let run settings launcherVersion cancellationToken = task {
                     Log.debug "Getting authorized products"
                     match! Api.getAuthorizedProducts settings.Platform None connection with
                     | Ok authorizedProducts ->
-                        let authorizedProducts = authorizedProducts |> List.map (AuthorizedProduct.fixDirectoryPath productsDir settings.Platform Directory.Exists)
+                        let applyFixes = AuthorizedProduct.fixDirectoryPath productsDir settings.Platform Directory.Exists
+                                         >> AuthorizedProduct.fixFilters settings.FilterOverrides
+                        let authorizedProducts = authorizedProducts |> List.map applyFixes
                         let names = authorizedProducts |> List.map (fun p -> p.Name)
                         Log.debug $"Authorized Products: %s{String.Join(',', names)}"
                         Log.info "Checking for updates"
@@ -448,7 +450,7 @@ let run settings launcherVersion cancellationToken = task {
                             if settings.AutoRun then
                                 playableProducts
                                 |> Array.filter (fun p -> settings.ProductWhitelist.Count = 0
-                                                          || p.Filters |> Set.union settings.ProductWhitelist |> Set.count > 0)
+                                                          || p.Filters |> Set.intersect settings.ProductWhitelist |> Set.count > 0)
                                 |> Array.tryHead
                             else if playableProducts.Length > 0 then
                                 promptForProductToPlay playableProducts cancellationToken

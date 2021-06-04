@@ -45,7 +45,8 @@ type LauncherSettings =
       AutoUpdate: bool
       MaxConcurrentDownloads: int
       ForceUpdate: string Set
-      Processes: ProcessStartInfo list }
+      Processes: ProcessStartInfo list
+      FilterOverrides: Map<string, string> }
 type ServerStatus = Healthy
 type LocalVersion = Version
 type LauncherStatus =

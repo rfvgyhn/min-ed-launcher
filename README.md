@@ -160,31 +160,35 @@ Linux: `$XDG_CONFIG_HOME/min-ed-launcher/settings.json` (`~/.config` if `$XDG_CO
 | language               | Sets the game's language. Supported values are _en_ and the names of the language folders in Elite's install directory |
 | autoUpdate             | Automatically update games that are out of date                                                                        |
 | maxConcurrentDownloads | Maximum number of simultaneous downloads when downloading updates                                                      |
-| forceUpdate            | Be default, Steam and Epic updates are handled by their respective platform. In cases like the Odyssey alpha, FDev doesn't provide updates through Steam or Epic. This allows the launcher to force updates to be done via FDev servers by providing a comma delimited list of SKUs |
+| forceUpdate            | By default, Steam and Epic updates are handled by their respective platform. In cases like the Odyssey alpha, FDev doesn't provide updates through Steam or Epic. This allows the launcher to force updates to be done via FDev servers by providing a comma delimited list of SKUs |
 | processes              | Additional applications to launch before launching the game                                                            |
+| filterOverrides        | Manually override a product's filter for use with launch options filter flag (e.g. /edo, /edh, etc...)                 |
 
 When specifying a path for either `gameLocation` or `processes.fileName` on Windows, it's required to escape backslashes. Make sure to use a
 double backslash (`\\`) instead of a single backslash (`\`).
 
 ```json
 {
-    "apiUri": "https://api.zaonce.net",
-    "watchForCrashes": false,
-    "gameLocation": null,
-    "language": "en",
-    "autoUpdate": true,
-    "maxConcurrentDownloads": 4,
-    "forceUpdate": "PUBLIC_TEST_SERVER_OD",
-    "processes": [
-        {
-            "fileName": "C:\\path\\to\\app.exe",
-            "arguments": "--arg1 --arg2"
-        },
-        {
-            "fileName": "C:\\path\\to\\app2.exe",
-            "arguments": "--arg1 --arg2"
-        }
-    ]
+  "apiUri": "https://api.zaonce.net",
+  "watchForCrashes": false,
+  "gameLocation": null,
+  "language": "en",
+  "autoUpdate": true,
+  "maxConcurrentDownloads": 4,
+  "forceUpdate": "PUBLIC_TEST_SERVER_OD",
+  "processes": [
+    {
+      "fileName": "C:\\path\\to\\app.exe",
+      "arguments": "--arg1 --arg2"
+    },
+    {
+      "fileName": "C:\\path\\to\\app2.exe",
+      "arguments": "--arg1 --arg2"
+    }
+  ],
+  "filterOverrides": [
+    { "sku": "FORC-FDEV-DO-1000", "filter": "edo" }
+  ]
 }
 ```
 

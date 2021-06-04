@@ -54,4 +54,27 @@ let tests =
                 Expect.equal actual.Directory product.Directory ""
             }
         ]
+        
+        testList "fixFilters" [
+            let product =
+                { Name = ""; Filter = "oldFilter"; Directory = ""; GameArgs = ""; ServerArgs = ""; SortKey = 0; Sku = "sku"; TestApi = false }
+            test "No change when overrides is empty" {
+                let actual = AuthorizedProduct.fixFilters Map.empty product
+                
+                Expect.equal actual product ""
+            }
+            test "No change when no matching sku" {
+                let overrides = [ "asdf", "newFilter" ] |> Map.ofList
+                let actual = AuthorizedProduct.fixFilters overrides product
+                
+                Expect.equal actual product ""
+            }
+            test "Updates filter when matching sku" {
+                let newFilter = "newFilter"
+                let overrides = [ product.Sku, newFilter ] |> Map.ofList
+                let actual = AuthorizedProduct.fixFilters overrides product
+                
+                Expect.equal actual.Filter newFilter ""
+            }
+        ]
     ]

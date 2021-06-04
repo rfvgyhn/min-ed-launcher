@@ -171,8 +171,11 @@ let tests =
             let! settings = parseWithFallback (fun _ -> Ok expectedDir) [||]
             Expect.equal settings.CbLauncherDir expectedDir ""
         }
+
         testProperty "Unknown arg doesn't change any values" <|
             fun (args:string[]) ->
+                // /* args are considered whitelist args and not unknown
+                let args = args |> Array.filter (fun arg -> arg = null || (arg.StartsWith('/') && arg.Length < 2))
                 let settings = parse args
                 settings.Wait()
                 settings.Result = Settings.defaults

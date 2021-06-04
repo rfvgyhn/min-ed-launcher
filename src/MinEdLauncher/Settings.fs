@@ -24,7 +24,8 @@ let defaults =
       AutoUpdate = true
       MaxConcurrentDownloads = 4
       ForceUpdate = Set.empty
-      Processes = List.empty }
+      Processes = List.empty
+      FilterOverrides = Map.empty }
     
 [<RequireQualifiedAccess>]
 type FrontierCredResult = Found of string * string * string option | NotFound of string | UnexpectedFormat of string | Error of string
@@ -135,10 +136,8 @@ let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (arg
             | "/autorun", _                   -> { s with AutoRun = true }
             | "/autoquit", _                  -> { s with AutoQuit = true }
             | "/forcelocal", _                -> { s with ForceLocal = true }
-            | "/ed", _                        -> { s with ProductWhitelist = s.ProductWhitelist.Add "ed" }
-            | "/edh", _                       -> { s with ProductWhitelist = s.ProductWhitelist.Add "edh" }
-            | "/eda", _                       -> { s with ProductWhitelist = s.ProductWhitelist.Add "eda" }
-            | "/edo", _                       -> { s with ProductWhitelist = s.ProductWhitelist.Add "edo" }
+            | arg, _ when arg.StartsWith('/')
+                          && arg.Length > 1   -> { s with ProductWhitelist = s.ProductWhitelist.Add (arg.TrimStart('/')) }
             | _ -> s) defaults
     
     match cbLaunchDir
@@ -148,10 +147,9 @@ let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (arg
         applyDeviceAuth settings
     | Result.Error msg -> Result.Error msg |> Task.fromResult
     
-[<CLIMutable>]
-type ProcessConfig =
-    { FileName: string
-      Arguments: string option }
+
+[<CLIMutable>] type ProcessConfig = { FileName: string; Arguments: string option }
+[<CLIMutable>] type FilterConfig = { Sku: string; Filter: string }
 [<CLIMutable>]
 type Config =
     { ApiUri: string
@@ -163,26 +161,33 @@ type Config =
       [<DefaultValue("4")>]
       MaxConcurrentDownloads: int
       ForceUpdate: string list
-      Processes: ProcessConfig list }
+      Processes: ProcessConfig list
+      FilterOverrides: FilterConfig list }
 let parseConfig fileName =
     let configRoot = ConfigurationBuilder()
                         .AddJsonFile(fileName, false)
                         .Build()
+    let parseKvps section keyName valueName map =
+        configRoot.GetSection(section).GetChildren()
+            |> Seq.choose (fun section ->
+                let key = section.GetValue<string>(keyName)
+                let value = section.GetValue<string>(valueName)
+                if String.IsNullOrWhiteSpace(key) then
+                    None
+                else
+                    map key value)
+            |> Seq.toList
     match AppConfig(configRoot).Get<Config>() with
     | Ok config ->
         // FsConfig doesn't support list of records so handle it manually
         let processes =
-            configRoot.GetSection("processes").GetChildren()
-            |> Seq.map (fun section ->
-                let fileName = section.GetValue<string>("fileName")
-                let arguments = section.GetValue<string>("arguments")
-                if fileName = null then
-                    None
-                else
-                    Some { FileName = fileName; Arguments = if arguments = null then None else Some arguments })
-            |> Seq.choose id
-            |> Seq.toList
-        { config with Processes = processes } |> ConfigParseResult.Ok
+            parseKvps "processes" "fileName" "arguments" (fun key value ->
+                Some { FileName = key; Arguments = if value = null then None else Some value })
+        let filterOverrides =
+            parseKvps "filterOverrides" "sku" "filter" (fun key value ->
+                if String.IsNullOrWhiteSpace(value) then None
+                else Some { Sku = key; Filter = value })
+        { config with Processes = processes; FilterOverrides = filterOverrides } |> ConfigParseResult.Ok
     | Error error -> Error error
     
 let getSettings args appDir fileConfig = task {
@@ -208,7 +213,7 @@ let getSettings args appDir fileConfig = task {
             pInfo.RedirectStandardError <- true
             pInfo.WindowStyle <- ProcessWindowStyle.Minimized
             pInfo)
-    
+    let filterOverrides = fileConfig.FilterOverrides |> Seq.map (fun o -> o.Sku, o.Filter) |> Map.ofSeq
     let fallbackDirs platform =
         match platform with
         | Epic d -> Epic.potentialInstallPaths d.AppId |> findCbLaunchDir
@@ -224,4 +229,5 @@ let getSettings args appDir fileConfig = task {
                                                           MaxConcurrentDownloads = fileConfig.MaxConcurrentDownloads
                                                           PreferredLanguage = fileConfig.Language
                                                           Processes = processes
+                                                          FilterOverrides = filterOverrides
                                                           WatchForCrashes = fileConfig.WatchForCrashes }) }

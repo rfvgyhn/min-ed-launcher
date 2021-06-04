@@ -4,9 +4,15 @@
 
 ### Breaking Changes
 - Restart option has moved to the `/restart delay` argument and is no longer specified in the config file.
+  
   This allows for creating separate shortcuts, one for normal gameplay and one for restarting.
   
   Instead of specifying `restart: { enabled: true, shutdownTimeout: 3 }`, modify your launch options to include `/restart 3`.
+
+### New Features
+- Add ability to override a product's filter via the config file
+  
+  Useful for when FDev makes a copy/paste error for a new product (i.e. when they released Odyssey with an "edh" filter instead of "edo")
 
 ## [0.4.0] - 2021-05-11
 

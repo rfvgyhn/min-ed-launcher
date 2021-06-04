@@ -5,5 +5,6 @@
     "autoUpdate": true,
     "maxConcurrentDownloads": 4,
     "forceUpdate": "",
-    "processes": []
+    "processes": [],
+    "filterOverrides": []
 }
