@@ -14,7 +14,7 @@ let defaults =
       AutoRun = false
       AutoQuit = false
       WatchForCrashes = true
-      ProductWhitelist = Set.empty
+      ProductWhitelist = OrdinalIgnoreCaseSet.empty
       ForceLocal = false
       Proton = None
       CbLauncherDir = "."
@@ -25,7 +25,7 @@ let defaults =
       MaxConcurrentDownloads = 4
       ForceUpdate = Set.empty
       Processes = List.empty
-      FilterOverrides = Map.empty }
+      FilterOverrides = OrdinalIgnoreCaseMap.empty }
     
 [<RequireQualifiedAccess>]
 type FrontierCredResult = Found of string * string * string option | NotFound of string | UnexpectedFormat of string | Error of string
@@ -214,7 +214,7 @@ let getSettings args appDir fileConfig = task {
             pInfo.RedirectStandardError <- true
             pInfo.WindowStyle <- ProcessWindowStyle.Minimized
             pInfo)
-    let filterOverrides = fileConfig.FilterOverrides |> Seq.map (fun o -> o.Sku, o.Filter) |> Map.ofSeq
+    let filterOverrides = fileConfig.FilterOverrides |> Seq.map (fun o -> o.Sku, o.Filter) |> OrdinalIgnoreCaseMap.ofSeq
     let fallbackDirs platform =
         match platform with
         | Epic d -> Epic.potentialInstallPaths d.AppId |> findCbLaunchDir

@@ -122,6 +122,14 @@ let filterByUpdateRequired platform updateOverride (products: Product list) =
     |> List.choose (fun p -> match p with | RequiresUpdate p -> Some p | _ -> None)
     |> updateable
 
+let selectProduct (whitelist: OrdinalIgnoreCaseSet) (products: ProductDetails[]) =
+    if whitelist.Count = 0 then
+        None
+    else
+        products
+        |> Array.filter (fun p -> p.Filters |> OrdinalIgnoreCaseSet.intersect whitelist |> OrdinalIgnoreCaseSet.any)
+        |> Array.tryHead
+
 let createArgString vr (lang: string option) edSession machineId timestamp watchForCrashes platform hashFile (product:ProductDetails) =
     let targetOptions = String.Join(" ", [
         if lang.IsSome then "/language " + lang.Value 
@@ -179,7 +187,7 @@ let mapProduct productsDir (product:AuthorizedProduct) =
             if product.TestApi then "/Test"
             if not (String.IsNullOrEmpty(product.ServerArgs)) then product.ServerArgs
         ])
-    let filters = product.Filter.Split(',', StringSplitOptions.RemoveEmptyEntries) |> Set.ofArray
+    let filters = product.Filter.Split(',', StringSplitOptions.RemoveEmptyEntries) |> OrdinalIgnoreCaseSet.ofSeq
     let directory = Path.Combine(productsDir, product.Directory)
     match readVersionInfo (Path.Combine(productsDir, product.Directory)) with
     | Found v ->

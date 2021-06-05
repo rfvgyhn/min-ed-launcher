@@ -1,9 +1,28 @@
 module MinEdLauncher.Types
 
-open FSharp.Data
 open System
+open System.Collections.Generic
+open FSharp.Data
 open System.Diagnostics
 open Token
+
+type OrdinalIgnoreCaseComparer() = 
+    interface IComparer<string> with
+        member x.Compare(a, b) = StringComparer.OrdinalIgnoreCase.Compare(a, b)
+
+type OrdinalIgnoreCaseSet = FSharpx.Collections.Tagged.Set<string, OrdinalIgnoreCaseComparer>
+[<RequireQualifiedAccess>]
+module OrdinalIgnoreCaseSet =
+    let intersect set2 set1 = OrdinalIgnoreCaseSet.Intersection(set1, set2)
+    let any (set: OrdinalIgnoreCaseSet) = set.Count > 0
+    let ofSeq (items: string[]) = OrdinalIgnoreCaseSet.Create(OrdinalIgnoreCaseComparer(), items)
+    let empty = OrdinalIgnoreCaseSet.Empty(OrdinalIgnoreCaseComparer())
+    
+type OrdinalIgnoreCaseMap<'Value> = FSharpx.Collections.Tagged.Map<string, 'Value, OrdinalIgnoreCaseComparer>
+[<RequireQualifiedAccess>]
+module OrdinalIgnoreCaseMap =
+    let ofSeq<'Value> items = OrdinalIgnoreCaseMap<'Value>.Create(OrdinalIgnoreCaseComparer(), items)
+    let empty<'Value> = OrdinalIgnoreCaseMap<'Value>.Empty(OrdinalIgnoreCaseComparer())
 
 type EpicDetails =
     { ExchangeCode: string
@@ -35,7 +54,7 @@ type LauncherSettings =
       AutoRun: AutoRun
       AutoQuit: AutoQuit
       WatchForCrashes: WatchForCrashes
-      ProductWhitelist: Set<string>
+      ProductWhitelist: OrdinalIgnoreCaseSet
       ForceLocal: ForceLocal
       Proton: Proton option
       CbLauncherDir: string
@@ -46,7 +65,7 @@ type LauncherSettings =
       MaxConcurrentDownloads: int
       ForceUpdate: string Set
       Processes: ProcessStartInfo list
-      FilterOverrides: Map<string, string> }
+      FilterOverrides: OrdinalIgnoreCaseMap<string> }
 type ServerStatus = Healthy
 type LocalVersion = Version
 type LauncherStatus =
@@ -93,7 +112,7 @@ type ProductMetadata =
 type ProductDetails =
     { Sku: string
       Name: string
-      Filters: Set<string>
+      Filters: OrdinalIgnoreCaseSet
       Executable: string
       UseWatchDog64: bool
       SteamAware: bool
@@ -107,7 +126,7 @@ type ProductDetails =
 type MissingProductDetails =
     { Sku: string
       Name: string
-      Filters: Set<string>
+      Filters: OrdinalIgnoreCaseSet
       Directory: string }
 type ProductManifest = XmlProvider<"""<Manifest title="Win64_4_0_0_10_Alpha" version="2021.04.09.263090"><File><Path>AppConfig.xml</Path><Hash>b73379436461d1596b39f6aa07dd6d83724cca6d</Hash><Size>3366</Size><Download>http://path.to/file</Download></File><File><Path>AudioConfiguration.xml</Path><Hash>ad79d0c6ca5988175b45c929ec039e86cd6967f3</Hash><Size>2233</Size><Download>http://path.to/file2</Download></File></Manifest>""">
 type Product =

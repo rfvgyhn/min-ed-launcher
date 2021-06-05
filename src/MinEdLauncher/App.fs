@@ -446,12 +446,10 @@ let run settings launcherVersion cancellationToken = task {
                             |> List.append updated
                             |> List.sortBy (fun p -> p.SortKey)
                             |> List.toArray
-                        let selectedProduct =
+                        let selectedProduct = 
                             if settings.AutoRun then
                                 playableProducts
-                                |> Array.filter (fun p -> settings.ProductWhitelist.Count = 0
-                                                          || p.Filters |> Set.intersect settings.ProductWhitelist |> Set.count > 0)
-                                |> Array.tryHead
+                                |> Product.selectProduct settings.ProductWhitelist
                             else if playableProducts.Length > 0 then
                                 promptForProductToPlay playableProducts cancellationToken
                             else None

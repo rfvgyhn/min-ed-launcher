@@ -23,8 +23,7 @@ let fixDirectoryPath productsDir platform directoryExists (product: AuthorizedPr
     
 // Allows for overriding a product's filter. Useful for when FDev makes a copy/paste error
 // for a new product (i.e. when they released Odyssey with an "edh" filter instead of "edo") 
-let fixFilters overrides (product: AuthorizedProduct) =
-    overrides
-    |> Map.tryFind product.Sku
+let fixFilters (overrides: OrdinalIgnoreCaseMap<string>) (product: AuthorizedProduct) =    
+    overrides.TryFind product.Sku
     |> Option.map (fun filter -> { product with Filter = filter })
     |> Option.defaultValue product

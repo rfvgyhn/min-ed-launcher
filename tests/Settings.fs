@@ -109,19 +109,19 @@ let tests =
         }
         testTask "Matches /ed" {
             let! settings = parse [| "/ed" |]
-            Expect.equal (settings.ProductWhitelist.Contains "ed") true ""
+            Expect.contains settings.ProductWhitelist "ed" ""
         }
         testTask "Matches /edh" {
             let! settings = parse [| "/edh" |]
-            Expect.equal (settings.ProductWhitelist.Contains "edh") true ""
+            Expect.contains settings.ProductWhitelist "edh" ""
         }
         testTask "Matches /eda" {
             let! settings = parse [| "/eda" |]
-            Expect.equal (settings.ProductWhitelist.Contains "eda") true ""
+            Expect.contains settings.ProductWhitelist "eda" ""
         }
         testTask "Matches /edo" {
             let! settings = parse [| "/edo" |]
-            Expect.equal (settings.ProductWhitelist.Contains "edo") true ""
+            Expect.contains settings.ProductWhitelist "edo" ""
         }
         
         yield! [

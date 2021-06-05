@@ -23,7 +23,7 @@ open Expecto
         let product =
             { Sku = ""
               Name = ""
-              Filters = Set.empty
+              Filters = OrdinalIgnoreCaseSet.empty
               Executable = ""
               UseWatchDog64 = false
               SteamAware = false
@@ -414,4 +414,55 @@ open Expecto
                     
                     Expect.sequenceEqual result products ""
                 } ]
+            testList "selectProduct" [
+                testTask "Selects none when whitelist is empty" {
+                    let products = [| product |]
+                    let actual = Product.selectProduct OrdinalIgnoreCaseSet.empty products
+                    
+                    Expect.isNone actual ""
+                }
+                testTask "Selects none when filters is empty" {
+                    let products = [|
+                        { product with Filters = OrdinalIgnoreCaseSet.empty }
+                    |]
+                    let whitelist = [| "filter" |] |> OrdinalIgnoreCaseSet.ofSeq
+                    
+                    let actual = Product.selectProduct whitelist products
+                    
+                    Expect.isNone actual ""
+                }
+                testTask "Selects none when no matching filters" {
+                    let products = [|
+                        { product with Filters = [| "edo" |] |> OrdinalIgnoreCaseSet.ofSeq }
+                    |]
+                    let whitelist = [| "filter" |] |> OrdinalIgnoreCaseSet.ofSeq
+                    
+                    let actual = Product.selectProduct whitelist products
+                    
+                    Expect.isNone actual ""
+                }
+                testTask "Selects head when match found" {
+                    let products = [|
+                        { product with Filters = [| "filter" |] |> OrdinalIgnoreCaseSet.ofSeq; Sku = "p1" }
+                        { product with Filters = [| "filter" |] |> OrdinalIgnoreCaseSet.ofSeq; Sku = "p2" }
+                    |]
+                    let whitelist = [| "filter" |] |> OrdinalIgnoreCaseSet.ofSeq
+                    let expected = products |> Array.head |> Some
+                    
+                    let actual = Product.selectProduct whitelist products
+                    
+                    Expect.equal actual expected ""
+                }
+                testTask "Selects head when match found case-insensitive" {
+                    let products = [|
+                        { product with Filters = [| "FiLtEr" |] |> OrdinalIgnoreCaseSet.ofSeq }
+                    |]
+                    let whitelist = [| "fIlTeR" |] |> OrdinalIgnoreCaseSet.ofSeq
+                    let expected = products |> Array.head |> Some
+                    
+                    let actual = Product.selectProduct whitelist products
+                    
+                    Expect.equal actual expected ""
+                }
+            ]
         ]

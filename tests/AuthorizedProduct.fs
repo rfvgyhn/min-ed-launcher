@@ -59,19 +59,19 @@ let tests =
             let product =
                 { Name = ""; Filter = "oldFilter"; Directory = ""; GameArgs = ""; ServerArgs = ""; SortKey = 0; Sku = "sku"; TestApi = false }
             test "No change when overrides is empty" {
-                let actual = AuthorizedProduct.fixFilters Map.empty product
+                let actual = AuthorizedProduct.fixFilters OrdinalIgnoreCaseMap.empty product
                 
                 Expect.equal actual product ""
             }
             test "No change when no matching sku" {
-                let overrides = [ "asdf", "newFilter" ] |> Map.ofList
+                let overrides = [ "asdf", "newFilter" ] |> OrdinalIgnoreCaseMap.ofSeq
                 let actual = AuthorizedProduct.fixFilters overrides product
                 
                 Expect.equal actual product ""
             }
             test "Updates filter when matching sku" {
                 let newFilter = "newFilter"
-                let overrides = [ product.Sku, newFilter ] |> Map.ofList
+                let overrides = [ product.Sku, newFilter ] |> OrdinalIgnoreCaseMap.ofSeq
                 let actual = AuthorizedProduct.fixFilters overrides product
                 
                 Expect.equal actual.Filter newFilter ""
