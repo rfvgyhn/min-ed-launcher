@@ -6,5 +6,7 @@
     "maxConcurrentDownloads": 4,
     "forceUpdate": "",
     "processes": [],
-    "filterOverrides": []
+    "filterOverrides": [
+        { "sku": "FORC-FDEV-DO-1000", "filter": "edo" }
+    ]
 }
