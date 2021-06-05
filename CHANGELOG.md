@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.5.1] - 2021-06-04
+
+### Enhancements
+
+- Automatically fix Odyssey filter by providing correct override in default `settings.json`
+
+  Users upgrading from previous versions will need to manually update their `settings.json` file or delete it and let it be auto-created again.
+  
+  Manual update should include the following:
+  ```json
+  "filterOverrides": [
+        { "sku": "FORC-FDEV-DO-1000", "filter": "edo" }
+    ]
+  ```
+
+### Bug Fixes
+
+- Fix filter overrides not being case-insensitive
+- Fix `/novr` flag being treated as a product whitelist
+
 ## [0.5.0] - 2021-06-03
 
 ### Breaking Changes
@@ -69,7 +89,8 @@
 
 Initial release
 
-[unreleased]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.5.0...HEAD
+[unreleased]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.3.0...v0.3.1
