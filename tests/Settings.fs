@@ -157,6 +157,19 @@ let tests =
                 Expect.equal settings.CbLauncherDir launcherDir ""
             }
         )
+        testTask "steam linux runtime - ignores reaper" {
+            // This test is only needed until running without crashing via reaper is implemented
+            let launcherDir = "launchDir"
+            let launcherPath = Path.Combine(launcherDir, "EDLaunch.exe")
+            let args = [| Path.Combine("ubuntu32_32", "reaper"); "SteamLaunch"; "AppId=359320"; "--"; Path.Combine("steamapps", "common", "SteamLinuxRuntime_soldier", "_v2-entry-point"); "--verb=protonAction"; "--"; Path.Combine("steamapps", "common", "Proton 5.0", "proton"); "protonAction"; launcherPath; "/other"; "/args" |]
+            
+            let! settings = parse args
+            
+            let expectedArgs = Array.concat [ args.[5..^5]; [| "python3" |]; args.[^4..^3] ]
+            let expected = { EntryPoint = args.[4]; Args = expectedArgs }
+            Expect.equal settings.Proton (Some expected) ""
+            Expect.equal settings.CbLauncherDir launcherDir ""
+        }
         testTask "Fewer than three args means no Proton" {
             let! settings = parse [| "asdf"; "fdsa" |]
             Expect.equal settings.Proton None ""

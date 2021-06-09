@@ -65,13 +65,13 @@ let private doesntEndWith (value: string) (str: string) = not (str.EndsWith(valu
 type private EpicArg = ExchangeCode of string | Type of string | AppId of string
 let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (argv: string[]) =
     let proton, cbLaunchDir, args =
-        let isOldProton() = // Proton < 5.13 doesn't run via steam linux runtime
-            argv.Length > 2 && argv.[0] <> null
+        let isOldProton (args: string[]) = // Proton < 5.13 doesn't run via steam linux runtime
+            args.Length > 2 && args.[0] <> null
             && [ Path.Combine("steamapps", "common", "Proton"); Path.Combine("Steam", "compatibilitytools.d", "Proton") ]
-               |> List.exists (fun p -> argv.[0].Contains(p))
-        let isNewProton() = // Proton >= 5.13 runs via steam linux runtime
-            argv.Length > 2 && argv.[0] <> null
-            && argv.[0].Contains("SteamLinuxRuntime")
+               |> List.exists (fun p -> args.[0].Contains(p))
+        let isNewProton (args: string[]) = // Proton >= 5.13 runs via steam linux runtime
+            args.Length > 2 && args.[0] <> null
+            && args.[0].Contains("SteamLinuxRuntime")
         let isReaper() = // Steam Client v? introduced a reaper process as entrypoint
             argv.Length > 2 && argv.[0] <> null
             && argv.[0].EndsWith("/reaper")
@@ -83,13 +83,13 @@ let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (arg
                 argv.[index..]
             else
                 argv
-        if isNewProton() then
+        if isNewProton argv then
             let runtimeArgs = argv.[1..] |> Array.takeWhile (doesntEndWith "proton")
             let protonArgs = argv.[1..] |> Array.skipWhile (doesntEndWith "proton") |> Array.takeWhile (doesntEndWith "EDLaunch.exe")
             let args = seq { runtimeArgs; [| "python3" |]; protonArgs } |> Array.concat
             let launcherIndex = args.Length
             Some { EntryPoint = argv.[0]; Args = args }, Path.GetDirectoryName(argv.[launcherIndex]) |> Some, argv.[launcherIndex..]
-        else if isOldProton() then 
+        else if isOldProton argv then 
             Some { EntryPoint = "python3"; Args = argv.[..1] }, Path.GetDirectoryName(argv.[2]) |> Some, argv.[2..]
         else if argv.Length > 0 && argv.[0] <> null && argv.[0].EndsWith("EDLaunch.exe", StringComparison.OrdinalIgnoreCase) then
             None, Some (Path.GetDirectoryName(argv.[0])), argv.[1..]
