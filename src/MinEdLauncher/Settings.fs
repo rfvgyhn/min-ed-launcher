@@ -61,6 +61,7 @@ let applyDeviceAuth settings  =
         | Cobra.CredResult.Failure msg -> return Error msg }
     | _ -> Ok settings |> Task.fromResult
     
+let private doesntEndWith (value: string) (str: string) = not (str.EndsWith(value))
 type private EpicArg = ExchangeCode of string | Type of string | AppId of string
 let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (argv: string[]) =
     let proton, cbLaunchDir, args =
@@ -71,8 +72,18 @@ let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (arg
         let isNewProton() = // Proton >= 5.13 runs via steam linux runtime
             argv.Length > 2 && argv.[0] <> null
             && argv.[0].Contains("SteamLinuxRuntime")
+        let isReaper() = // Steam Client v? introduced a reaper process as entrypoint
+            argv.Length > 2 && argv.[0] <> null
+            && argv.[0].EndsWith("/reaper")
+        
+        // TODO: figure out how to get elite to run with reaper instead of ignoring it
+        let argv =
+            if isReaper() then
+                let index = (argv |> Array.findIndex (fun arg -> arg = "--")) + 1
+                argv.[index..]
+            else
+                argv
         if isNewProton() then
-            let doesntEndWith (value: string) (str: string) = not (str.EndsWith(value))
             let runtimeArgs = argv.[1..] |> Array.takeWhile (doesntEndWith "proton")
             let protonArgs = argv.[1..] |> Array.skipWhile (doesntEndWith "proton") |> Array.takeWhile (doesntEndWith "EDLaunch.exe")
             let args = seq { runtimeArgs; [| "python3" |]; protonArgs } |> Array.concat
