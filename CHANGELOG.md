@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.2] - 2021-06-09
+
+### Security
+- Address [CVE-2021-31957] by building with latest version of .net SDK (5.0.301)
+
+### Bug Fixes
+- Implement temporary workaround for launcher failing when Steam starts the executable via `reaper`
+
 ## [0.5.1] - 2021-06-04
 
 ### Enhancements
@@ -89,7 +97,8 @@
 
 Initial release
 
-[unreleased]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.5.1...HEAD
+[unreleased]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.5.2...HEAD
+[0.5.2]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.3.1...v0.4.0
@@ -100,3 +109,4 @@ Initial release
 [0.1.0]: https://github.com/rfvgyhn/min-ed-launcher/compare/67d8c3f...v0.1.0
 [Proton-GE]: https://github.com/GloriousEggroll/proton-ge-custom
 [CVE-2021-31204]: https://github.com/dotnet/announcements/issues/185
+[CVE-2021-31957]: https://github.com/dotnet/announcements/issues/189
