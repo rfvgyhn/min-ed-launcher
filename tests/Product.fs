@@ -8,15 +8,7 @@ open MinEdLauncher.Product
 open MinEdLauncher.Token
 open MinEdLauncher.Types
 open Expecto
-
-    module Expect =
-        let notStringContains (subject : string) (substring : string) message =
-          if (subject.Contains(substring)) then
-            failtestf "%s. Expected subject string '%s' to not contain substring '%s'."
-                            message subject substring
-        let stringEqual (actual: string) (expected: string) comparisonType message =
-            if not (String.Equals(actual, expected, comparisonType)) then
-                failtest $"%s{message}. Actual value was %s{actual} but had expected it to be %s{expected}."
+open MinEdLauncher.Tests.Extensions
 
     [<Tests>]
     let tests =

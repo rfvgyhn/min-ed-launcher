@@ -18,6 +18,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Extensions.fs" />
     <Compile Include="Settings.fs" />
     <Compile Include="Product.fs" />
     <Compile Include="EdLauncher.fs" />

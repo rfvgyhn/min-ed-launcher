@@ -1,11 +1,13 @@
 module MinEdLauncher.Tests.Settings
 
+open System
 open System.IO
 open Expecto
 open FSharp.Control.Tasks.NonAffine
 open MinEdLauncher
 open MinEdLauncher.Settings
 open MinEdLauncher.Types
+open MinEdLauncher.Tests.Extensions
 
 [<Tests>]
 let tests =
@@ -195,7 +197,21 @@ let tests =
             
             Expect.isEmpty settings.ProductWhitelist ""
         }
-
+        yield! [
+            "no proton",           [ ]
+            "proton",              [ Path.Combine("steamapps", "common", "Proton 5.0", "proton"); "protonAction" ]
+            "steam linux runtime", [ Path.Combine("steamapps", "common", "SteamLinuxRuntime_soldier", "_v2-entry-point"); "--verb=protonAction"; "--"; Path.Combine("steamapps", "common", "Proton 5.0", "proton"); "protonAction" ]
+        ] |> List.map (fun (name, protonArgs) ->            
+            testTask $"EDLaunch path arg should be ignored {name}" {
+                let launcherPath = Path.Combine("/launchDir", "EDLaunch.exe")
+                let args = protonArgs @ [launcherPath] |> List.toArray
+                
+                let! settings = parse args
+                
+                Expect.notContainsString settings.ProductWhitelist "EDLaunch.exe" StringComparison.OrdinalIgnoreCase ""
+            }
+        )
+        
         testProperty "Unknown arg doesn't change any values" <|
             fun (args:string[]) ->
                 // /* args are considered whitelist args and not unknown

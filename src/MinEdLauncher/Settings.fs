@@ -88,9 +88,9 @@ let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (arg
             let protonArgs = argv.[1..] |> Array.skipWhile (doesntEndWith "proton") |> Array.takeWhile (doesntEndWith "EDLaunch.exe")
             let args = seq { runtimeArgs; [| "python3" |]; protonArgs } |> Array.concat
             let launcherIndex = args.Length
-            Some { EntryPoint = argv.[0]; Args = args }, Path.GetDirectoryName(argv.[launcherIndex]) |> Some, argv.[launcherIndex..]
+            Some { EntryPoint = argv.[0]; Args = args }, Path.GetDirectoryName(argv.[launcherIndex]) |> Some, argv.[launcherIndex + 1..]
         else if isOldProton argv then 
-            Some { EntryPoint = "python3"; Args = argv.[..1] }, Path.GetDirectoryName(argv.[2]) |> Some, argv.[2..]
+            Some { EntryPoint = "python3"; Args = argv.[..1] }, Path.GetDirectoryName(argv.[2]) |> Some, argv.[3..]
         else if argv.Length > 0 && argv.[0] <> null && argv.[0].EndsWith("EDLaunch.exe", StringComparison.OrdinalIgnoreCase) then
             None, Some (Path.GetDirectoryName(argv.[0])), argv.[1..]
         else
