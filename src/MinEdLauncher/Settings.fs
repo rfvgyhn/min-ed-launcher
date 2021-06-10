@@ -74,7 +74,7 @@ let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (arg
             && args.[0].Contains("SteamLinuxRuntime")
         let isReaper() = // Steam Client v? introduced a reaper process as entrypoint
             argv.Length > 2 && argv.[0] <> null
-            && argv.[0].EndsWith("/reaper")
+            && argv.[0].EndsWith(string Path.DirectorySeparatorChar + "reaper")
         
         // TODO: figure out how to get elite to run with reaper instead of ignoring it
         let argv =
