@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.5.3] - 2021-06-09
+
+### Bug Fixes
+- Implement _working_ temporary workaround for launcher failing when Steam starts the executable via `reaper`
+- Fix EDLaunch.exe path being treated as product whitelist item
+
 ## [0.5.2] - 2021-06-09
 
 ### Security
@@ -97,7 +103,8 @@
 
 Initial release
 
-[unreleased]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.5.2...HEAD
+[unreleased]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.5.3...HEAD
+[0.5.3]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.4.0...v0.5.0
