@@ -68,12 +68,9 @@ let private fetch (httpClient: HttpClient) requestMessage = task {
         return Error $"%i{int response.StatusCode}: %s{response.ReasonPhrase}"
 }
 
-let createClient apiUri version os =
-    let appName = "min-ed-launcher"
-    let userAgent = $"%s{appName}/%s{version}/%s{os}"
-    let httpClient = new HttpClient()
+let createClient apiUri version =
+    let httpClient = Http.createClient version
     httpClient.BaseAddress <- apiUri
-    httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", userAgent) |> ignore
     httpClient.DefaultRequestHeaders.ConnectionClose <- Nullable<bool>(false)
     httpClient
 

@@ -18,7 +18,7 @@ type LoginResult =
 | Success of Api.Connection
 | ActionRequired of string
 | Failure of string
-let login runningTime httpClient machineId (platform: Platform) lang =
+let login launcherVersion runningTime httpClient machineId (platform: Platform) lang =
     let authenticate = function
         | Ok authToken -> task {
             Log.debug $"Authenticating via %s{platform.Name}"
@@ -64,9 +64,9 @@ let login runningTime httpClient machineId (platform: Platform) lang =
         let! result = steam.Login() |> Result.map (fun steamUser -> Permanent steamUser.SessionToken) |> authenticate
         return result, noopDisposable }
     | Epic details -> task {
-        match! Epic.login details with
+        match! Epic.login launcherVersion details with
         | Ok t ->
-            let tokenManager = new RefreshableTokenManager(t, Epic.refreshToken)
+            let tokenManager = new RefreshableTokenManager(t, Epic.refreshToken launcherVersion)
             let! result = tokenManager.Get |> Expires |> Ok |> authenticate 
             return result, (tokenManager :> IDisposable)
         | Error msg -> return Failure msg, noopDisposable }
@@ -298,7 +298,7 @@ let run settings launcherVersion cancellationToken = task {
             return 1 }
         | Ok productsDir, Ok cbVersion -> task {
             printInfo settings.Platform productsDir cbVersion
-            use httpClient = Api.createClient settings.ApiUri launcherVersion (RuntimeInformation.getOsIdent())
+            use httpClient = Api.createClient settings.ApiUri launcherVersion
             let localTime = DateTime.UtcNow
             let! remoteTime = task {
                 match! Api.getTime localTime httpClient with
@@ -319,7 +319,7 @@ let run settings launcherVersion cancellationToken = task {
             match machineId with
             | Ok machineId ->
                 let lang = settings.PreferredLanguage |> Option.defaultValue "en"
-                let! loginResult, disposable = login runningTime httpClient machineId settings.Platform lang
+                let! loginResult, disposable = login launcherVersion runningTime httpClient machineId settings.Platform lang
                 use _ = disposable
                 match loginResult with
                 | Success connection ->

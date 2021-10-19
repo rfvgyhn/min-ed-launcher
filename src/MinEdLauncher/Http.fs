@@ -28,3 +28,10 @@ let downloadFile (httpClient: HttpClient) (createHash: unit -> HashAlgorithm) ca
     let hash = hashAlgorithm.Hash |> Hex.toString |> String.toLower
     return { FilePath = request.TargetPath; Hash = hash; Integrity = request.ExpectedHash = hash |> FileIntegrity.fromBool } }
 
+let createClient launcherVersion =
+    let appName = "min-ed-launcher"
+    let userAgent = $"%s{appName}/%s{launcherVersion}/%s{RuntimeInformation.getOsIdent()}"
+    let httpClient = new HttpClient()
+    httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", userAgent) |> ignore
+    httpClient
+

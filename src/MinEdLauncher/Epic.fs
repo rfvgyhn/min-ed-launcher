@@ -35,8 +35,6 @@ let potentialInstallPaths appId =
     |> function
         | Error msg -> []
         | Ok dir -> [ dir ]
-    
-let private httpClient = new HttpClient()
         
 let parseJson element =
     let accessToken = element >>= Json.parseProp "access_token" >>= Json.toString
@@ -96,7 +94,7 @@ let private epicValues = lazy (
             err "Unable to reflect types for Epic IDs"
     with e -> err (e.ToString()))
 
-let private request (formValues: string list) : Task<Result<RefreshableToken, string>> =
+let private request launcherVersion (formValues: string list) : Task<Result<RefreshableToken, string>> =
     match epicValues.Force() with
     | Ok (clientId, clientSecret, dId) -> task {
         let formValues =
@@ -113,6 +111,7 @@ let private request (formValues: string list) : Task<Result<RefreshableToken, st
         request.Content <- content
         
         Log.debug "Requesting epic token"
+        use httpClient = Http.createClient launcherVersion
         let! response = httpClient.SendAsync(request)
         
         if response.IsSuccessStatusCode then
@@ -124,10 +123,10 @@ let private request (formValues: string list) : Task<Result<RefreshableToken, st
             return $"%i{int response.StatusCode}: %s{response.ReasonPhrase}" |> Error }
     | Error msg -> Error msg |> Task.fromResult
     
-let login epicDetails =             
-    request [ "grant_type=exchange_code"
-              $"exchange_code=%s{epicDetails.ExchangeCode}" ]
+let login launcherVersion epicDetails =             
+    request launcherVersion [ "grant_type=exchange_code"
+                              $"exchange_code=%s{epicDetails.ExchangeCode}" ]
     
-let refreshToken (token: RefreshableToken) =
-    request [ "grant_type=refresh_token"
-              $"refresh_token=%s{token.RefreshToken}" ]
+let refreshToken launcherVersion (token: RefreshableToken) =
+    request launcherVersion [ "grant_type=refresh_token"
+                              $"refresh_token=%s{token.RefreshToken}" ]
