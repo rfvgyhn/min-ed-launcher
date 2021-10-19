@@ -218,16 +218,11 @@ you want to login again (refresh machine token), you can delete the appropriate 
 There is rudimentary support for running your Epic account via Steam. Running a Steam account without Steam installed and running is not supported.
 
 In order to authenticate with an Epic account:
-1. You will first need to make sure two files are in your Steam installation directory. You'll likely have to start installing via Epic and
-   then when `EosSdk.dll` and `EosIF.dll` are downloaded, you can stop the install (and delete the rest of the files). Once you have those
-   two files, copy them to your Steam install directory (so that they are in the same folder as `MinEdLauncher`. It's possible this step will
-   become obsolete if FDev updates their Steam depot to include these files.
-
-2. Get an Epic exchange code. This part is really clunky and will need to be done for every launch as the exchange code expires after one use.
+1. Get an Epic exchange code. This part is really clunky and will need to be done for every launch as the exchange code expires after one use.
    
     Within the Epic launcher, click your username and select manage account. This will open a browser. The URL will contain an `exchangeCode=code`
     parameter. Copy the code before the page is redirected (can just hit the stop button in your browser).
-3. Add the `-auth_password=code` argument to your launch options. `cmd /c "MinEdLauncher.exe %command% /autoquit /EDH -auth_password=code"`
+2. Add the `-auth_password=code` argument to your launch options. `cmd /c "MinEdLauncher.exe %command% /autoquit /EDH -auth_password=code"`
 
    You can also create a separate shortcut. Right click game in your Steam library and create desktop shortcut. Edit the properties of the shortcut
    to include the `-auth_password=code` argument. `steam://rungameid/359320// -auth_password=code` The two trailing slashes are important. Then just
