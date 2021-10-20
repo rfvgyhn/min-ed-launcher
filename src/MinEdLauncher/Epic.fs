@@ -119,7 +119,8 @@ let private request launcherVersion (formValues: string list) : Task<Result<Refr
             use! content = response.Content.ReadAsStreamAsync()
             return content |> Json.parseStream >>= Json.rootElement |> parseJson
         else
-            Log.debug "Requesting epic token fail"
+            let! content = response.Content.ReadAsStringAsync()
+            Log.debug $"Requesting epic token failed: %s{content}"
             return $"%i{int response.StatusCode}: %s{response.ReasonPhrase}" |> Error }
     | Error msg -> Error msg |> Task.fromResult
     
