@@ -5,7 +5,7 @@ version=$(grep -oPm1 "(?<=<VersionPrefix>)[^<]+" src/Directory.Build.props) # us
 release_name="min-ed-launcher_v${version}_$target"
 
 dotnet restore -r $target
-dotnet publish src/MinEdLauncher/MinEdLauncher.fsproj -r "$target" --self-contained true --no-restore -o "artifacts/$release_name" -c Release -p:PublishSingleFile=true
+dotnet publish src/MinEdLauncher/MinEdLauncher.fsproj -r "$target" --self-contained true --no-restore -o "artifacts/$release_name" -c Release -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
 cp README.md CHANGELOG.md "artifacts/$release_name"
 rm artifacts/"$release_name"/*.pdb
 

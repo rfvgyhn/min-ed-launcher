@@ -16,7 +16,7 @@ let defaults =
       WatchForCrashes = true
       ProductWhitelist = OrdinalIgnoreCaseSet.empty
       ForceLocal = false
-      Proton = None
+      CompatTool = None
       CbLauncherDir = "."
       PreferredLanguage = None
       ApiUri = Uri("http://localhost:8080")
@@ -64,7 +64,7 @@ let applyDeviceAuth settings  =
 let private doesntEndWith (value: string) (str: string) = not (str.EndsWith(value))
 type private EpicArg = ExchangeCode of string | Type of string | AppId of string
 let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (argv: string[]) =
-    let proton, cbLaunchDir, args =
+    let compatTool, cbLaunchDir, args =
         let isOldProton (args: string[]) = // Proton < 5.13 doesn't run via steam linux runtime
             args.Length > 2 && args.[0] <> null
             && [ Path.Combine("steamapps", "common", "Proton"); Path.Combine("Steam", "compatibilitytools.d", "Proton") ]
@@ -75,6 +75,7 @@ let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (arg
         let isReaper() = // Steam Client v? introduced a reaper process as entrypoint
             argv.Length > 2 && argv.[0] <> null
             && argv.[0].EndsWith(string Path.DirectorySeparatorChar + "reaper")
+        let isWine() = argv.Length > 0 && argv.[0] = "wine"
         
         // TODO: figure out how to get elite to run with reaper instead of ignoring it
         let argv =
@@ -91,8 +92,10 @@ let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (arg
             Some { EntryPoint = argv.[0]; Args = args }, Path.GetDirectoryName(argv.[launcherIndex]) |> Some, argv.[launcherIndex + 1..]
         else if isOldProton argv then 
             Some { EntryPoint = "python3"; Args = argv.[..1] }, Path.GetDirectoryName(argv.[2]) |> Some, argv.[3..]
+        else if isWine() then
+            Some { EntryPoint = "wine"; Args = [||] }, Path.GetDirectoryName(argv.[1]) |> Some, argv.[2..]
         else if argv.Length > 0 && argv.[0] <> null && argv.[0].EndsWith("EDLaunch.exe", StringComparison.OrdinalIgnoreCase) then
-            None, Some (Path.GetDirectoryName(argv.[0])), argv.[1..]
+            None, Path.GetDirectoryName(argv.[0]) |> Some, argv.[1..]
         else
             None, None, argv
             
@@ -154,7 +157,7 @@ let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (arg
     
     match cbLaunchDir
           |> Option.map Ok |> Option.defaultWith (fun () -> findCbLaunchDir settings.Platform)
-          |> Result.map (fun launchDir -> { settings with Proton = proton; CbLauncherDir = launchDir }) with
+          |> Result.map (fun launchDir -> { settings with CompatTool = compatTool; CbLauncherDir = launchDir }) with
     | Ok settings ->
         applyDeviceAuth settings
     | Result.Error msg -> Result.Error msg |> Task.fromResult

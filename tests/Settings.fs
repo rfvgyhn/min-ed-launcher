@@ -137,7 +137,7 @@ let tests =
                 let! settings = parse args
                 
                 let expected = { EntryPoint = "python3"; Args = args.[..^3] }
-                Expect.equal settings.Proton (Some expected) ""
+                Expect.equal settings.CompatTool (Some expected) ""
                 Expect.equal settings.CbLauncherDir launcherDir ""
             }
         )
@@ -155,7 +155,7 @@ let tests =
                 
                 let expectedArgs = protonArgs.[1..^2] @ [ "python3" ] @ protonArgs.[^1..] |> List.toArray
                 let expected = { EntryPoint = args.[0]; Args = expectedArgs }
-                Expect.equal settings.Proton (Some expected) ""
+                Expect.equal settings.CompatTool (Some expected) ""
                 Expect.equal settings.CbLauncherDir launcherDir ""
             }
         )
@@ -169,16 +169,20 @@ let tests =
             
             let expectedArgs = Array.concat [ args.[5..^5]; [| "python3" |]; args.[^4..^3] ]
             let expected = { EntryPoint = args.[4]; Args = expectedArgs }
-            Expect.equal settings.Proton (Some expected) ""
+            Expect.equal settings.CompatTool (Some expected) ""
             Expect.equal settings.CbLauncherDir launcherDir ""
         }
-        testTask "Fewer than three args means no Proton" {
-            let! settings = parse [| "asdf"; "fdsa" |]
-            Expect.equal settings.Proton None ""
+        testTask "Matches wine args" {
+            let launcherDir = "launchDir"
+            let launcherPath = Path.Combine(launcherDir, "EDLaunch.exe")
+            let! settings = parse [| "wine"; launcherPath |]
+            
+            let expected = { EntryPoint = "wine"; Args = [||] } |> Some
+            Expect.equal settings.CompatTool expected ""
         }
         testTask "First arg doesn't contain steamapps/common/Proton or SteamRuntimeLinux means no Proton" {
             let! settings = parse [| "asdf"; "fdsa"; "launchDir" |]
-            Expect.equal settings.Proton None ""
+            Expect.equal settings.CompatTool None ""
         }
         testTask "Uses first arg as launch dir if it points to EDLaunch.exe" {
             let expectedDir = Path.Combine("test", "dir")

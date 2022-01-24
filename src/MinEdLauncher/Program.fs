@@ -49,13 +49,18 @@ let main argv =
         try
             do! Async.SwitchToThreadPool ()
             let version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion
-            logRuntimeInfo version argv
             
-            let! settings = getSettings argv |> Async.AwaitTask
+            let stdin = Console.ReadLine().Split(' ') |> Array.filter (fun s -> String.IsNullOrEmpty(s) |> not)
+            let args = Array.append stdin argv
+            
+            logRuntimeInfo version args
+            
+            let! settings = getSettings args |> Async.AwaitTask
             Log.debug $"Settings: %A{settings}"
             return! match settings with
                     | Ok settings ->
                         task {
+                            Directory.SetCurrentDirectory(settings.CbLauncherDir)
                             let! runResult = App.run settings version cts.Token
 
                             if not settings.AutoQuit && not cts.Token.IsCancellationRequested then

@@ -463,7 +463,7 @@ let run settings launcherVersion cancellationToken = task {
                             match Product.validateForRun settings.CbLauncherDir settings.WatchForCrashes product with
                             | Ok p ->
                                 let processes = Process.launchProcesses settings.Processes
-                                launchProduct settings.Proton processArgs settings.Restart product.Name p
+                                launchProduct settings.CompatTool processArgs settings.Restart product.Name p
                                 Process.stopProcesses processes
                             | Error msg -> Log.error $"Couldn't start selected product: %s{msg}"
                         | None, _ -> Log.error "No selected project"                        

@@ -42,7 +42,7 @@ type Platform =
     | Oculus of string
     | Dev
     with member this.Name = Union.getCaseName this
-type Proton = { EntryPoint: string; Args: string array }
+type CompatTool = { EntryPoint: string; Args: string array }
 type DisplayMode = Vr | Pancake
 type AutoRun = bool
 type AutoQuit = bool
@@ -56,7 +56,7 @@ type LauncherSettings =
       WatchForCrashes: WatchForCrashes
       ProductWhitelist: OrdinalIgnoreCaseSet
       ForceLocal: ForceLocal
-      Proton: Proton option
+      CompatTool: CompatTool option
       CbLauncherDir: string
       PreferredLanguage: string option
       ApiUri: Uri
