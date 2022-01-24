@@ -307,13 +307,13 @@ module SHA1 =
     
     let hashString (str:string) =
         let bytes = Encoding.ASCII.GetBytes(str)
-        use crypto = new SHA1CryptoServiceProvider()
+        use crypto = SHA1.Create()
         crypto.ComputeHash(bytes)
         
     let hashFile (filePath:string) =
         try
             use file = File.OpenRead(filePath)
-            use crypto = new SHA1CryptoServiceProvider()
+            use crypto = SHA1.Create()
             crypto.ComputeHash(file) |> Ok
         with
         | e -> Error e
