@@ -49,9 +49,11 @@ let main argv =
         try
             do! Async.SwitchToThreadPool ()
             let version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion
-            
-            let stdin = Console.ReadLine().Split(' ') |> Array.filter (fun s -> String.IsNullOrEmpty(s) |> not)
-            let args = Array.append stdin argv
+            let args =
+                if Console.IsInputRedirected then
+                    let stdin = Console.ReadLine().Split(' ') |> Array.filter (fun s -> String.IsNullOrEmpty(s) |> not)
+                    Array.append stdin argv
+                else argv
             
             logRuntimeInfo version args
             
