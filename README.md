@@ -240,7 +240,7 @@ Windows: `%LOCALAPPDATA%\min-ed-launcher\cache`
 Linux: `$XDG_CACHE_HOME/min-ed-launcher` (`~/.cache` if `$XDG_CACHE_HOME` isn't set)
 
 ## Build
-1. Install the [.Net 5 SDK]
+1. Install the [.Net 6 SDK]
 2. Run `dotnet build`
 
 ### Release Artifacts
@@ -262,7 +262,7 @@ specifically targets Windows and won't publish on a non-Windows machine.
 [alacritty]: https://github.com/alacritty/alacritty
 [gnome-terminal]: https://wiki.gnome.org/Apps/Terminal
 [konsole]: https://konsole.kde.org/
-[.Net 5 SDK]: https://dotnet.microsoft.com/download/dotnet/5.0
+[.Net 6 SDK]: https://dotnet.microsoft.com/download/dotnet/6.0
 [NativeAOT]: https://github.com/dotnet/runtimelab/tree/feature/NativeAOT
 [Features]: #features
 [Usage]: #usage

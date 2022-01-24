@@ -1,0 +1,6 @@
+<linker>
+    <assembly fullname="mscorlib" />
+    <assembly fullname="System.Runtime">
+        <type fullname="System.Reflection.AssemblyTrademarkAttribute"/>
+    </assembly>
+</linker>

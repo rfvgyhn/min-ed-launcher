@@ -27,7 +27,7 @@ let fixLcAll() =
     else
         Environment.SetEnvironmentVariable("LC_ALL", null)
         Log.debug "Unset LC_ALL. Using $LANG to determine correct UI culture"
-        let lang = Environment.GetEnvironmentVariable("LANG")
+        let lang = Environment.GetEnvironmentVariable("LANG").Split('.')[0]
         Threading.Thread.CurrentThread.CurrentUICulture <- CultureInfo.GetCultureInfo(lang)
 
 [<Literal>]
