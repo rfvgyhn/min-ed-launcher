@@ -19,7 +19,7 @@ accounts on both Windows and Linux.
     * [Multi-Account]
         * [Frontier account via Steam or Epic]
         * [Epic account via Steam]
-    * [Logs]
+    * [Troubleshooting]
     * [Cache]
 * [Build]
     * [Release Artifacts]    
@@ -228,8 +228,10 @@ In order to authenticate with an Epic account:
    to include the `-auth_password=code` argument. `steam://rungameid/359320// -auth_password=code` The two trailing slashes are important. Then just
    edit this shortcut with the new exchange code each time instead of changing your Steam launch options.
 
-### Logs
-Debug logging is placed in the file `logs/min-ed-launcher.log`
+### Troubleshooting
+Debug logging is placed in the standard log location for your operating system:
+* Windows - `%LOCALAPPDATA%\min-ed-launcher\min-ed-launcher.log`
+* Linux - `$XDG_STATE_HOME/min-ed-launcher/min-ed-launcher.log` (`~/.local/state` if `$XDG_STATE_HOME` isn't set)
 
 ### Cache
 When updating your game files, the launcher downloads updates into a temporary directory. You may delete these files at any time.
@@ -275,7 +277,7 @@ specifically targets Windows and won't publish on a non-Windows machine.
 [Multi-Account]: #multi-account
 [Frontier account via Steam or Epic]: #frontier-account-via-steam-or-epic
 [Epic account via Steam]: #epic-account-via-steam
-[Logs]: #logs
+[Troubleshooting]: #troubleshooting
 [Cache]: #cache
 [Build]: #build
 [Release Artifacts]: #release-artifacts

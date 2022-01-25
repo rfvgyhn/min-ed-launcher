@@ -52,7 +52,7 @@ type LoggerSinkConfiguration with
         let formatter = EpicScrubber(MessageTemplateTextFormatter("{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}", null))
         this.File(formatter = formatter, path=path, restrictedToMinimumLevel=restrictedToMinimumLevel)
 
-let logPath = Path.Combine("logs/min-ed-launcher.log")
+let private logPath = Path.Combine(Environment.logDir, "min-ed-launcher.log")
 let logger =
   let consoleLevel =
 #if DEBUG

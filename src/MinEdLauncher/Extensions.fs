@@ -471,6 +471,16 @@ module Environment =
     
     [<Literal>]
     let private AppFolderName = "min-ed-launcher"
+    let private home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+    let private xdgDir var fallback =
+        let xdgPath = Environment.GetEnvironmentVariable($"XDG_%s{var}")
+        if String.IsNullOrEmpty(xdgPath) then
+            Path.Combine(fallback, AppFolderName)
+        else
+            Path.Combine(xdgPath, AppFolderName)
+    let private localAppData subDir =
+        let appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
+        Path.Combine(appData, AppFolderName, subDir)
     
     let configDir =
         let specialFolder =
@@ -484,13 +494,13 @@ module Environment =
         
     let cacheDir =
         if RuntimeInformation.IsOSPlatform(OSPlatform.Windows) then
-            let appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
-            Path.Combine(appData, AppFolderName, "cache")
+            localAppData "cache"
         else
-            let xdgCacheHome = Environment.GetEnvironmentVariable("XDG_CACHE_HOME")
-            if String.IsNullOrEmpty(xdgCacheHome) then
-                let home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
-                Path.Combine(home, ".cache", AppFolderName)
-            else
-                Path.Combine(xdgCacheHome, AppFolderName)
+            xdgDir "CACHE_HOME" (Path.Combine(home, ".cache"))
+                
+    let logDir =
+        if RuntimeInformation.IsOSPlatform(OSPlatform.Windows) then
+            localAppData ""
+        else
+            xdgDir "STATE_HOME" (Path.Combine(home, ".local", "state"))
         
