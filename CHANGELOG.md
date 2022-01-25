@@ -1,5 +1,26 @@
 # Changelog
 
+## [unreleased]
+
+### New Features
+- Read arguments from STDIN which allows for piping info from other apps (e.g. legendary)
+
+### Enhancements
+- Added support for detecting wine usage from command line args
+- Better logging for when failing to get an Epic auth token
+- Upgrade to .Net 6
+
+### Misc
+- Log file is placed in a standard location (`%LOCALAPPDATA%`, `$XDG_STATE_HOME`).
+
+Epic users on Linux should now have an easier time launching the game by utilizing [legendary]
+to automatically generate an exchange code instead of having to manually copy it from your browser.
+
+Example usage:
+```
+legendary launch --dry-run 9c203b6ed35846e8a4a9ff1e314f6593 2> >(grep "Launch parameters") | cut -d':' -f 3- | WINEPREFIX=/your/wine/prefix /path/to/MinEdLauncher /autorun /edh /autoquit
+```
+
 ## [0.5.4] - 2021-10-19
 
 ### Bug Fixes
@@ -123,3 +144,4 @@ Initial release
 [Proton-GE]: https://github.com/GloriousEggroll/proton-ge-custom
 [CVE-2021-31204]: https://github.com/dotnet/announcements/issues/185
 [CVE-2021-31957]: https://github.com/dotnet/announcements/issues/189
+[legendary]: https://github.com/derrod/legendary
