@@ -90,22 +90,34 @@ the default launcher or manually create and link your account(s).
        `konsole -e ./MinEdLauncher %command% /autorun /autoquit /EDH`
 5. Launch your game as you normally would in Steam
 #### Epic
-1. Download the [latest release] for Windows
-2. Extract executables from the zip archive
-3. Navigate to your Elite Dangerous install location (folder that contains `EDLaunch.exe`)
-4. Copy `MinEdLauncher.exe`
-5. Delete or rename `EDLaunch.exe` (e.g. `EDLaunch.exe.bak`)
-6. Copy and rename `MinEdLauncher.Bootstrap.exe` to `EDLaunch.exe`. This step is required because
+1. Download the [latest release] for your operating system
+2. Extract executable from the zip/tar archive
+3. Place `MinEdLauncher` in your Elite Dangerous install location so that it's in the same folder
+   as `EDLaunch.exe`.
+
+##### Windows
+1. Delete or rename `EDLaunch.exe` (e.g. `EDLaunch.exe.bak`)
+2. Copy and rename `MinEdLauncher.Bootstrap.exe` to `EDLaunch.exe`. This step is required because
    Epic doesn't allow changing the game's startup application. If someone knows how to modify the
    game's manifest file (`EliteDangerous/.egstore/*.manifest`), this could be avoided. Please open
    a [new issue] if you can help with this. This also means any time the game updates or you verify
    your game files, you'll have to replace `EDLaunch.exe` with `MinEdLauncher.Bootstrap.exe`.
-7. Update your launch options to auto start your preferred product
+3. Update your launch options to auto start your preferred product
     1. Click _Settings_ in the Epic Games Launcher
     2. Scroll down to the _Manage Games_ section and click _Elite Dangerous_
     3. Check _Additional Command Line Arguments_
     4. Set the value to `/autorun /autoquit /EDH`
-8. Launch your game as you normally would in Epic
+4. Launch your game as you normally would in Epic
+
+##### Linux
+This method utilizes [legendary].
+
+1. Ensure you've authenticated, installed Elite Dangerous via [legendary] and setup your wine prefix
+2. Use the `--dry-run` flag and pipe the arguments to `MinEdLauncher`
+    ```sh
+    legendary launch --dry-run 9c203b6ed35846e8a4a9ff1e314f6593 2> >(grep "Launch parameters") | cut -d':' -f 3- | WINEPREFIX=/your/wine/prefix /path/to/MinEdLauncher /autorun /edh /autoquit
+    ```
+
 #### Frontier
 1. Download the [latest release] for Windows
 2. Extract executables from the zip archive
@@ -220,7 +232,11 @@ There is rudimentary support for running your Epic account via Steam. Running a 
 In order to authenticate with an Epic account:
 1. Get an Epic exchange code. This part is really clunky and will need to be done for every launch as the exchange code expires after one use.
    
-    Within the Epic launcher, click your username and select manage account. This will open a browser. The URL will contain an `exchangeCode=code`
+    * **Legendary** - Extract the code via [legendary]'s `--dry-run` option.
+        ```sh
+        legendary launch --dry-run 9c203b6ed35846e8a4a9ff1e314f6593 2> >(grep AUTH_PASSWORD) | sed -ne 's/^.*-AUTH_PASSWORD=\([a-z0-9]*\).*$/\1/p'
+        ```
+    * **Manually** - Within the Epic launcher, click your username and select manage account. This will open a browser. The URL will contain an `exchangeCode=code`
     parameter. Copy the code before the page is redirected (can just hit the stop button in your browser).
 2. Add the `-auth_password=code` argument to your launch options. `cmd /c "MinEdLauncher.exe %command% /autoquit /EDH -auth_password=code"`
 
@@ -281,3 +297,4 @@ specifically targets Windows and won't publish on a non-Windows machine.
 [Cache]: #cache
 [Build]: #build
 [Release Artifacts]: #release-artifacts
+[legendary]: https://github.com/derrod/legendary
