@@ -1,6 +1,7 @@
 ﻿module MinEdLauncher.Program
 
 open System
+open System.Collections
 open System.IO
 open System.Reflection
 open System.Threading
@@ -36,9 +37,15 @@ let getSettings args =
 
 let logRuntimeInfo version args =
     Log.info $"Elite Dangerous: Minimal Launcher - v{version}"
+    let envVars = Environment.GetEnvironmentVariables()
+                  |> Seq.cast<DictionaryEntry>
+                  |> Seq.filter (fun e -> e.Key = "WINEPREFIX" || e.Key = "STEAM_COMPAT_DATA_PATH")
+                  |> Seq.map (fun e -> $"{e.Key}={e.Value}")
+                  |> String.join Environment.NewLine
     Log.debug $"""
     Args: %A{args}
     OS: %s{RuntimeInformation.getOsIdent()}
+    Env: %s{envVars}
     """
 
 [<EntryPoint>]
