@@ -2,4 +2,11 @@
     <PropertyGroup>
         <VersionPrefix>0.5.4</VersionPrefix>
     </PropertyGroup>
+    <Target Name="SetSourceRevisionId" BeforeTargets="InitializeSourceControlInformation">
+        <Exec Command="git describe --long --always --dirty --exclude=* --abbrev=8"
+              ConsoleToMSBuild="True"
+              IgnoreExitCode="False">
+            <Output PropertyName="SourceRevisionId" TaskParameter="ConsoleOutput"/>
+        </Exec>
+    </Target>
 </Project>
