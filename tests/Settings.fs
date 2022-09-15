@@ -117,6 +117,10 @@ let tests =
             let! settings = parse [| "/edh" |]
             Expect.contains settings.ProductWhitelist "edh" ""
         }
+        testTask "Matches /edh4" {
+            let! settings = parse [| "/edh4" |]
+            Expect.contains settings.ProductWhitelist "edh4" ""
+        }
         testTask "Matches /eda" {
             let! settings = parse [| "/eda" |]
             Expect.contains settings.ProductWhitelist "eda" ""
