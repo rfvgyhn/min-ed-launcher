@@ -261,8 +261,17 @@ In order to authenticate with an Epic account:
 2. Add the `-auth_password=code` argument to your launch options. `cmd /c "MinEdLauncher.exe %command% /autoquit /EDH -auth_password=code"`
 
    You can also create a separate shortcut. Right click game in your Steam library and create desktop shortcut. Edit the properties of the shortcut
-   to include the `-auth_password=code` argument. `steam://rungameid/359320// -auth_password=code` The two trailing slashes are important. Then just
+   to include the `-auth_password=code` argument. `"C:\Program Files (x86)\Steam\Steam.exe" -gameidlaunch 359320 -auth_password=code`. Then just
    edit this shortcut with the new exchange code each time instead of changing your Steam launch options.
+
+### Steam Shortcuts
+You can create multiple shortcuts with different launch parameters. Prefer avoiding the steam protocol handler
+as it has some [quirks] that make it more of a pain to use.
+
+Example _Target_ field for a shortcut that launches Odyssey:
+
+`"C:\Program Files (x86)\Steam\Steam.exe" -gameidlaunch 359320 /edo`
+
 
 ### Troubleshooting
 Debug logging is placed in the standard log location for your operating system:
@@ -318,3 +327,4 @@ specifically targets Windows and won't publish on a non-Windows machine.
 [Build]: #build
 [Release Artifacts]: #release-artifacts
 [legendary]: https://github.com/derrod/legendary
+[quirks]: https://github.com/rfvgyhn/min-ed-launcher/issues/45#issuecomment-1030312606
