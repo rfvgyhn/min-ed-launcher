@@ -96,18 +96,26 @@ the default launcher or manually create and link your account(s).
    as `EDLaunch.exe`.
 
 ##### Windows
-1. Delete or rename `EDLaunch.exe` (e.g. `EDLaunch.exe.bak`)
-2. Copy and rename `MinEdLauncher.Bootstrap.exe` to `EDLaunch.exe`. This step is required because
-   Epic doesn't allow changing the game's startup application. If someone knows how to modify the
-   game's manifest file (`EliteDangerous/.egstore/*.manifest`), this could be avoided. Please open
-   a [new issue] if you can help with this. This also means any time the game updates or you verify
-   your game files, you'll have to replace `EDLaunch.exe` with `MinEdLauncher.Bootstrap.exe`.
-3. Update your launch options to auto start your preferred product
-    1. Click _Settings_ in the Epic Games Launcher
-    2. Scroll down to the _Manage Games_ section and click _Elite Dangerous_
-    3. Check _Additional Command Line Arguments_
-    4. Set the value to `/autorun /autoquit /EDH`
-4. Launch your game as you normally would in Epic
+Either configure the Epic client and use the provided Bootstrap exe or use [legendary] to launch the game
+
+* Epic Client
+  1. Delete or rename `EDLaunch.exe` (e.g. `EDLaunch.exe.bak`)
+  2. Copy and rename `MinEdLauncher.Bootstrap.exe` to `EDLaunch.exe`. This step is required because
+     Epic doesn't allow changing the game's startup application. If someone knows how to modify the
+     game's manifest file (`EliteDangerous/.egstore/*.manifest`), this could be avoided. Please open
+     a [new issue] if you can help with this. This also means any time the game updates or you verify
+     your game files, you'll have to replace `EDLaunch.exe` with `MinEdLauncher.Bootstrap.exe`.
+  3. Update your launch options to auto start your preferred product
+      1. Click _Settings_ in the Epic Games Launcher
+      2. Scroll down to the _Manage Games_ section and click _Elite Dangerous_
+      3. Check _Additional Command Line Arguments_
+      4. Set the value to `/autorun /autoquit /EDH`
+  4. Launch your game as you normally would in Epic
+* Legendary
+
+    Use legendary's `override-exe` argument via windows terminal
+
+    `legendary.exe launch 9c203b6ed35846e8a4a9ff1e314f6593 --override-exe MinEdLauncher.exe /autorun /edh /autoquit`
 
 ##### Linux
 This method utilizes [legendary].
