@@ -48,24 +48,6 @@ type AutoRun = bool
 type AutoQuit = bool
 type WatchForCrashes = bool
 type ForceLocal = bool
-type LauncherSettings =
-    { Platform: Platform
-      DisplayMode: DisplayMode
-      AutoRun: AutoRun
-      AutoQuit: AutoQuit
-      WatchForCrashes: WatchForCrashes
-      ProductWhitelist: OrdinalIgnoreCaseSet
-      ForceLocal: ForceLocal
-      CompatTool: CompatTool option
-      CbLauncherDir: string
-      PreferredLanguage: string option
-      ApiUri: Uri
-      Restart: int64 option
-      AutoUpdate: bool
-      MaxConcurrentDownloads: int
-      ForceUpdate: string Set
-      Processes: ProcessStartInfo list
-      FilterOverrides: OrdinalIgnoreCaseMap<string> }
 type ServerStatus = Healthy
 type LocalVersion = Version
 type LauncherStatus =
@@ -95,6 +77,25 @@ type AuthorizedProduct =
       SortKey: int
       Sku: string
       TestApi: bool }
+type LauncherSettings =
+    { Platform: Platform
+      DisplayMode: DisplayMode
+      AutoRun: AutoRun
+      AutoQuit: AutoQuit
+      WatchForCrashes: WatchForCrashes
+      ProductWhitelist: OrdinalIgnoreCaseSet
+      ForceLocal: ForceLocal
+      CompatTool: CompatTool option
+      CbLauncherDir: string
+      PreferredLanguage: string option
+      ApiUri: Uri
+      Restart: int64 option
+      AutoUpdate: bool
+      MaxConcurrentDownloads: int
+      ForceUpdate: string Set
+      Processes: ProcessStartInfo list
+      FilterOverrides: OrdinalIgnoreCaseMap<string>
+      AdditionalProducts: AuthorizedProduct list }
 type ProductMode = Online | Offline
 type VersionInfo =
     { Name: string

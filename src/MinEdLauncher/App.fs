@@ -329,7 +329,14 @@ let run settings launcherVersion cancellationToken = task {
                     | Ok authorizedProducts ->
                         let applyFixes = AuthorizedProduct.fixDirectoryPath productsDir settings.Platform Directory.Exists
                                          >> AuthorizedProduct.fixFilters settings.FilterOverrides
-                        let authorizedProducts = authorizedProducts |> List.map applyFixes
+                                         
+                        if settings.AdditionalProducts.Length > 0 then
+                            Log.debug $"Appending %i{settings.AdditionalProducts.Length} product(s) from settings file"
+                                         
+                        let authorizedProducts =
+                            authorizedProducts
+                            |> List.append settings.AdditionalProducts
+                            |> List.map applyFixes
                         let names = authorizedProducts |> List.map (fun p -> p.Name)
                         Log.debug $"Authorized Products: %s{String.Join(',', names)}"
                         Log.info "Checking for updates"

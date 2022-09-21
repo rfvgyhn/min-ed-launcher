@@ -25,7 +25,8 @@ let defaults =
       MaxConcurrentDownloads = 4
       ForceUpdate = Set.empty
       Processes = List.empty
-      FilterOverrides = OrdinalIgnoreCaseMap.empty }
+      FilterOverrides = OrdinalIgnoreCaseMap.empty
+      AdditionalProducts = List.empty }
     
 [<RequireQualifiedAccess>]
 type FrontierCredResult = Found of string * string * string option | NotFound of string | UnexpectedFormat of string | Error of string
@@ -177,7 +178,8 @@ type Config =
       MaxConcurrentDownloads: int
       ForceUpdate: string list
       Processes: ProcessConfig list
-      FilterOverrides: FilterConfig list }
+      FilterOverrides: FilterConfig list
+      AdditionalProducts: AuthorizedProduct list }
 let parseConfig fileName =
     let configRoot = ConfigurationBuilder()
                         .AddJsonFile(fileName, false)
@@ -192,6 +194,9 @@ let parseConfig fileName =
                 else
                     map key value)
             |> Seq.toList
+    let parseAdditionalProducts() =
+        configRoot.GetSection("additionalProducts").GetChildren()
+        |> Seq.mapOrFail AuthorizedProduct.fromConfig
     match AppConfig(configRoot).Get<Config>() with
     | Ok config ->
         // FsConfig doesn't support list of records so handle it manually
@@ -202,7 +207,9 @@ let parseConfig fileName =
             parseKvps "filterOverrides" "sku" "filter" (fun key value ->
                 if String.IsNullOrWhiteSpace(value) then None
                 else Some { Sku = key; Filter = value })
-        { config with Processes = processes; FilterOverrides = filterOverrides } |> ConfigParseResult.Ok
+        match parseAdditionalProducts() with
+        | Ok additionalProducts -> { config with Processes = processes; FilterOverrides = filterOverrides; AdditionalProducts = additionalProducts } |> ConfigParseResult.Ok
+        | Error msg -> BadValue ("additionalProducts", msg) |> Error
     | Error error -> Error error
     
 let getSettings args appDir fileConfig = task {
@@ -245,4 +252,5 @@ let getSettings args appDir fileConfig = task {
                                                           PreferredLanguage = fileConfig.Language
                                                           Processes = processes
                                                           FilterOverrides = filterOverrides
-                                                          WatchForCrashes = fileConfig.WatchForCrashes }) }
+                                                          WatchForCrashes = fileConfig.WatchForCrashes
+                                                          AdditionalProducts = fileConfig.AdditionalProducts }) }

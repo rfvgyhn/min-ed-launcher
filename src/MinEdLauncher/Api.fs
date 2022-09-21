@@ -226,30 +226,8 @@ let getAuthorizedProducts platform lang connection = task {
     return content
        >>= ((fun json -> Log.debug $"Purchases Response:{Environment.NewLine}%s{json.ToString()}"; json)
             >> Json.parseProp "purchases")
-       >>= Json.mapArray (fun (element) ->
-              let filter = element |> Json.parseProp "filter" >>= Json.toString |> Result.defaultValue ""
-              let directory = element |> Json.parseProp "directory" >>= Json.toString
-              let gameArgs = element |> Json.parseProp "gameargs" >>= Json.toString |> Result.defaultValue ""
-              let serverArgs = element |> Json.parseProp "serverargs" >>= Json.toString |> Result.defaultValue ""
-              let sortKey = element |> Json.parseProp "sortkey" >>= Json.toInt 
-              let name = element |> Json.parseProp "product_name" >>= Json.toString
-              let sku = element |> Json.parseProp "product_sku" >>= Json.toString
-              let testApi = element |> Json.parseProp "testapi" >>= Json.asBool |> Result.defaultValue false
-              match directory, sortKey, name, sku with
-              | Ok directory, Ok sortKey, Ok name, Ok sku ->
-                  Ok { Name = name
-                       Filter = filter
-                       Directory = directory
-                       GameArgs = gameArgs
-                       ServerArgs = serverArgs
-                       SortKey = sortKey
-                       Sku = sku
-                       TestApi = testApi }
-              | _ ->
-                  let msg = $"Unexpected json object %s{element.ToString()}"
-                  Log.debug msg
-                  Error msg)
-       |> Result.map Seq.chooseResult
+       >>= Json.mapArray AuthorizedProduct.fromJson
+       |> Result.map (Seq.chooseResultDoErr Log.debug)
        |> Result.map (fun products -> products |> Seq.sortBy (fun p -> p.SortKey) |> List.ofSeq)
 }
 

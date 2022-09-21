@@ -50,7 +50,20 @@ module Seq =
     open System.Linq
     
     let chooseResult r = r |> Seq.choose (fun r -> match r with | Error _ -> None | Ok v -> Some v)
+    let chooseResultDoErr action r =
+        r |> Seq.choose (function
+                          | Error e ->
+                              action e
+                              None
+                          | Ok v -> Some v)
     let intersect (itemsToInclude: seq<'T>) (source: seq<'T>) = source.Intersect(itemsToInclude)
+    let mapOrFail mapping source =
+        let rec loop acc source =
+            match (source |> Seq.isEmpty) with
+            | true -> Ok (List.rev acc)
+            | false ->
+                mapping (source |> Seq.head) |> Result.bind (fun item -> loop (item::acc) (source |> Seq.tail))
+        loop [] source
     
 module List =
     open System.Threading.Tasks
