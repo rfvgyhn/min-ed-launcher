@@ -2,6 +2,22 @@
 
 ## [Unreleased]
 
+### New Features
+- Provide extra products to the authorized product list. Useful for launching Horizons 4.0 when you own the Odyssey DLC.
+
+    To make use of this feature, users will need to add the following to their [settings.json] file to include the following:
+    ```json
+    "additionalProducts": [{
+        "filter": "edh4",
+        "directory": "elite-dangerous-odyssey-64",
+        "serverargs": "",
+        "gameargs": "SeasonTwo",
+        "sortkey": "04",
+        "product_name": "Elite Dangerous: Horizons (4.0)",
+        "product_sku": "FORC-FDEV-DO-38-IN-40"
+    }]
+    ```
+
 ### Enhancements
 - Support `.rdr` files when looking for a product's directory
 

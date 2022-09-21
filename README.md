@@ -143,7 +143,6 @@ you to select a version of the game.
 | /ed            | Select Elite Dangerous as the startup product             |
 | /edh           | Select Elite Dangerous Horizons as the startup product    |
 | /eda           | Select Elite Dangerous Arena as the startup product       |
-| /edo           | Select Elite Dangerous Odyssey as the startup product     |
 | /vr            | Tell the game that you want to play in VR mode            |
 | -auth_password | Epic exchange code. Used for authenticating with Epic     |
 
@@ -152,6 +151,7 @@ The following arguments are in addition to the above:
 
 | Argument               | Effect                                                                                                                           |
 |------------------------|----------------------------------------------------------------------------------------------------------------------------------|
+| /edo                   | Select Elite Dangerous Odyssey as the startup product                                                                            |
 | /edh4                  | Select Elite Dangerous Horizons 4.0 as the startup product                                                                       |
 | /frontier profile-name | Use this argument to login with a Frontier Store account. Keep the profile name to letters, numbers, dashes and underscores only |
 | /restart delay         | Restart the game after it has closed with _delay_ being the number of seconds given to cancel the restart (i.e `/restart 3`)     |
@@ -169,17 +169,18 @@ Windows: `%LOCALAPPDATA%\min-ed-launcher\settings.json`
 
 Linux: `$XDG_CONFIG_HOME/min-ed-launcher/settings.json` (`~/.config` if `$XDG_CONFIG_HOME` isn't set)
 
-| Settings               | Effect                                                                                                                 |
-|------------------------|------------------------------------------------------------------------------------------------------------------------|
-| apiUri                 | FDev API base URI. Should only be changed if you are doing local development                                           |
-| watchForCrashes        | Determines if the game should be launched by `WatchDog64.exe` or not                                                   |
-| gameLocation           | Path to game's install folder. Specify this if the launcher can't figure it out by itself                              |
-| language               | Sets the game's language. Supported values are _en_ and the names of the language folders in Elite's install directory |
-| autoUpdate             | Automatically update games that are out of date                                                                        |
-| maxConcurrentDownloads | Maximum number of simultaneous downloads when downloading updates                                                      |
+| Settings               | Effect                                                                                                                                                                                                                                                                              |
+|------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| apiUri                 | FDev API base URI. Should only be changed if you are doing local development                                                                                                                                                                                                        |
+| watchForCrashes        | Determines if the game should be launched by `WatchDog64.exe` or not                                                                                                                                                                                                                |
+| gameLocation           | Path to game's install folder. Specify this if the launcher can't figure it out by itself                                                                                                                                                                                           |
+| language               | Sets the game's language. Supported values are _en_ and the names of the language folders in Elite's install directory                                                                                                                                                              |
+| autoUpdate             | Automatically update games that are out of date                                                                                                                                                                                                                                     |
+| maxConcurrentDownloads | Maximum number of simultaneous downloads when downloading updates                                                                                                                                                                                                                   |
 | forceUpdate            | By default, Steam and Epic updates are handled by their respective platform. In cases like the Odyssey alpha, FDev doesn't provide updates through Steam or Epic. This allows the launcher to force updates to be done via FDev servers by providing a comma delimited list of SKUs |
-| processes              | Additional applications to launch before launching the game                                                            |
-| filterOverrides        | Manually override a product's filter for use with launch options filter flag (e.g. /edo, /edh, etc...)                 |
+| processes              | Additional applications to launch before launching the game                                                                                                                                                                                                                         |
+| filterOverrides        | Manually override a product's filter for use with launch options filter flag (e.g. /edo, /edh, etc...)                                                                                                                                                                              |
+| additionalProducts     | Provide extra products to the authorized product list. Useful for launching Horizons 4.0 when you own the Odyssey DLC                                                                                                                                                               |
 
 When specifying a path for either `gameLocation` or `processes.fileName` on Windows, it's required to escape backslashes. Make sure to use a
 double backslash (`\\`) instead of a single backslash (`\`).
@@ -204,8 +205,18 @@ double backslash (`\\`) instead of a single backslash (`\`).
     }
   ],
   "filterOverrides": [
-    { "sku": "FORC-FDEV-DO-1000", "filter": "edo" }
-  ]
+    { "sku": "FORC-FDEV-DO-1000", "filter": "edo" },
+    { "sku": "FORC-FDEV-DO-38-IN-40", "filter": "edh4" }
+  ],
+  "additionalProducts": [{
+    "filter": "edh4",
+    "directory": "elite-dangerous-odyssey-64",
+    "serverargs": "",
+    "gameargs": "SeasonTwo",
+    "sortkey": "04",
+    "product_name": "Elite Dangerous: Horizons (4.0)",
+    "product_sku": "FORC-FDEV-DO-38-IN-40"
+  }]
 }
 ```
 
