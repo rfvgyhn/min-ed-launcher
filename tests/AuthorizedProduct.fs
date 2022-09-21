@@ -9,55 +9,93 @@ let tests =
     testList "AuthorizedProduct" [
         testList "fixDirectoryPath" [
             let product =
-                { Name = ""; Filter = ""; Directory = "directory"; GameArgs = ""; ServerArgs = ""; SortKey = 0; Sku = "sku"; TestApi = false }
+                { Name = ""; Filter = ""; DirectoryName = "directory"; GameArgs = ""; ServerArgs = ""; SortKey = 0; Sku = "sku"; TestApi = false }
             
-            test "Steam prefers Directory over SKU" {
-                let directoryExists path = true
-                
-                let actual = AuthorizedProduct.fixDirectoryPath "" Steam directoryExists product
-                
-                Expect.equal actual.Directory product.Directory ""
-            }
-            test "Steam uses SKU if Directory doesn't exist" {
-                let directoryExists path = if path = product.Directory then false else true
-                
-                let actual = AuthorizedProduct.fixDirectoryPath "" Steam directoryExists product
-                
-                Expect.equal actual.Directory product.Sku ""
-            }
-            test "Epic prefers Directory over SKU" {
-                let directoryExists path = true
-                
-                let actual = AuthorizedProduct.fixDirectoryPath "" (Epic EpicDetails.Empty) directoryExists product
-                
-                Expect.equal actual.Directory product.Directory ""
-            }
-            test "Epic uses SKU if Directory doesn't exist" {
-                let directoryExists path = if path = product.Directory then false else true
-                
-                let actual = AuthorizedProduct.fixDirectoryPath "" (Epic EpicDetails.Empty) directoryExists product
-                
-                Expect.equal actual.Directory product.Sku ""
-            }
-            test "Frontier prefers SKU over directory" {
-                let directoryExists path = true
-                
-                let actual = AuthorizedProduct.fixDirectoryPath "" (Frontier FrontierDetails.Empty) directoryExists product
-                
-                Expect.equal actual.Directory product.Sku ""
-            }
-            test "Frontier uses Directory if SKU doesn't exist" {
-                let directoryExists path = if path = product.Sku then false else true
-                
-                let actual = AuthorizedProduct.fixDirectoryPath "" (Frontier FrontierDetails.Empty) directoryExists product
-                
-                Expect.equal actual.Directory product.Directory ""
-            }
+            testList "Steam" [
+                test "Prefers [directory].rdr over SKU" {
+                    let directoryExists _ = true
+                    let fileExists (path: string) = path.EndsWith($"{product.DirectoryName}.rdr")
+                    
+                    let actual = AuthorizedProduct.fixDirectoryName "" Steam directoryExists fileExists product
+                    
+                    Expect.equal actual.DirectoryName product.DirectoryName ""
+                }
+                test "Prefers directory over SKU" {
+                    let directoryExists _ = true
+                    let fileExists (path: string) = not (path.EndsWith($"{product.DirectoryName}.rdr"))
+                    
+                    let actual = AuthorizedProduct.fixDirectoryName "" Steam directoryExists fileExists product
+                    
+                    Expect.equal actual.DirectoryName product.DirectoryName ""
+                }
+                test "Uses SKU if [directory].rdr or directory doesn't exist" {
+                    let directoryExists path = path <> product.DirectoryName
+                    let fileExists (path: string) = not (path.EndsWith($"{product.DirectoryName}.rdr"))
+                    
+                    let actual = AuthorizedProduct.fixDirectoryName "" Steam directoryExists fileExists product
+                    
+                    Expect.equal actual.DirectoryName product.Sku ""
+                }
+            ]
+            
+            testList "Epic" [
+                test "Prefers [directory].rdr over SKU" {
+                    let directoryExists _ = true
+                    let fileExists (path: string) = path.EndsWith($"{product.DirectoryName}.rdr")
+                    
+                    let actual = AuthorizedProduct.fixDirectoryName "" (Epic EpicDetails.Empty) directoryExists fileExists product
+                    
+                    Expect.equal actual.DirectoryName product.DirectoryName ""
+                }
+                test "Prefers directory over SKU" {
+                    let directoryExists _ = true
+                    let fileExists (path: string) = not (path.EndsWith($"{product.DirectoryName}.rdr"))
+                    
+                    let actual = AuthorizedProduct.fixDirectoryName "" (Epic EpicDetails.Empty) directoryExists fileExists product
+                    
+                    Expect.equal actual.DirectoryName product.DirectoryName ""
+                }
+                test "Uses SKU if [directory].rdr or directory doesn't exist" {
+                    let directoryExists path = path <> product.DirectoryName
+                    let fileExists (path: string) = not (path.EndsWith($"{product.DirectoryName}.rdr"))
+                    
+                    let actual = AuthorizedProduct.fixDirectoryName "" (Epic EpicDetails.Empty) directoryExists fileExists product
+                    
+                    Expect.equal actual.DirectoryName product.Sku ""
+                }
+            ]
+            
+            testList "Frontier" [
+                test "Prefers [sku].rdr over directory" {
+                    let directoryExists _ = true
+                    let fileExists (path: string) = path.EndsWith($"{product.Sku}.rdr")
+                    
+                    let actual = AuthorizedProduct.fixDirectoryName "" (Frontier FrontierDetails.Empty) directoryExists fileExists product
+                    
+                    Expect.equal actual.DirectoryName product.Sku ""
+                }
+                test "Prefers SKU over directory" {
+                    let directoryExists _ = true
+                    let fileExists (path: string) = not (path.EndsWith($"{product.Sku}.rdr"))
+                    
+                    let actual = AuthorizedProduct.fixDirectoryName "" (Frontier FrontierDetails.Empty) directoryExists fileExists product
+                    
+                    Expect.equal actual.DirectoryName product.Sku ""
+                }
+                test "Uses directory if [SKU].rdr or SKU doesn't exist" {
+                    let directoryExists path = path <> product.Sku
+                    let fileExists (path: string) = not (path.EndsWith($"{product.Sku}.rdr"))
+                    
+                    let actual = AuthorizedProduct.fixDirectoryName "" (Frontier FrontierDetails.Empty) directoryExists fileExists product
+                    
+                    Expect.equal actual.DirectoryName product.DirectoryName ""
+                }
+            ]
         ]
         
         testList "fixFilters" [
             let product =
-                { Name = ""; Filter = "oldFilter"; Directory = ""; GameArgs = ""; ServerArgs = ""; SortKey = 0; Sku = "sku"; TestApi = false }
+                { Name = ""; Filter = "oldFilter"; DirectoryName = ""; GameArgs = ""; ServerArgs = ""; SortKey = 0; Sku = "sku"; TestApi = false }
             test "No change when overrides is empty" {
                 let actual = AuthorizedProduct.fixFilters OrdinalIgnoreCaseMap.empty product
                 

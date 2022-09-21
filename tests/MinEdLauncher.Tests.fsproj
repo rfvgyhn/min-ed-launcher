@@ -24,6 +24,7 @@
     <Compile Include="EdLauncher.fs" />
     <Compile Include="MachineId.fs" />
     <Compile Include="AuthorizedProduct.fs" />
+    <Compile Include="Cobra.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
 

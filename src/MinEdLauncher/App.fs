@@ -285,7 +285,7 @@ let run settings launcherVersion cancellationToken = task {
     
     let appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Frontier_Developments")
     let productsDir =
-        Cobra.getProductsDir appDataDir FileIO.hasWriteAccess settings.ForceLocal settings.CbLauncherDir
+        Cobra.getDefaultProductsDir appDataDir FileIO.hasWriteAccess settings.ForceLocal settings.CbLauncherDir
         |> FileIO.ensureDirExists
     let version = Cobra.getVersion settings.CbLauncherDir
     return!
@@ -327,7 +327,7 @@ let run settings launcherVersion cancellationToken = task {
                     Log.debug "Getting authorized products"
                     match! Api.getAuthorizedProducts settings.Platform None connection with
                     | Ok authorizedProducts ->
-                        let applyFixes = AuthorizedProduct.fixDirectoryPath productsDir settings.Platform Directory.Exists
+                        let applyFixes = AuthorizedProduct.fixDirectoryName productsDir settings.Platform Directory.Exists File.Exists
                                          >> AuthorizedProduct.fixFilters settings.FilterOverrides
                                          
                         if settings.AdditionalProducts.Length > 0 then
@@ -340,10 +340,12 @@ let run settings launcherVersion cancellationToken = task {
                         let names = authorizedProducts |> List.map (fun p -> p.Name)
                         Log.debug $"Authorized Products: %s{String.Join(',', names)}"
                         Log.info "Checking for updates"
-                        let checkForUpdates = authorizedProducts
-                                              |> List.map (Product.mapProduct productsDir)
-                                              |> List.filter (function | Playable _ -> true | _ -> false)
-                                              |> Api.checkForUpdates settings.Platform machineId connection
+                        let checkForUpdates =
+                            let getProductDir = Cobra.getProductDir productsDir File.Exists File.ReadAllLines Directory.Exists
+                            authorizedProducts
+                            |> List.map (fun p -> Product.mapProduct (getProductDir p.DirectoryName) p)
+                            |> List.filter (function | Playable _ -> true | _ -> false)
+                            |> Api.checkForUpdates settings.Platform machineId connection
                         let! products = task {
                             match! checkForUpdates with
                             | Ok p -> return p

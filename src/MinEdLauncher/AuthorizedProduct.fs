@@ -7,22 +7,35 @@ open Microsoft.Extensions.Configuration
 open MinEdLauncher.Types
 open Rop
 
-let fixDirectoryPath productsDir platform directoryExists (product: AuthorizedProduct) =
-    // I don't know why, but the default launcher changes the directory path based on platform
+let fixDirectoryName productsDir platform directoryExists fileExists (product: AuthorizedProduct) =
+    // I don't know why, but the default launcher changes the directory name based on platform
     // If Steam or Epic, try the following paths
-    //     1. Products/directory
-    //     2. Products/sku 
+    //     1. Products/[directory].rdr if it exists
+    //     2. Products/[directory] if it exists
+    //     3. Products/[sku].rdr if it exists
+    //     4. Products/[sku]
     // else
-    //     1. Products/sku
-    //     2. Products/directory
-    let dirExists path = directoryExists (Path.Combine(productsDir, path))
+    //     1. Products/[sku].rdr if it exists
+    //     2. Products/[sku] if it exists
+    //     3. Products/[directory].rdr if it exists
+    //     4. Products/[directory]
+    let exists (check: string -> bool) path = check (Path.Combine(productsDir, path))
+    let dirExists = exists directoryExists
+    let fileExists = exists fileExists
     let dir =
         match platform with
         | Steam | Epic _ ->
-            if dirExists product.Directory then product.Directory else product.Sku
+            if fileExists $"{product.DirectoryName}.rdr" || dirExists product.DirectoryName then
+                product.DirectoryName
+            else
+                product.Sku
         | Frontier _ | Oculus _ | Dev ->
-            if dirExists product.Sku then product.Sku else product.Directory
-    { product with Directory = dir }
+            if fileExists $"{product.Sku}.rdr" || dirExists product.Sku then
+                product.Sku
+            else
+                product.DirectoryName
+            
+    { product with DirectoryName = dir }
     
 // Allows for overriding a product's filter. Useful for when FDev makes a copy/paste error
 // for a new product (i.e. when they released Odyssey with an "edh" filter instead of "edo") 
@@ -40,7 +53,7 @@ let fromJson element =
     | Ok directory, Ok sortKey, Ok name, Ok sku ->
         Ok { Name = name
              Filter = element |> Json.parseProp "filter" >>= Json.toString |> Result.defaultValue ""
-             Directory = directory
+             DirectoryName = directory
              GameArgs = element |> Json.parseProp "gameargs" >>= Json.toString |> Result.defaultValue ""
              ServerArgs = element |> Json.parseProp "serverargs" >>= Json.toString |> Result.defaultValue ""
              SortKey = sortKey
@@ -58,7 +71,7 @@ let fromConfig (section: IConfigurationSection) =
     | NotEmpty directory, NotEmpty name, NotEmpty sku ->
         Ok { Name = name
              Filter = section.GetValue<string>("filter")
-             Directory = directory
+             DirectoryName = directory
              GameArgs = section.GetValue<string>("gameargs")
              ServerArgs = section.GetValue<string>("serverargs")
              SortKey = section.GetValue<int>("sortKey")

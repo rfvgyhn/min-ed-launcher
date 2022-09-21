@@ -188,8 +188,8 @@ let mapProduct productsDir (product:AuthorizedProduct) =
             if not (String.IsNullOrEmpty(product.ServerArgs)) then product.ServerArgs
         ])
     let filters = product.Filter.Split(',', StringSplitOptions.RemoveEmptyEntries) |> OrdinalIgnoreCaseSet.ofSeq
-    let directory = Path.Combine(productsDir, product.Directory)
-    match readVersionInfo (Path.Combine(productsDir, product.Directory)) with
+    let directory = Path.Combine(productsDir, product.DirectoryName)
+    match readVersionInfo directory with
     | Found v ->
         Playable { Sku = product.Sku
                    Name = product.Name

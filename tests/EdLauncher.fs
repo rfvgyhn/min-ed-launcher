@@ -10,7 +10,7 @@ let tests =
     let noWriteAccess = (fun _ -> false)
     let productsDir = "Products"
     let fallbackDir = "fallback"
-    let getProdDir = Cobra.getProductsDir fallbackDir
+    let getProdDir = Cobra.getDefaultProductsDir fallbackDir
     let launcherDir = "."
     
     testList "Absolute Products Directory" [

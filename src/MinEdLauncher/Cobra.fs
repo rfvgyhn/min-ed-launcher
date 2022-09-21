@@ -14,12 +14,23 @@ open MinEdLauncher
 open Steam
 open Types
         
-let getProductsDir fallbackPath hasWriteAccess (forceLocal:ForceLocal) launcherDir =
+let getDefaultProductsDir fallbackPath hasWriteAccess (forceLocal:ForceLocal) launcherDir =
     let productsPath = "Products"
     let localPath = Path.Combine(launcherDir, productsPath)
     if forceLocal then localPath
     elif hasWriteAccess launcherDir then localPath
     else Path.Combine(fallbackPath, productsPath)
+    
+let getProductDir defaultProductsDir fileExists (readAllLines: string -> string[]) dirExists directoryName =
+    let rdrPath = Path.Combine(defaultProductsDir, directoryName) + ".rdr"
+    
+    if fileExists rdrPath then
+        readAllLines rdrPath
+        |> Array.map (fun p -> p.Trim())
+        |> Array.tryFind dirExists
+        |> Option.defaultValue defaultProductsDir
+    else
+        defaultProductsDir
     
 let getVersion cbLauncherDir =
     let cobraPath = Path.Combine(cbLauncherDir, "CBViewModel.dll")

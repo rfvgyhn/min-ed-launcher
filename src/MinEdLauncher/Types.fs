@@ -71,7 +71,7 @@ type User =
 type AuthorizedProduct =
     { Name: string
       Filter: string
-      Directory: string
+      DirectoryName: string
       ServerArgs: string
       GameArgs: string
       SortKey: int

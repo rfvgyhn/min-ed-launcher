@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Enhancements
+- Support `.rdr` files when looking for a product's directory
+
 ## [0.6.0] - 2022-09-15
 
 ### New Features
