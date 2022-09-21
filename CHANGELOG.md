@@ -21,6 +21,9 @@
 ### Enhancements
 - Support `.rdr` files when looking for a product's directory
 
+### Bug Fixes
+- Fix crash when no products are available to play
+
 ## [0.6.0] - 2022-09-15
 
 ### New Features

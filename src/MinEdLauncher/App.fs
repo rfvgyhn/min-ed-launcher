@@ -353,9 +353,12 @@ let run settings launcherVersion cancellationToken = task {
 
                         let availableProductsDisplay =
                             let max (f: ProductDetails -> string) =
-                                products
-                                |> List.map (function | Playable p | RequiresUpdate p -> (f(p)).Length | _ -> 0)
-                                |> List.max
+                                if products.Length = 0 then
+                                    0
+                                else
+                                    products
+                                    |> List.map (function | Playable p | RequiresUpdate p -> (f(p)).Length | _ -> 0)
+                                    |> List.max
                             let maxName = max (fun p -> p.Name)
                             let maxSku = max (fun p -> p.Sku)
                             let map msg (p: ProductDetails) = $"{p.Name.PadRight(maxName)} {p.Sku.PadRight(maxSku)} %s{msg}" 
