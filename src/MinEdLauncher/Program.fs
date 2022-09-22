@@ -3,6 +3,7 @@
 open System
 open System.Collections
 open System.IO
+open System.Net.Http
 open System.Reflection
 open System.Threading
 open FsConfig
@@ -82,5 +83,15 @@ let main argv =
                 |> TaskResult.defaultValue 1
                 |> Async.AwaitTask
         with
+        | :? AggregateException as e when (e.InnerException :? HttpRequestException) ->
+            let e = e.InnerException :?> HttpRequestException
+            let at =
+                e.StackTrace.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
+                |> Seq.map (fun line -> line.TrimStart())
+                |> Seq.filter (fun line -> line.StartsWith("at MinEdLauncher"))
+                |> Seq.tryHead
+                |> Option.defaultValue ""
+            Log.error $"Network request failed. Are you connected to the internet? - {e.Message} {at}"
+            return 1
         | e -> Log.error $"Unhandled exception: {e}"; return 1
     } |> Async.RunSynchronously
