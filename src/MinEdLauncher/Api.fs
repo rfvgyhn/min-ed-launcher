@@ -10,12 +10,21 @@ open MinEdLauncher.Token
 open Types
 open Rop
 
-type Connection =
-    { HttpClient: HttpClient
-      Session: EdSession
-      RunningTime: unit -> double }
-    with static member Create httpClient session runningTime =
-            { HttpClient = httpClient; Session = session; RunningTime = runningTime }
+type Connection(httpClient: HttpClient, session: EdSession, runningTime: unit -> double) =
+    let mutable disposableResource : IDisposable option = None
+    
+    member this.HttpClient = httpClient
+    member this.Session = session
+    member this.RunningTime = runningTime
+    member this.WithResource resource =
+        disposableResource <- Some resource
+        this
+    
+    interface IDisposable with
+        member this.Dispose() =
+            disposableResource
+            |> Option.iter (fun d -> d.Dispose())
+
 type AuthResult =
 | Authorized of Connection
 | RegistrationRequired of Uri
@@ -28,7 +37,7 @@ let private buildUri (host: Uri) (path: string) queryParams =
     builder.Path <- path
     builder.Uri |> Uri.addQueryParams queryParams
 
-let private buildRequest (path: string) platform connection queryParams =
+let private buildRequest (path: string) platform (connection: Connection) queryParams =
     let request = new HttpRequestMessage()
     request.RequestUri <- buildUri connection.HttpClient.BaseAddress path queryParams
     match platform with
@@ -183,7 +192,7 @@ let authenticate (runningTime: unit -> double) (token: AuthToken) platform machi
                 | Error _, Error _, Ok value, Ok msg -> Failed $"%s{value} - %s{msg}"
                 | Ok fdevToken, Ok machineToken, _, _ ->
                     let session = { Token = fdevToken; PlatformToken = token; Name = registeredName; MachineToken = machineToken }
-                    Authorized <| Connection.Create httpClient session runningTime
+                    Authorized <| new Connection(httpClient, session, runningTime)
                 | Error msg, _, _, _
                 | _, Error msg, _, _ -> Failed msg
             | HttpStatusCode.Found ->
@@ -209,7 +218,7 @@ let authenticate (runningTime: unit -> double) (token: AuthToken) platform machi
                 Failed $"%i{int code}: %s{response.ReasonPhrase}"
 }
 
-let getAuthorizedProducts platform lang connection = task {
+let getAuthorizedProducts platform lang (connection: Connection) = task {
     use request =
         match platform with
         | Frontier _ -> [ "authToken", connection.Session.Token; "machineToken", connection.Session.MachineToken ]
@@ -238,7 +247,7 @@ let getProductManifest (httpClient: HttpClient) (uri: Uri) = task {
     with e -> return e.ToString() |> Error
 }
 
-let checkForUpdate platform machineId connection product = task {
+let checkForUpdate platform machineId (connection: Connection) product = task {
     match product with
     | Unknown name -> return Error $"{name}: Can't check updates for unknown product"
     | Missing p -> return Error $"{p.Name}: Can't check updates for missing product"

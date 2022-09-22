@@ -1,9 +1,7 @@
 module MinEdLauncher.App
 
 open System.IO
-open System.Net.Http
 open System.Runtime.InteropServices
-open System.Security.Cryptography
 open System.Threading
 open MinEdLauncher
 open MinEdLauncher.Http
@@ -12,32 +10,31 @@ open System
 open System.Diagnostics
 open System.Threading.Tasks
 open MinEdLauncher.Types
+open FsToolkit.ErrorHandling
 
-type LoginResult =
-| Success of Api.Connection
+type LoginError =
 | ActionRequired of string
 | Failure of string
 let login launcherVersion runningTime httpClient machineId (platform: Platform) lang =
-    let authenticate = function
+    let authenticate disposable = function
         | Ok authToken -> task {
             Log.debug $"Authenticating via %s{platform.Name}"
             match! Api.authenticate runningTime authToken platform machineId lang httpClient with
             | Api.Authorized connection ->
                 Log.debug "Successfully authenticated"
-                return Success connection
-            | Api.RegistrationRequired uri -> return ActionRequired <| $"Registration is required at %A{uri}"
-            | Api.LinkAvailable uri -> return ActionRequired <| $"Link available at %A{uri}"
-            | Api.Denied msg -> return Failure msg
-            | Api.Failed msg -> return Failure msg }
-        | Error msg -> Failure msg |> Task.fromResult
+                let connection = disposable |> Option.map connection.WithResource |> Option.defaultValue connection
+                return Ok connection
+            | Api.RegistrationRequired uri -> return ActionRequired <| $"Registration is required at %A{uri}" |> Error
+            | Api.LinkAvailable uri -> return ActionRequired <| $"Link available at %A{uri}" |> Error
+            | Api.Denied msg -> return Failure msg |> Error
+            | Api.Failed msg -> return Failure msg |> Error }
+        | Error msg -> Failure msg |> Error |> Task.fromResult
         
-    let noopDisposable = { new IDisposable with member _.Dispose() = () }
-    
     match platform with
-    | Oculus _ -> (Failure "Oculus not supported", noopDisposable) |> Task.fromResult
+    | Oculus _ -> Failure "Oculus not supported" |> Error |> Task.fromResult
     | Dev -> task {
-        let! result = Permanent "DevAuthToken" |> Ok |> authenticate
-        return result, noopDisposable }
+        let! result = Permanent "DevAuthToken" |> Ok |> (authenticate None)
+        return result }
     | Frontier details -> task {
         let promptTwoFactorCode email =
             printf $"Enter verification code that was sent to %s{email}: "
@@ -53,22 +50,22 @@ let login launcherVersion runningTime httpClient machineId (platform: Platform) 
         let! token = Api.login runningTime httpClient details machineId lang (Cobra.saveCredentials credPath) promptTwoFactorCode promptUserPass
         match token with
         | Ok (username, password, token) ->
-            let! result = PasswordBased { Username = username; Password = password; Token = token } |> Ok |> authenticate
-            return result, noopDisposable
+            let! result = PasswordBased { Username = username; Password = password; Token = token } |> Ok |> (authenticate None)
+            return result
         | Error msg ->
             let! _ = Cobra.discardToken credPath
-            return Failure msg, noopDisposable }
+            return Failure msg |> Error }
     | Steam -> task {
         use steam = new Steam.Steam()
-        let! result = steam.Login() |> Result.map (fun steamUser -> Permanent steamUser.SessionToken) |> authenticate
-        return result, noopDisposable }
+        let! result = steam.Login() |> Result.map (fun steamUser -> Permanent steamUser.SessionToken) |> (authenticate None)
+        return result }
     | Epic details -> task {
         match! Epic.login launcherVersion details with
         | Ok t ->
             let tokenManager = new RefreshableTokenManager(t, Epic.refreshToken launcherVersion)
-            let! result = tokenManager.Get |> Expires |> Ok |> authenticate 
-            return result, (tokenManager :> IDisposable)
-        | Error msg -> return Failure msg, noopDisposable }
+            let! result = tokenManager.Get |> Expires |> Ok |> (authenticate (Some tokenManager)) 
+            return result
+        | Error msg -> return Failure msg |> Error }
 
 let printInfo (platform: Platform) productsDir cobraVersion =
     Log.info $"""Elite Runtime
@@ -277,214 +274,215 @@ let updateProduct downloader paths (manifest: Types.ProductManifest.File[]) = ta
                 return verifyFiles files
             else
                 return Ok 0 }) }
+   
+type AppError =
+    | Version of string
+    | ProductsDirectory of string
+    | MachineId of string
+    | AuthorizedProducts of string
+    | Login of LoginError
+    | NoSelectedProduct
+    | InvalidProductState of string
     
-let run settings launcherVersion cancellationToken = task {
+[<RequireQualifiedAccess>]
+module AppError =
+    let toDisplayString = function
+        | Version m -> $"Unable to get version: %s{m}"
+        | ProductsDirectory m -> $"Unable to get products directory: %s{m}"
+        | MachineId m -> $"Couldn't get machine id: %s{m}"
+        | AuthorizedProducts m -> $"Couldn't get available products: %s{m}"
+        | Login (ActionRequired m) -> $"Unsupported login action required: %s{m}"
+        | Login (Failure m) -> $"Couldn't login: %s{m}"
+        | NoSelectedProduct -> "No selected project"
+        | InvalidProductState m -> $"Couldn't start selected product: %s{m}"
+
+let run settings launcherVersion cancellationToken = taskResult {
     if RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && settings.Platform = Steam then
         Steam.fixLcAll()
     
     let appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Frontier_Developments")
-    let productsDir =
+    let! productsDir =
         Cobra.getDefaultProductsDir appDataDir FileIO.hasWriteAccess settings.ForceLocal settings.CbLauncherDir
         |> FileIO.ensureDirExists
-    let version = Cobra.getVersion settings.CbLauncherDir
-    return!
-        match productsDir, version with 
-        | _, Error msg -> task {
-            Log.error $"Unable to get version: %s{msg}"
-            return 1 }
-        | Error msg, _ -> task { 
-            Log.error $"Unable to get products directory: %s{msg}"
-            return 1 }
-        | Ok productsDir, Ok cbVersion -> task {
-            printInfo settings.Platform productsDir cbVersion
-            use httpClient = Api.createClient settings.ApiUri launcherVersion
-            let localTime = DateTime.UtcNow
-            let! remoteTime = task {
-                match! Api.getTime localTime httpClient with
-                | Ok timestamp -> return timestamp
-                | Error (localTimestamp, msg) ->
-                    Log.warn $"Couldn't get remote time: %s{msg}. Using local system time instead"
-                    return localTimestamp
-            }
-            let runningTime = fun () ->
-                    let runningTime = DateTime.UtcNow.Subtract(localTime);
-                    ((double)remoteTime + runningTime.TotalSeconds)
-            let! machineId =
+        |> Result.mapError ProductsDirectory
+    let! cbVersion = Cobra.getVersion settings.CbLauncherDir |> Result.mapError Version
+
+    printInfo settings.Platform productsDir cbVersion
+    use httpClient = Api.createClient settings.ApiUri launcherVersion
+    let localTime = DateTime.UtcNow
+    let! remoteTime = task {
+        match! Api.getTime localTime httpClient with
+        | Ok timestamp -> return timestamp
+        | Error (localTimestamp, msg) ->
+            Log.warn $"Couldn't get remote time: %s{msg}. Using local system time instead"
+            return localTimestamp
+    }
+    let runningTime = fun () ->
+        let runningTime = DateTime.UtcNow.Subtract(localTime);
+        ((double)remoteTime + runningTime.TotalSeconds)
+    let! machineId =
 #if WINDOWS
-                MachineId.getWindowsId() |> Task.fromResult
+        MachineId.getWindowsId() |> Task.fromResult
 #else
-                MachineId.getWineId()
+        MachineId.getWineId()
 #endif
-            match machineId with
-            | Ok machineId ->
-                let lang = settings.PreferredLanguage |> Option.defaultValue "en"
-                let! loginResult, disposable = login launcherVersion runningTime httpClient machineId settings.Platform lang
-                use _ = disposable
-                match loginResult with
-                | Success connection ->
-                    Log.info $"Logged in via %s{settings.Platform.Name} as: %s{connection.Session.Name}"
-                    Log.debug "Getting authorized products"
-                    match! Api.getAuthorizedProducts settings.Platform None connection with
-                    | Ok authorizedProducts ->
-                        let applyFixes = AuthorizedProduct.fixDirectoryName productsDir settings.Platform Directory.Exists File.Exists
-                                         >> AuthorizedProduct.fixFilters settings.FilterOverrides
-                                         
-                        if settings.AdditionalProducts.Length > 0 then
-                            Log.debug $"Appending %i{settings.AdditionalProducts.Length} product(s) from settings file"
-                                         
-                        let authorizedProducts =
-                            authorizedProducts
-                            |> List.append settings.AdditionalProducts
-                            |> List.map applyFixes
-                        let names = authorizedProducts |> List.map (fun p -> p.Name)
-                        Log.debug $"Authorized Products: %s{String.Join(',', names)}"
-                        Log.info "Checking for updates"
-                        let checkForUpdates =
-                            let getProductDir = Cobra.getProductDir productsDir File.Exists File.ReadAllLines Directory.Exists
-                            authorizedProducts
-                            |> List.map (fun p -> Product.mapProduct (getProductDir p.DirectoryName) p)
-                            |> List.filter (function | Playable _ -> true | _ -> false)
-                            |> Api.checkForUpdates settings.Platform machineId connection
-                        let! products = task {
-                            match! checkForUpdates with
-                            | Ok p -> return p
-                            | Error e -> Log.warn $"{e}"; return [] }
+        |> TaskResult.mapError MachineId
 
-                        let availableProductsDisplay =
-                            let max (f: ProductDetails -> string) =
-                                if products.Length = 0 then
-                                    0
-                                else
-                                    products
-                                    |> List.map (function | Playable p | RequiresUpdate p -> (f(p)).Length | _ -> 0)
-                                    |> List.max
-                            let maxName = max (fun p -> p.Name)
-                            let maxSku = max (fun p -> p.Sku)
-                            let map msg (p: ProductDetails) = $"{p.Name.PadRight(maxName)} {p.Sku.PadRight(maxSku)} %s{msg}" 
-                            let availableProducts =
-                                products
-                                |> List.choose (function | Playable p -> map "Up to Date" p |> Some
-                                                         | RequiresUpdate p -> map "Requires Update" p |> Some
-                                                         | Missing _ | Product.Unknown _ -> None)
-                            match availableProducts with
-                            | [] -> "None"
-                            | p -> String.Join(Environment.NewLine + "\t", p)
-                        Log.info $"Available Products:{Environment.NewLine}\t%s{availableProductsDisplay}"
+    let lang = settings.PreferredLanguage |> Option.defaultValue "en"
+    use! connection = login launcherVersion runningTime httpClient machineId settings.Platform lang |> TaskResult.mapError Login
 
-                        let productsRequiringUpdate = Product.filterByUpdateRequired settings.Platform settings.ForceUpdate products |> List.toArray
-                        let productsToUpdate =
-                            let products =
-                                if settings.AutoUpdate then
-                                    productsRequiringUpdate
-                                else
-                                    productsRequiringUpdate |> promptForProductsToUpdate
-                            products
-                            |> Array.filter (fun p -> p.Metadata.IsNone)
-                            |> Array.iter (fun p -> Log.error $"Unknown product metadata for %s{p.Name}")
-                            
-                            products |> Array.filter (fun p -> p.Metadata.IsSome)
+    Log.info $"Logged in via %s{settings.Platform.Name} as: %s{connection.Session.Name}"
+    Log.debug "Getting authorized products"
+    
+    let applyFixes = AuthorizedProduct.fixDirectoryName productsDir settings.Platform Directory.Exists File.Exists
+                     >> AuthorizedProduct.fixFilters settings.FilterOverrides
+    
+    let! authorizedProducts =
+        Api.getAuthorizedProducts settings.Platform None connection
+        |> TaskResult.mapError AuthorizedProducts
+        |> TaskResult.map (fun p ->
+            if settings.AdditionalProducts.Length > 0 then
+                Log.debug $"Appending %i{settings.AdditionalProducts.Length} product(s) from settings file"
+            p |> List.append settings.AdditionalProducts
+              |> List.map applyFixes)
+    
+    let names = authorizedProducts |> List.map (fun p -> p.Name)
+    Log.debug $"Authorized Products: %s{String.Join(',', names)}"
+    Log.info "Checking for updates"
+    let checkForUpdates =
+        let getProductDir = Cobra.getProductDir productsDir File.Exists File.ReadAllLines Directory.Exists
+        authorizedProducts
+        |> List.map (fun p -> Product.mapProduct (getProductDir p.DirectoryName) p)
+        |> List.filter (function | Playable _ -> true | _ -> false)
+        |> Api.checkForUpdates settings.Platform machineId connection
+    let! products = task {
+        match! checkForUpdates with
+        | Ok p -> return p
+        | Error e -> Log.warn $"{e}"; return [] }
 
-                        let! productManifests =
-                            if productsToUpdate.Length > 0 then
-                                Log.info "Fetching product manifest(s)"
-                            
-                            productsToUpdate
-                            |> Array.map (fun p ->
-                                p.Metadata
-                                |> Option.map (fun m -> Api.getProductManifest httpClient m.RemotePath)
-                                |> Option.defaultValue (Task.FromResult(Error $"No metadata for %s{p.Name}")))
-                            |> Task.whenAll
-                        let productsToUpdate, failedManifests =
-                            productManifests
-                            |> Array.zip productsToUpdate
-                            |> Array.fold (fun (success, failed) (product, manifest) ->
-                                match manifest with
-                                | Ok m -> ((product, m) :: success, failed)
-                                | Error e -> (success, (product.Name, e) :: failed)) ([], [])
-                            
-                        if not failedManifests.IsEmpty then
-                            let separator = $"{Environment.NewLine}\t"
-                            let messages = failedManifests |> List.map (fun (name, error) -> $"%s{name} - %s{error}") |> String.join separator
-                            Log.error $"Unable to update the following products. Failed to get their manifests:%s{separator}%s{messages}"
-                        
-                        let! updated =
-                            let productsDir = Path.Combine(settings.CbLauncherDir, "Products")
-                            
-                            productsToUpdate
-                            |> List.chooseTasksSequential (fun (product, manifest) -> task {
-                                Log.info $"Updating %s{product.Name}"
-                                let productDir = Path.Combine(productsDir, product.Directory)
-                                let productCacheDir = Path.Combine(Environment.cacheDir, $"%s{manifest.Title}%s{manifest.Version}")
-                                let pathInfo = { ProductDir = productDir
-                                                 ProductCacheDir = productCacheDir
-                                                 CacheHashMap = Path.Combine(productCacheDir, "hashmap.txt")
-                                                 ProductHashMap = Path.Combine(Environment.cacheDir, $"hashmap.%s{Path.GetFileName(productDir)}.txt") }
-                                let mutable lastProgress = 0.
-                                let progress = Progress<DownloadProgress>(fun p ->
-                                    let completed = p.BytesSoFar = p.TotalBytes
-                                    if p.Elapsed.TotalMilliseconds - lastProgress >= 200. || completed then
-                                        lastProgress <- p.Elapsed.TotalMilliseconds
-                                        let total = p.TotalBytes |> Int64.toFriendlyByteString
-                                        let speed =  (p.BytesSoFar / (int64 p.Elapsed.TotalMilliseconds) * 1000L |> Int64.toFriendlyByteString).PadLeft(6)
-                                        let percent = float p.BytesSoFar / float p.TotalBytes
-                                        let barLength = 30
-                                        let blocks = int (float barLength * percent)
-                                        let bar = String.replicate blocks "#" + String.replicate (barLength - blocks) "-"
-                                        Console.Write($"\r\tDownloading %s{total} %s{speed}/s [%s{bar}] {percent:P0}")
-                                        if completed then Console.WriteLine()) :> IProgress<DownloadProgress>
-                                        
+    let availableProductsDisplay =
+        let max (f: ProductDetails -> string) =
+            if products.Length = 0 then
+                0
+            else
+                products
+                |> List.map (function | Playable p | RequiresUpdate p -> (f(p)).Length | _ -> 0)
+                |> List.max
+        let maxName = max (fun p -> p.Name)
+        let maxSku = max (fun p -> p.Sku)
+        let map msg (p: ProductDetails) = $"{p.Name.PadRight(maxName)} {p.Sku.PadRight(maxSku)} %s{msg}" 
+        let availableProducts =
+            products
+            |> List.choose (function | Playable p -> map "Up to Date" p |> Some
+                                     | RequiresUpdate p -> map "Requires Update" p |> Some
+                                     | Missing _ | Product.Unknown _ -> None)
+        match availableProducts with
+        | [] -> "None"
+        | p -> String.Join(Environment.NewLine + "\t", p)
+    Log.info $"Available Products:{Environment.NewLine}\t%s{availableProductsDisplay}"
 
-                                use semaphore = new SemaphoreSlim(settings.MaxConcurrentDownloads, settings.MaxConcurrentDownloads)
-                                let throttled progress = throttledAction semaphore (downloadFile httpClient Product.createHashAlgorithm cancellationToken progress)
-                                let downloader = { Download = throttled; Progress = progress }
-                                match! updateProduct downloader pathInfo manifest.Files with
-                                | Ok 0 -> return Some product
-                                | Ok _ ->
-                                    Console.CursorVisible <- true
-                                    File.Delete(pathInfo.CacheHashMap)
-                                    FileIO.mergeDirectories productDir productCacheDir
-                                    Log.debug $"Moved downloaded files from '%s{Environment.cacheDir}' to '%s{productDir}'"
-                                    Log.info $"Finished updating %s{product.Name}"
-                                    return Some product
-                                | Error e ->
-                                    Log.error $"Unable to download update for %s{product.Name} - %s{e}"
-                                    return None
-                                })
-                        
-                        let playableProducts =
-                            products
-                            |> List.choose (fun p -> match p with | Playable p -> Some p | _ -> None)
-                            |> List.append updated
-                            |> List.sortBy (fun p -> p.SortKey)
-                            |> List.toArray
-                        let selectedProduct = 
-                            if settings.AutoRun then
-                                playableProducts
-                                |> Product.selectProduct settings.ProductWhitelist
-                            else if playableProducts.Length > 0 then
-                                promptForProductToPlay playableProducts cancellationToken
-                            else None
-                        
-                        match selectedProduct, cancellationToken.IsCancellationRequested with
-                        | _, true -> ()
-                        | Some product, _ ->
-                            let gameLanguage = Cobra.getGameLang settings.CbLauncherDir settings.PreferredLanguage
-                            let processArgs() = Product.createArgString settings.DisplayMode gameLanguage connection.Session machineId (runningTime()) settings.WatchForCrashes settings.Platform SHA1.hashFile product
-                            
-                            match Product.validateForRun settings.CbLauncherDir settings.WatchForCrashes product with
-                            | Ok p ->
-                                let processes = Process.launchProcesses settings.Processes
-                                launchProduct settings.CompatTool processArgs settings.Restart product.Name p
-                                Process.stopProcesses processes
-                            | Error msg -> Log.error $"Couldn't start selected product: %s{msg}"
-                        | None, _ -> Log.error "No selected project"                        
-                    | Error msg ->
-                        Log.error $"Couldn't get available products: %s{msg}"
-                | ActionRequired msg ->
-                    Log.error $"Unsupported login action required: %s{msg}"
-                | Failure msg ->
-                    Log.error $"Couldn't login: %s{msg}"
-            | Error msg ->
-                Log.error $"Couldn't get machine id: %s{msg}"
-            return 0 }
-}    
+    let productsRequiringUpdate = Product.filterByUpdateRequired settings.Platform settings.ForceUpdate products |> List.toArray
+    let productsToUpdate =
+        let products =
+            if settings.AutoUpdate then
+                productsRequiringUpdate
+            else
+                productsRequiringUpdate |> promptForProductsToUpdate
+        products
+        |> Array.filter (fun p -> p.Metadata.IsNone)
+        |> Array.iter (fun p -> Log.error $"Unknown product metadata for %s{p.Name}")
+        
+        products |> Array.filter (fun p -> p.Metadata.IsSome)
+
+    let! productManifests =
+        if productsToUpdate.Length > 0 then
+            Log.info "Fetching product manifest(s)"
+        
+        productsToUpdate
+        |> Array.map (fun p ->
+            p.Metadata
+            |> Option.map (fun m -> Api.getProductManifest httpClient m.RemotePath)
+            |> Option.defaultValue (Task.FromResult(Error $"No metadata for %s{p.Name}")))
+        |> Task.whenAll
+    let productsToUpdate, failedManifests =
+        productManifests
+        |> Array.zip productsToUpdate
+        |> Array.fold (fun (success, failed) (product, manifest) ->
+            match manifest with
+            | Ok m -> ((product, m) :: success, failed)
+            | Error e -> (success, (product.Name, e) :: failed)) ([], [])
+        
+    if not failedManifests.IsEmpty then
+        let separator = $"{Environment.NewLine}\t"
+        let messages = failedManifests |> List.map (fun (name, error) -> $"%s{name} - %s{error}") |> String.join separator
+        Log.error $"Unable to update the following products. Failed to get their manifests:%s{separator}%s{messages}"
+    
+    let! updated =
+        let productsDir = Path.Combine(settings.CbLauncherDir, "Products")
+        
+        productsToUpdate
+        |> List.chooseTasksSequential (fun (product, manifest) -> task {
+            Log.info $"Updating %s{product.Name}"
+            let productDir = Path.Combine(productsDir, product.Directory)
+            let productCacheDir = Path.Combine(Environment.cacheDir, $"%s{manifest.Title}%s{manifest.Version}")
+            let pathInfo = { ProductDir = productDir
+                             ProductCacheDir = productCacheDir
+                             CacheHashMap = Path.Combine(productCacheDir, "hashmap.txt")
+                             ProductHashMap = Path.Combine(Environment.cacheDir, $"hashmap.%s{Path.GetFileName(productDir)}.txt") }
+            let mutable lastProgress = 0.
+            let progress = Progress<DownloadProgress>(fun p ->
+                let completed = p.BytesSoFar = p.TotalBytes
+                if p.Elapsed.TotalMilliseconds - lastProgress >= 200. || completed then
+                    lastProgress <- p.Elapsed.TotalMilliseconds
+                    let total = p.TotalBytes |> Int64.toFriendlyByteString
+                    let speed =  (p.BytesSoFar / (int64 p.Elapsed.TotalMilliseconds) * 1000L |> Int64.toFriendlyByteString).PadLeft(6)
+                    let percent = float p.BytesSoFar / float p.TotalBytes
+                    let barLength = 30
+                    let blocks = int (float barLength * percent)
+                    let bar = String.replicate blocks "#" + String.replicate (barLength - blocks) "-"
+                    Console.Write($"\r\tDownloading %s{total} %s{speed}/s [%s{bar}] {percent:P0}")
+                    if completed then Console.WriteLine()) :> IProgress<DownloadProgress>                    
+
+            use semaphore = new SemaphoreSlim(settings.MaxConcurrentDownloads, settings.MaxConcurrentDownloads)
+            let throttled progress = throttledAction semaphore (downloadFile httpClient Product.createHashAlgorithm cancellationToken progress)
+            let downloader = { Download = throttled; Progress = progress }
+            match! updateProduct downloader pathInfo manifest.Files with
+            | Ok 0 -> return Some product
+            | Ok _ ->
+                Console.CursorVisible <- true
+                File.Delete(pathInfo.CacheHashMap)
+                FileIO.mergeDirectories productDir productCacheDir
+                Log.debug $"Moved downloaded files from '%s{Environment.cacheDir}' to '%s{productDir}'"
+                Log.info $"Finished updating %s{product.Name}"
+                return Some product
+            | Error e ->
+                Log.error $"Unable to download update for %s{product.Name} - %s{e}"
+                return None
+            })
+    
+    let playableProducts =
+        products
+        |> List.choose (fun p -> match p with | Playable p -> Some p | _ -> None)
+        |> List.append updated
+        |> List.sortBy (fun p -> p.SortKey)
+        |> List.toArray
+    let! selectedProduct = 
+        if settings.AutoRun then
+            playableProducts
+            |> Product.selectProduct settings.ProductWhitelist
+        else if playableProducts.Length > 0 then
+            promptForProductToPlay playableProducts cancellationToken
+        else None
+        |> Result.requireSome NoSelectedProduct
+    
+    let! p = Product.validateForRun settings.CbLauncherDir settings.WatchForCrashes selectedProduct |> Result.mapError InvalidProductState
+    
+    let gameLanguage = Cobra.getGameLang settings.CbLauncherDir settings.PreferredLanguage
+    let processArgs() = Product.createArgString settings.DisplayMode gameLanguage connection.Session machineId (runningTime()) settings.WatchForCrashes settings.Platform SHA1.hashFile selectedProduct
+    let processes = Process.launchProcesses settings.Processes
+    
+    if not cancellationToken.IsCancellationRequested then
+        launchProduct settings.CompatTool processArgs settings.Restart selectedProduct.Name p
+        Process.stopProcesses processes
+    return 0
+} 

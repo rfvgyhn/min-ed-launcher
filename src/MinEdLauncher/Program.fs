@@ -6,6 +6,7 @@ open System.IO
 open System.Reflection
 open System.Threading
 open FsConfig
+open FsToolkit.ErrorHandling
 open Steam
 
 let assembly = typeof<Steam>.GetTypeInfo().Assembly
@@ -63,21 +64,23 @@ let main argv =
             
             logRuntimeInfo version args
             
-            let! settings = getSettings args |> Async.AwaitTask
-            Log.debug $"Settings: %A{settings}"
-            return! match settings with
-                    | Ok settings ->
-                        task {
-                            Directory.SetCurrentDirectory(settings.CbLauncherDir)
-                            let! runResult = App.run settings version cts.Token
+            return!
+                getSettings args
+                |> TaskResult.bind (fun settings ->
+                    taskResult {
+                        Log.debug $"Settings: %A{settings}"
+                        Directory.SetCurrentDirectory(settings.CbLauncherDir)
+                        let! runResult = App.run settings version cts.Token |> TaskResult.mapError App.AppError.toDisplayString
 
-                            if not settings.AutoQuit && not cts.Token.IsCancellationRequested then
-                                printfn "Press any key to quit..."
-                                Console.ReadKey() |> ignore
-                                
-                            return runResult
-                        } |> Async.AwaitTask
-                    | Error msg -> async { Log.error msg; return 1 }
+                        if not settings.AutoQuit && not cts.Token.IsCancellationRequested then
+                            printfn "Press any key to quit..."
+                            Console.ReadKey() |> ignore
+                            
+                        return runResult
+                    })
+                |> TaskResult.teeError Log.error
+                |> TaskResult.defaultValue 1
+                |> Async.AwaitTask
         with
         | e -> Log.error $"Unhandled exception: {e}"; return 1
     } |> Async.RunSynchronously

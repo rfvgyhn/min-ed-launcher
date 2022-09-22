@@ -76,6 +76,8 @@
     <PackageReference Include="TypeShape" Version="10.0.0" />
     <PackageReference Include="FsConfig" Version="3.1.0" />
     <PackageReference Update="FSharp.Core" Version="6.0.6" />
+    <PackageReference Include="FsToolkit.ErrorHandling" Version="3.0.0-beta007" />
+    <PackageReference Include="FsToolkit.ErrorHandling.TaskResult" Version="3.0.0-beta007" />
   </ItemGroup>
 
 </Project>
