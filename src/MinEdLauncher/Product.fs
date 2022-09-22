@@ -123,7 +123,7 @@ let filterByUpdateRequired platform updateOverride (products: Product list) =
     |> updateable
 
 let selectProduct (whitelist: OrdinalIgnoreCaseSet) (products: ProductDetails[]) =
-    if whitelist.Count = 0 then
+    if whitelist.IsEmpty then
         None
     else
         products
