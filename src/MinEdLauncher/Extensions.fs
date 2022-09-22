@@ -3,7 +3,6 @@ namespace MinEdLauncher
 open System.IO
 
 module Task =
-    open FSharp.Control.Tasks.NonAffine
     open System.Threading.Tasks
     open System.Collections.Generic
     let fromResult r = Task.FromResult(r)
@@ -26,7 +25,6 @@ module Task =
     }
 
 module Result =
-    open FSharp.Control.Tasks.NonAffine
     open System.Threading.Tasks
     
     let defaultValue value = function
@@ -67,7 +65,6 @@ module Seq =
     
 module List =
     open System.Threading.Tasks
-    open FSharp.Control.Tasks.NonAffine
     
     let mapTasksSequential (mapping: 'T -> Task<'U>) list = task {
         let! result =
@@ -265,7 +262,6 @@ module Int64 =
 module StreamExtensions =
     open System
     open System.Threading
-    open FSharp.Control.Tasks.NonAffine
     
     type Stream with
         member source.CopyToAsync(destination: Stream, bufferSize: int, ?progress: IProgress<int>, ?cancellationToken: CancellationToken) = task {
@@ -296,7 +292,6 @@ module StreamExtensions =
 
 module HttpClientExtensions =
     open StreamExtensions
-    open FSharp.Control.Tasks.NonAffine
     open System
     open System.Net.Http
     open System.Threading
@@ -348,7 +343,6 @@ module Hex =
 module FileIO =
     open System
     open System.IO
-    open FSharp.Control.Tasks.NonAffine
     
     let hasWriteAccess directory =
         try

@@ -5,7 +5,6 @@ open System
 open System.IO
 open System.Diagnostics
 open FsConfig
-open FSharp.Control.Tasks.NonAffine
 open Microsoft.Extensions.Configuration
 
 let defaults =

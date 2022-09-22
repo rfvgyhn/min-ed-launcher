@@ -5,7 +5,6 @@ open System.IO
 open System.Security.Cryptography
 open System.Net.Http
 open System.Threading.Tasks
-open FSharp.Control.Tasks.NonAffine
 open HttpClientExtensions
 
 type DownloadProgress = { TotalFiles: int; BytesSoFar: int64; Elapsed: TimeSpan; TotalBytes: int64; }

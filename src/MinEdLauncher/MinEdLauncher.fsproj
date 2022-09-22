@@ -64,7 +64,6 @@
     <PackageReference Include="FSharp.Data" Version="5.0.2" />
     <PackageReference Include="FSharpx.Collections" Version="3.0.1" />
     <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
-    <PackageReference Include="Ply" Version="0.3.1" />
     <PackageReference Include="Serilog" Version="2.12.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="4.1.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />

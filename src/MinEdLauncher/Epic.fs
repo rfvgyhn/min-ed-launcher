@@ -3,7 +3,6 @@ module MinEdLauncher.Epic
 open Types
 open Rop
 open MinEdLauncher.Token
-open FSharp.Control.Tasks.NonAffine
 open System
 open System.IO
 open System.Net.Http

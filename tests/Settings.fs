@@ -3,7 +3,6 @@ module MinEdLauncher.Tests.Settings
 open System
 open System.IO
 open Expecto
-open FSharp.Control.Tasks.NonAffine
 open MinEdLauncher
 open MinEdLauncher.Settings
 open MinEdLauncher.Types

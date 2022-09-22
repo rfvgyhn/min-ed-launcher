@@ -7,7 +7,6 @@ open System.Runtime.InteropServices
 open System.Security.Cryptography
 open System.Threading
 open System.Threading.Tasks
-open FSharp.Control.Tasks.NonAffine
 open MinEdLauncher.Http
 open MinEdLauncher.Rop
 open MinEdLauncher.Types

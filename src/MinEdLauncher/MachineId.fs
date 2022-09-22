@@ -1,7 +1,6 @@
 module MinEdLauncher.MachineId
 open System
 open System.IO
-open FSharp.Control.Tasks.NonAffine
 
 module WindowsRegistry =
     open Microsoft.Win32

@@ -6,7 +6,6 @@ open System.IO
 open System.Reflection
 open System.Threading
 open FsConfig
-open FSharp.Control.Tasks.NonAffine
 open Steam
 
 let assembly = typeof<Steam>.GetTypeInfo().Assembly

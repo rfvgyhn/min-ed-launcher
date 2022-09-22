@@ -8,7 +8,6 @@ open System.Threading
 open MinEdLauncher
 open MinEdLauncher.Http
 open MinEdLauncher.Token
-open FSharp.Control.Tasks.NonAffine
 open System
 open System.Diagnostics
 open System.Threading.Tasks

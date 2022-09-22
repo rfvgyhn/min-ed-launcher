@@ -9,7 +9,6 @@ open System.Resources
 open System.Runtime.InteropServices
 open System.Security.Cryptography
 open System.Text
-open FSharp.Control.Tasks.NonAffine
 open MinEdLauncher
 open Steam
 open Types

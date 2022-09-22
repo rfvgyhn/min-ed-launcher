@@ -6,7 +6,6 @@ open System.Net
 open System.Net.Http
 open System.Text
 open System.Threading.Tasks
-open FSharp.Control.Tasks.NonAffine
 open MinEdLauncher.Token
 open Types
 open Rop
