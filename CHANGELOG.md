@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.7.0] - 2022-09-22
 
 ### New Features
 - Provide extra products to the authorized product list. Useful for launching Horizons 4.0 when you own the Odyssey DLC.
@@ -156,7 +156,8 @@ legendary launch --dry-run 9c203b6ed35846e8a4a9ff1e314f6593 2> >(grep "Launch pa
 
 Initial release
 
-[unreleased]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.6.0...HEAD
+[unreleased]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.5.4...v0.6.0
 [0.5.4]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.5.3...v0.5.4
 [0.5.3]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.5.2...v0.5.3
