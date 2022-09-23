@@ -1,8 +1,9 @@
 name: Publish
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
 
 jobs:
   release:
@@ -35,9 +36,14 @@ jobs:
         if: ${{ matrix.target == 'linux-x64' }}
         run: ./publish.sh
 
+      - name: Create Release Notes
+        run: ci/latest-changes.sh > release-notes.txt
+
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
+          draft: true
           files: "artifacts/min-ed-launcher*"
+          body_path: release-notes.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
