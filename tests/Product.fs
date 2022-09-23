@@ -205,6 +205,7 @@ open MinEdLauncher.Tests.Extensions
                     Expect.all result (fun c -> Char.IsDigit(c) || Char.IsLower(c)) ""
                 } ]
             testList "getFileHashes" [
+                let getFileHashes = getFileHashes (Progress())
                 test "skips files that don't exist" {
                     let tryGenHash = (fun _ -> Some "hash")
                     let fileExists = (fun _ -> false)

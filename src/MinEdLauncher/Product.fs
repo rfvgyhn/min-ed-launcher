@@ -21,18 +21,22 @@ let createHashAlgorithm() = SHA1.Create() :> HashAlgorithm
 let private mapHashPair file hash = (file, hash)
 let private getFileRelativeDirectory relativeTo (file: string) = file.Replace(relativeTo, "").TrimStart(Path.DirectorySeparatorChar)
 
-let private generateFileHashes tryGenHash productDir (manifestFiles: string Set) (filePaths: string seq) =
-    let tryGetHash file =
+let private generateFileHashes tryGenHash (progress: IProgress<int>) productDir (manifestFiles: string Set) (filePaths: string[]) =
+    let alreadyHashed = manifestFiles.Count - filePaths.Length
+    let tryGetHash (index, file) =
         let getFileAbsoluteDirectory file = Path.Combine(productDir, file)
-        tryGenHash (getFileAbsoluteDirectory file) |> Option.map (mapHashPair file)
+        let hash = tryGenHash (getFileAbsoluteDirectory file) |> Option.map (mapHashPair file)
+        progress.Report(index + 1 + alreadyHashed)
+        hash
         
     filePaths
     |> Seq.map (getFileRelativeDirectory productDir)
     |> Seq.intersect manifestFiles
+    |> Seq.indexed
     |> Seq.choose tryGetHash
     |> Map.ofSeq
 
-let getFileHashes tryGenHash fileExists (manifestFiles: string Set) cache productDir (filePaths: string seq) =
+let getFileHashes progress tryGenHash fileExists (manifestFiles: string Set) cache productDir (filePaths: string seq) =
     let getHashFromCache cache file =
         cache
         |> Map.tryFind (getFileRelativeDirectory productDir file)
@@ -40,8 +44,8 @@ let getFileHashes tryGenHash fileExists (manifestFiles: string Set) cache produc
 
     let filePaths = filePaths |> Seq.toArray 
     let cachedHashes = filePaths |> Array.choose (getHashFromCache cache)
-    let missingHashes = filePaths |> Array.except (cachedHashes |> Array.map fst) |> Seq.filter fileExists
-    generateFileHashes tryGenHash productDir manifestFiles missingHashes
+    let missingHashes = filePaths |> Array.except (cachedHashes |> Array.map fst) |> Array.filter fileExists
+    generateFileHashes tryGenHash progress productDir manifestFiles missingHashes
     |> Map.merge cache
 
 let parseHashCacheLines (lines: string seq) =

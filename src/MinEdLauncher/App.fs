@@ -182,7 +182,7 @@ let throttledAction (semaphore: SemaphoreSlim) (action: 'a -> Task<'b>) input =
     |> Task.whenAll
 
 type UpdateProductPaths = { ProductDir: string; ProductCacheDir: string; CacheHashMap: string; ProductHashMap: string }
-let updateProduct downloader paths (manifest: Types.ProductManifest.File[]) = task {
+let updateProduct downloader hashProgress paths (manifest: Types.ProductManifest.File[]) = task {
     let manifestMap =
         manifest
         |> Array.map (fun file -> Product.normalizeManifestPartialPath file.Path, file)
@@ -205,12 +205,12 @@ let updateProduct downloader paths (manifest: Types.ProductManifest.File[]) = ta
         | Ok () -> Log.debug $"Wrote hash cache to '%s{path}'"
         | Error e -> Log.warn $"Unable to write hash cache at '%s{path}' - %s{e}" }
     
-    let getFileHashes = Product.getFileHashes tryGenHash File.Exists (manifestMap |> Map.keys)
+    let getFileHashes = Product.getFileHashes hashProgress tryGenHash File.Exists (manifestMap |> Map.keys)
     let processFiles productHashMap cacheHashMap =
         paths.ProductCacheDir
         |> FileIO.ensureDirExists
         |> Result.map (fun cacheDir ->
-            Log.info "Determining which files need to be updated. This may take a while."
+            Log.info "Determining which files need to be updated..."
             let validCachedHashes =
                 getFileHashes cacheHashMap cacheDir (Directory.EnumerateFiles(cacheDir, "*.*", SearchOption.AllDirectories))
                 |> Map.filter (fun file hash -> manifestMap.[file].Hash = hash)
@@ -236,7 +236,6 @@ let updateProduct downloader paths (manifest: Types.ProductManifest.File[]) = ta
     let downloadFiles downloader cacheDir (files: Types.ProductManifest.File[]) =
         if files.Length > 0 then
             Log.info $"Downloading %d{files.Length} files"
-            Console.CursorVisible <- false
             Product.downloadFiles downloader cacheDir files
         else
             Log.info "All files already up to date"
@@ -430,23 +429,32 @@ let run settings launcherVersion cancellationToken = taskResult {
                              CacheHashMap = Path.Combine(productCacheDir, "hashmap.txt")
                              ProductHashMap = Path.Combine(Environment.cacheDir, $"hashmap.%s{Path.GetFileName(productDir)}.txt") }
             let mutable lastProgress = 0.
-            let progress = Progress<DownloadProgress>(fun p ->
+            let barLength = 30
+            let downloadProgress = Progress<DownloadProgress>(fun p ->
                 let completed = p.BytesSoFar = p.TotalBytes
                 if p.Elapsed.TotalMilliseconds - lastProgress >= 200. || completed then
                     lastProgress <- p.Elapsed.TotalMilliseconds
                     let total = p.TotalBytes |> Int64.toFriendlyByteString
                     let speed =  (p.BytesSoFar / (int64 p.Elapsed.TotalMilliseconds) * 1000L |> Int64.toFriendlyByteString).PadLeft(6)
                     let percent = float p.BytesSoFar / float p.TotalBytes
-                    let barLength = 30
                     let blocks = int (float barLength * percent)
                     let bar = String.replicate blocks "#" + String.replicate (barLength - blocks) "-"
                     Console.Write($"\r\tDownloading %s{total} %s{speed}/s [%s{bar}] {percent:P0}")
                     if completed then Console.WriteLine()) :> IProgress<DownloadProgress>                    
-
+            let totalFiles = manifest.Files.Length
+            let digits = Math.Floor(Math.Log10(if totalFiles = 0 then 1 else totalFiles) + 1.) |> int
+            let hashProgress = Progress<int>(fun p ->
+                let percent = float p / float totalFiles
+                let blocks = int (float barLength * percent)
+                let bar = String.replicate blocks "#" + String.replicate (barLength - blocks) "-"
+                let file = p.ToString().PadLeft(digits)
+                Console.Write($"\r\tChecking file %s{file} of %i{totalFiles} [%s{bar}] {percent:P0}")
+                if p = totalFiles then Console.WriteLine())
             use semaphore = new SemaphoreSlim(settings.MaxConcurrentDownloads, settings.MaxConcurrentDownloads)
             let throttled progress = throttledAction semaphore (downloadFile httpClient Product.createHashAlgorithm cancellationToken progress)
-            let downloader = { Download = throttled; Progress = progress }
-            match! updateProduct downloader pathInfo manifest.Files with
+            let downloader = { Download = throttled; Progress = downloadProgress }
+            Console.CursorVisible <- false
+            match! updateProduct downloader hashProgress pathInfo manifest.Files with
             | Ok 0 -> return Some product
             | Ok _ ->
                 Console.CursorVisible <- true

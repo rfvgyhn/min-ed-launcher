@@ -20,6 +20,7 @@
 
 ### Enhancements
 - Support `.rdr` files when looking for a product's directory
+- Show progress indicator when verifying integrity of game files
 
 ### Bug Fixes
 - Fix crash when no products are available to play
