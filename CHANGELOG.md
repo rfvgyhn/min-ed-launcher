@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.7.1] - 2022-09-25
+
+## Bug Fixes
+- Fix game not launching properly on Linux + Steam because of new Proton process `steam-launch-wrapper`
+
 ## [0.7.0] - 2022-09-22
 
 ### New Features
@@ -156,7 +161,8 @@ legendary launch --dry-run 9c203b6ed35846e8a4a9ff1e314f6593 2> >(grep "Launch pa
 
 Initial release
 
-[unreleased]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.7.0...HEAD
+[unreleased]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.5.4...v0.6.0
 [0.5.4]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.5.3...v0.5.4
