@@ -70,20 +70,9 @@ let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (arg
             && [ Path.Combine("steamapps", "common", "Proton"); Path.Combine("Steam", "compatibilitytools.d", "Proton") ]
                |> List.exists (fun p -> args.[0].Contains(p))
         let isNewProton (args: string[]) = // Proton >= 5.13 runs via steam linux runtime
-            args.Length > 2 && args.[0] <> null
-            && args.[0].Contains("SteamLinuxRuntime")
-        let isReaper() = // Steam Client v? introduced a reaper process as entrypoint
-            argv.Length > 2 && argv.[0] <> null
-            && argv.[0].EndsWith(string Path.DirectorySeparatorChar + "reaper")
+            args.Length > 2 && args |> Array.filter (fun a -> a <> null) |> Array.exists (fun a -> a.Contains("SteamLinuxRuntime"))
         let isWine() = argv.Length > 0 && argv.[0] = "wine"
-        
-        // TODO: figure out how to get elite to run with reaper instead of ignoring it
-        let argv =
-            if isReaper() then
-                let index = (argv |> Array.findIndex (fun arg -> arg = "--")) + 1
-                argv.[index..]
-            else
-                argv
+
         if isNewProton argv then
             let runtimeArgs = argv.[1..] |> Array.takeWhile (doesntEndWith "proton")
             let protonArgs = argv.[1..] |> Array.skipWhile (doesntEndWith "proton") |> Array.takeWhile (doesntEndWith "EDLaunch.exe")
