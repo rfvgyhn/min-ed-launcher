@@ -6,13 +6,22 @@ open System
 open System.Runtime.InteropServices
 
 #if WINDOWS
-//    [<DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = false)>]
-//    extern IntPtr private SendMessage(IntPtr hWnd, UInt32 Msg, IntPtr wParam, IntPtr lParam);
-//
-//    [<Literal>]
-//    let private WM_CLOSE = 0x10u;
-//    let private terminate handle =
-//        SendMessage(handle, WM_CLOSE, IntPtr.Zero, IntPtr.Zero) |> ignore
+[<Literal>]
+let private STD_OUTPUT_HANDLE = -11
+[<Literal>]
+let private ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004u;
+
+[<DllImport("kernel32.dll")>]
+extern bool private GetConsoleMode(IntPtr hConsoleHandle, uint& lpMode)
+[<DllImport("kernel32.dll")>]
+extern IntPtr private GetStdHandle(int nStdHandle)
+
+let ansiColorSupported() =
+    let stdOut = GetStdHandle(STD_OUTPUT_HANDLE)
+    let mutable consoleMode = Unchecked.defaultof<uint>
+    GetConsoleMode(stdOut, &consoleMode)
+    && consoleMode &&& ENABLE_VIRTUAL_TERMINAL_PROCESSING = ENABLE_VIRTUAL_TERMINAL_PROCESSING
+
 let private terminate (p: Process) =
     if p.CloseMainWindow() then
         Ok ()
@@ -47,6 +56,8 @@ let private terminate pid =
         getErrorMessage errno |> Error
     else
         Ok code
+        
+let ansiColorSupported() = not (String.IsNullOrEmpty(Environment.GetEnvironmentVariable("TERM")))
 #endif
 
 let termProcess (p: Process) =

@@ -38,7 +38,7 @@ type LoggerSinkConfiguration with
                |> function
                   | Some c ->
                     try
-                        let theme = if Console.IsOutputRedirected || Console.IsErrorRedirected
+                        let theme = if Console.IsOutputRedirected || Console.IsErrorRedirected || (not (Interop.ansiColorSupported()))
                                     then ConsoleTheme.None
                                     else upcast AnsiConsoleTheme.Code
                         let textFormatter = c.Invoke([| theme; "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}"; null |]) :?> ITextFormatter
