@@ -8,10 +8,8 @@ open System.Reflection
 open System.Threading
 open FsConfig
 open FsToolkit.ErrorHandling
-open Steam
 
-let assembly = typeof<Steam>.GetTypeInfo().Assembly
-let getSettings args =
+let getSettings (assembly: Assembly) args =
     let path = Environment.configDir
     match FileIO.ensureDirExists path with
     | Error msg -> Error $"Unable to find/create configuration directory at %s{path} - %s{msg}" |> Task.fromResult
@@ -56,17 +54,22 @@ let main argv =
 
         try
             do! Async.SwitchToThreadPool ()
+            let assembly = Assembly.GetExecutingAssembly()
             let version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion
             let args =
                 if Console.IsInputRedirected then
-                    let stdin = Console.ReadLine().Split(' ') |> Array.filter (fun s -> String.IsNullOrEmpty(s) |> not)
-                    Array.append stdin argv
+                    let input = Console.ReadLine()
+                    if input <> null then
+                        let stdin = input.Split(' ') |> Array.filter (fun s -> String.IsNullOrEmpty(s) |> not)
+                        Array.append stdin argv
+                    else
+                        argv
                 else argv
             
             logRuntimeInfo version args
             
             return!
-                getSettings args
+                getSettings assembly args
                 |> TaskResult.bind (fun settings ->
                     taskResult {
                         Log.debug $"Settings: %A{settings}"

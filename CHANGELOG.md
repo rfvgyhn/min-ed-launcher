@@ -1,8 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+### Bug Fixes
+- Fix crash when STDIN was interpreted as null (running windows version via wine)
+
 ## [0.7.1] - 2022-09-25
 
-## Bug Fixes
+### Bug Fixes
 - Fix game not launching properly on Linux + Steam because of new Proton process `steam-launch-wrapper`
 
 ## [0.7.0] - 2022-09-22
