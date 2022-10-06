@@ -12,11 +12,10 @@ namespace MinEdLauncher.Bootstrap
                 FileName = "MinEdLauncher.exe",
                 Arguments = string.Join(" ", args),
                 CreateNoWindow = false,
-                UseShellExecute = false
+                UseShellExecute = true
             };
 
-            var p = Process.Start(startInfo);
-            p?.WaitForExit();
+            Process.Start(startInfo);
         }
     }
 }

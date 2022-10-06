@@ -4,6 +4,7 @@
 
 ### Bug Fixes
 - Fix crash when STDIN was interpreted as null (running windows version via wine)
+- Fix console window not opening when launching via Bootstrapper.exe
 
 ## [0.7.1] - 2022-09-25
 
