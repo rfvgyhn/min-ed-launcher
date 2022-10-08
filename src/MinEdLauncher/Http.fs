@@ -1,9 +1,12 @@
 module MinEdLauncher.Http
 
 open System
+open System.Collections.Generic
 open System.IO
+open System.Net.Http.Headers
 open System.Security.Cryptography
 open System.Net.Http
+open System.Text
 open System.Threading.Tasks
 open HttpClientExtensions
 
@@ -33,4 +36,22 @@ let createClient launcherVersion =
     let httpClient = new HttpClient()
     httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", userAgent) |> ignore
     httpClient
-
+    
+let dumpHeaders (httpHeaders: HttpHeaders list) indentAmt (sb: StringBuilder) =
+    let indent = String.replicate indentAmt " "
+    sb.AppendLine("{") |> ignore
+    httpHeaders
+    |> List.iter (fun hh ->
+        hh.NonValidated
+        |> Seq.iter (fun (header: KeyValuePair<string, HeaderStringValues>) ->
+            header.Value
+            |> Seq.iter (fun value ->
+                sb.Append(String.replicate indentAmt indent)
+                  .Append(header.Key)
+                  .Append(": ")
+                  .AppendLine(value)
+                |> ignore
+            )
+        )
+    )
+    sb.AppendLine(indent + "}") |> ignore

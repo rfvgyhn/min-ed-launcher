@@ -309,6 +309,8 @@ let run settings launcherVersion cancellationToken = taskResult {
     printInfo settings.Platform productsDir cbVersion
     use httpClient = Api.createClient settings.ApiUri launcherVersion
     let localTime = DateTime.UtcNow
+    
+    Log.debug("Getting remote time")    
     let! remoteTime = task {
         match! Api.getTime localTime httpClient with
         | Ok timestamp -> return timestamp
@@ -319,6 +321,8 @@ let run settings launcherVersion cancellationToken = taskResult {
     let runningTime = fun () ->
         let runningTime = DateTime.UtcNow.Subtract(localTime);
         ((double)remoteTime + runningTime.TotalSeconds)
+    
+    Log.debug("Getting machine id")
     let! machineId =
 #if WINDOWS
         MachineId.getWindowsId() |> Task.fromResult
@@ -328,11 +332,12 @@ let run settings launcherVersion cancellationToken = taskResult {
         |> TaskResult.mapError MachineId
 
     let lang = settings.PreferredLanguage |> Option.defaultValue "en"
-    use! connection = login launcherVersion runningTime httpClient machineId settings.Platform lang |> TaskResult.mapError Login
-
-    Log.info $"Logged in via %s{settings.Platform.Name} as: %s{connection.Session.Name}"
-    Log.debug "Getting authorized products"
     
+    Log.info("Logging in")
+    use! connection = login launcherVersion runningTime httpClient machineId settings.Platform lang |> TaskResult.mapError Login
+    Log.info $"Logged in via %s{settings.Platform.Name} as: %s{connection.Session.Name}"
+    
+    Log.debug "Getting authorized products"    
     let applyFixes = AuthorizedProduct.fixDirectoryName productsDir settings.Platform Directory.Exists File.Exists
                      >> AuthorizedProduct.fixFilters settings.FilterOverrides
     

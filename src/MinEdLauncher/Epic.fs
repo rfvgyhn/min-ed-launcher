@@ -93,6 +93,19 @@ let private epicValues = lazy (
             err "Unable to reflect types for Epic IDs"
     with e -> err (e.ToString()))
 
+let private requestToStr formValues contentHeaders (request: HttpRequestMessage) =
+    let sb = StringBuilder()
+    sb.AppendLine()
+      .Append("  Method: ")
+      .AppendLine(request.Method.ToString())
+      .Append("  Uri: ")
+      .AppendLine(request.RequestUri.ToString())
+      .Append("  Content: ")
+    |> List.dump formValues 2
+    sb.Append("  Headers: ")
+    |> Http.dumpHeaders [ request.Headers; contentHeaders ] 2
+    sb.ToString()
+
 let private request launcherVersion (formValues: string list) : Task<Result<RefreshableToken, string>> =
     match epicValues.Force() with
     | Ok (clientId, clientSecret, dId) -> task {
@@ -109,7 +122,7 @@ let private request launcherVersion (formValues: string list) : Task<Result<Refr
         request.RequestUri <- Uri("https://api.epicgames.dev/epic/oauth/v1/token")
         request.Content <- content
         
-        Log.debug "Requesting epic token"
+        Log.debug $"Requesting epic token %s{requestToStr formValues content.Headers request}"
         use httpClient = Http.createClient launcherVersion
         let! response = httpClient.SendAsync(request)
         

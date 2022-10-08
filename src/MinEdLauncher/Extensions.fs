@@ -65,6 +65,7 @@ module Seq =
     
 module List =
     open System.Threading.Tasks
+    open System.Text
     
     let mapTasksSequential (mapping: 'T -> Task<'U>) list = task {
         let! result =
@@ -89,6 +90,13 @@ module List =
         let! items = list |> mapTasksSequential chooser
         return items |> List.choose id
     }
+    
+    let dump list indentAmt (sb: StringBuilder) =
+        let indent = String.replicate indentAmt " "
+        sb.AppendLine("[") |> ignore
+        list
+        |> List.iter (fun value -> sb.Append(String.replicate indentAmt indent).AppendLine(value.ToString()) |> ignore)
+        sb.AppendLine(indent + "]") |> ignore
     
 module Map =
     // https://stackoverflow.com/a/50925864/182821
