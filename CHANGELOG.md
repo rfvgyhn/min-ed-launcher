@@ -5,7 +5,8 @@
 ### Bug Fixes
 - Fix crash when STDIN was interpreted as null (running windows version via wine)
 - Fix console window not opening when launching via Bootstrapper.exe
-- Fix formatting of redacted steam token (makes logs easier to read) 
+- Fix formatting of redacted steam token (makes logs easier to read)
+- Fix crash when running via Epic due to updated EosIF.dll
 
 ## [0.7.1] - 2022-09-25
 

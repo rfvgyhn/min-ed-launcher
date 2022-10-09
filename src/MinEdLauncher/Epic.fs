@@ -53,23 +53,19 @@ let private epicValues = lazy (
     try
         let eosIfAsm = Assembly.LoadFrom("EosIF.dll")
         let eosIfType = eosIfAsm.GetType("EosIF.EosInterface")
-        let eosLogType = eosIfAsm.GetType("EosIF.LogHelper")
         let eosAsm = Assembly.LoadFrom("EosSdk.dll")
         let credType = eosAsm.GetType("Epic.OnlineServices.Platform.ClientCredentials")
         let optType = eosAsm.GetType("Epic.OnlineServices.Platform.Options")
         
-        if eosIfType <> null && credType <> null && optType <> null && eosLogType <> null then
+        if eosIfType <> null && credType <> null && optType <> null then
             let methodInfo = eosIfType.GetMethod("CreatePlatformOptions", BindingFlags.Instance ||| BindingFlags.NonPublic)
-            let logField = eosIfType.GetField("m_log", BindingFlags.Instance ||| BindingFlags.NonPublic)
             let credIdProp = credType.GetProperty("ClientId")
             let credSecretProp = credType.GetProperty("ClientSecret")
             let depIdProp = optType.GetProperty("DeploymentId")
             let credsProp = optType.GetProperty("ClientCredentials")
             
-            if methodInfo <> null && credIdProp <> null && credSecretProp <> null && depIdProp <> null && credsProp <> null && logField <> null then
+            if methodInfo <> null && credIdProp <> null && credSecretProp <> null && depIdProp <> null && credsProp <> null then
                 let eosIf = Activator.CreateInstance(eosIfType, null)
-                let log = Activator.CreateInstance(eosLogType, [| null |])  
-                logField.SetValue(eosIf, log) // Regular launcher uses a destructor in the EosInterface some reason. Need to set any fields/props it references to avoid null ref exn
                 let options = methodInfo.Invoke(eosIf, null)
                 
                 if options <> null then
