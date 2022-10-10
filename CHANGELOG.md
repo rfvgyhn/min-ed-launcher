@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Enhancements
+- Support launching the game via custom version of wine (i.e. lutris)
+
 ### Bug Fixes
 - Fix crash when STDIN was interpreted as null (running windows version via wine)
 - Fix console window not opening when launching via Bootstrapper.exe

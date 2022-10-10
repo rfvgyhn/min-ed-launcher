@@ -71,7 +71,7 @@ let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (arg
                |> List.exists (fun p -> args.[0].Contains(p))
         let isNewProton (args: string[]) = // Proton >= 5.13 runs via steam linux runtime
             args.Length > 2 && args |> Array.filter (fun a -> a <> null) |> Array.exists (fun a -> a.Contains("SteamLinuxRuntime"))
-        let isWine() = argv.Length > 0 && argv.[0] = "wine"
+        let isWine() = argv.Length > 0 && argv[0].EndsWith("wine")
 
         if isNewProton argv then
             let runtimeArgs = argv.[1..] |> Array.takeWhile (doesntEndWith "proton")
@@ -82,7 +82,7 @@ let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (arg
         else if isOldProton argv then 
             Some { EntryPoint = "python3"; Args = argv.[..1] }, Path.GetDirectoryName(argv.[2]) |> Some, argv.[3..]
         else if isWine() then
-            Some { EntryPoint = "wine"; Args = [||] }, Path.GetDirectoryName(argv.[1]) |> Some, argv.[2..]
+            Some { EntryPoint = argv[0]; Args = [||] }, Path.GetDirectoryName(argv.[1]) |> Some, argv.[2..]
         else if argv.Length > 0 && argv.[0] <> null && argv.[0].EndsWith("EDLaunch.exe", StringComparison.OrdinalIgnoreCase) then
             None, Path.GetDirectoryName(argv.[0]) |> Some, argv.[1..]
         else
