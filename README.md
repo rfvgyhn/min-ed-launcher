@@ -287,13 +287,22 @@ Windows: `%LOCALAPPDATA%\min-ed-launcher\cache`
 Linux: `$XDG_CACHE_HOME/min-ed-launcher` (`~/.cache` if `$XDG_CACHE_HOME` isn't set)
 
 ## Build
-1. Install the [.Net 6 SDK]
-2. Run `dotnet build`
+1. Install the [.Net SDK]
+
+    At least version 6. In general, min-ed-launcher follows the latest Current version of the SDK.
+2. Clone repository and build
+    ```
+    $ git clone https://github.com/rfvgyhn/min-ed-launcher
+    $ cd min-ed-launcher
+    $ dotnet build -c Release
+    $ dotnet run -c Release --project src/MinEdLauncher/MinEdLauncher.fsproj
+   ```
+   If you'd prefer a single, self-contained binary, use `publish` instead of `build`. See [publish.sh] or [publish.ps1] for more details. 
 
 ### Release Artifacts
 Run either `publish.sh` or `publish.ps1` depending on your OS. These scripts make use of `dotnet publish`. Artifacts will end up in the `artifacts`folder.
 
-Note that the bootstrap project uses [NativeAOT] to link and compile the app and the .net 5 runtime into a single native executable. It
+Note that the bootstrap project uses [NativeAOT] to link and compile the app and the .net runtime into a single native executable. It
 specifically targets Windows and won't publish on a non-Windows machine.
 
 [preview-gif]: https://rfvgyhn.blob.core.windows.net/elite-dangerous/min-ed-launcher-demo.gif
@@ -309,7 +318,7 @@ specifically targets Windows and won't publish on a non-Windows machine.
 [alacritty]: https://github.com/alacritty/alacritty
 [gnome-terminal]: https://wiki.gnome.org/Apps/Terminal
 [konsole]: https://konsole.kde.org/
-[.Net 6 SDK]: https://dotnet.microsoft.com/download/dotnet/6.0
+[.Net SDK]: https://dotnet.microsoft.com/download/dotnet
 [NativeAOT]: https://github.com/dotnet/runtimelab/tree/feature/NativeAOT
 [Features]: #features
 [Usage]: #usage
@@ -328,3 +337,5 @@ specifically targets Windows and won't publish on a non-Windows machine.
 [Release Artifacts]: #release-artifacts
 [legendary]: https://github.com/derrod/legendary
 [quirks]: https://github.com/rfvgyhn/min-ed-launcher/issues/45#issuecomment-1030312606
+[publish.sh]: publish.sh
+[publish.ps1]: publish.ps1
