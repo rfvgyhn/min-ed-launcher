@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.7.2] - 2022-10-10
 
 ### Enhancements
 - Support launching the game via custom version of wine (i.e. lutris)
@@ -173,7 +173,8 @@ legendary launch --dry-run 9c203b6ed35846e8a4a9ff1e314f6593 2> >(grep "Launch pa
 
 Initial release
 
-[unreleased]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.7.1...HEAD
+[unreleased]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.7.2...HEAD
+[0.7.2]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.5.4...v0.6.0
