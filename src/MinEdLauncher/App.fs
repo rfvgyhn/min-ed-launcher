@@ -295,6 +295,21 @@ module AppError =
         | NoSelectedProduct -> "No selected project"
         | InvalidProductState m -> $"Couldn't start selected product: %s{m}"
 
+let private createGetRunningTime httpClient = task {
+    let localTime = DateTime.UtcNow
+    Log.debug("Getting remote time")
+    let! remoteTime = task {
+        match! Api.getTime localTime httpClient with
+        | Ok timestamp -> return timestamp
+        | Error (localTimestamp, msg) ->
+            Log.warn $"Couldn't get remote time: %s{msg}. Using local system time instead"
+            return localTimestamp
+    }
+    return fun () ->
+        let runningTime = DateTime.UtcNow.Subtract(localTime);
+        (double remoteTime + runningTime.TotalSeconds)
+}
+
 let run settings launcherVersion cancellationToken = taskResult {
     if RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && settings.Platform = Steam then
         Steam.fixLcAll()
@@ -308,19 +323,6 @@ let run settings launcherVersion cancellationToken = taskResult {
 
     printInfo settings.Platform productsDir cbVersion
     use httpClient = Api.createClient settings.ApiUri launcherVersion
-    let localTime = DateTime.UtcNow
-    
-    Log.debug("Getting remote time")    
-    let! remoteTime = task {
-        match! Api.getTime localTime httpClient with
-        | Ok timestamp -> return timestamp
-        | Error (localTimestamp, msg) ->
-            Log.warn $"Couldn't get remote time: %s{msg}. Using local system time instead"
-            return localTimestamp
-    }
-    let runningTime = fun () ->
-        let runningTime = DateTime.UtcNow.Subtract(localTime);
-        ((double)remoteTime + runningTime.TotalSeconds)
     
     Log.debug("Getting machine id")
     let! machineId =
@@ -334,7 +336,8 @@ let run settings launcherVersion cancellationToken = taskResult {
     let lang = settings.PreferredLanguage |> Option.defaultValue "en"
     
     Log.info("Logging in")
-    use! connection = login launcherVersion runningTime httpClient machineId settings.Platform lang |> TaskResult.mapError Login
+    let! getRunningTime = createGetRunningTime httpClient
+    use! connection = login launcherVersion getRunningTime httpClient machineId settings.Platform lang |> TaskResult.mapError Login
     Log.info $"Logged in via %s{settings.Platform.Name} as: %s{connection.Session.Name}"
     
     Log.debug "Getting authorized products"    
@@ -491,7 +494,7 @@ let run settings launcherVersion cancellationToken = taskResult {
     let! p = Product.validateForRun settings.CbLauncherDir settings.WatchForCrashes selectedProduct |> Result.mapError InvalidProductState
     
     let gameLanguage = Cobra.getGameLang settings.CbLauncherDir settings.PreferredLanguage
-    let processArgs() = Product.createArgString settings.DisplayMode gameLanguage connection.Session machineId (runningTime()) settings.WatchForCrashes settings.Platform SHA1.hashFile selectedProduct
+    let processArgs() = Product.createArgString settings.DisplayMode gameLanguage connection.Session machineId (getRunningTime()) settings.WatchForCrashes settings.Platform SHA1.hashFile selectedProduct
     let processes = Process.launchProcesses settings.Processes
     
     if not cancellationToken.IsCancellationRequested then
