@@ -10,6 +10,7 @@
 - Fix console window not opening when launching via Bootstrapper.exe
 - Fix formatting of redacted steam token (makes logs easier to read)
 - Fix crash when running via Epic due to updated EosIF.dll
+- Fix not correctly parsing quoted args when reading from STDIN (e.g. piping from legendary when path to game has spaces)
 
 ## [0.7.1] - 2022-09-25
 

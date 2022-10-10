@@ -71,7 +71,7 @@ let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (arg
                |> List.exists (fun p -> args.[0].Contains(p))
         let isNewProton (args: string[]) = // Proton >= 5.13 runs via steam linux runtime
             args.Length > 2 && args |> Array.filter (fun a -> a <> null) |> Array.exists (fun a -> a.Contains("SteamLinuxRuntime"))
-        let isWine() = argv.Length > 0 && argv[0].EndsWith("wine")
+        let isWine() = argv.Length > 0 && argv[0] <> null && argv[0].EndsWith("wine")
 
         if isNewProton argv then
             let runtimeArgs = argv.[1..] |> Array.takeWhile (doesntEndWith "proton")

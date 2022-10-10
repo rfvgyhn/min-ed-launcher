@@ -5,6 +5,7 @@ open System.Collections
 open System.IO
 open System.Net.Http
 open System.Reflection
+open System.Text.RegularExpressions
 open System.Threading
 open FsConfig
 open FsToolkit.ErrorHandling
@@ -60,7 +61,12 @@ let main argv =
                 if Console.IsInputRedirected then
                     let input = Console.ReadLine()
                     if input <> null then
-                        let stdin = input.Split(' ') |> Array.filter (fun s -> String.IsNullOrEmpty(s) |> not)
+                        Log.debug $"STDIN: {input}"
+                        let stdin =
+                            Regex.Matches(input, @"[^\s""']+|""([^""]*)""|'([^']*)'", RegexOptions.Multiline)
+                            |> Seq.filter (fun m -> not <| String.IsNullOrEmpty(m.Value))
+                            |> Seq.map (fun m -> m.Value.Trim('\'', '"'))
+                            |> Seq.toArray
                         Array.append stdin argv
                     else
                         argv
