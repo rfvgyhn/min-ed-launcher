@@ -73,11 +73,11 @@ let printInfo (platform: Platform) productsDir cobraVersion =
     CobraBay Version: %s{cobraVersion}
     Products Dir: %s{productsDir}"""
     
-let rec launchProduct proton processArgs restart productName product =
+let rec launchProduct dryRun proton processArgs restart productName product =
     let args = processArgs()
     Log.info $"Launching %s{productName}"
     
-    match Product.run proton args product with
+    match Product.run dryRun proton args product with
     | Product.RunResult.Ok p ->
         let timeout = restart |> Option.defaultValue 3000L
         let cancelRestart() =
@@ -106,7 +106,10 @@ let rec launchProduct proton processArgs restart productName product =
         Log.info $"Shutdown %s{productName}"
         
         if restart.IsSome && not (cancelRestart()) then
-            launchProduct proton processArgs restart productName product
+            launchProduct dryRun proton processArgs restart productName product
+    | Product.DryRun p ->
+        Console.WriteLine("\tDry run")
+        Console.WriteLine($"\t{p.FileName} {p.Arguments}")
     | Product.RunResult.AlreadyRunning -> Log.info $"%s{productName} is already running"
     | Product.RunResult.Error e -> Log.error $"Couldn't start selected product: %s{e.ToString()}"
   
@@ -495,10 +498,15 @@ let run settings launcherVersion cancellationToken = taskResult {
     
     let gameLanguage = Cobra.getGameLang settings.CbLauncherDir settings.PreferredLanguage
     let processArgs() = Product.createArgString settings.DisplayMode gameLanguage connection.Session machineId (getRunningTime()) settings.WatchForCrashes settings.Platform SHA1.hashFile selectedProduct
-    let processes = Process.launchProcesses settings.Processes
+    settings.Processes |> List.iter (fun p -> Log.info $"Starting process %s{p.FileName}")
+    let processes =
+        if settings.DryRun then
+            []
+        else
+            Process.launchProcesses settings.Processes
     
     if not cancellationToken.IsCancellationRequested then
-        launchProduct settings.CompatTool processArgs settings.Restart selectedProduct.Name p
+        launchProduct settings.DryRun settings.CompatTool processArgs settings.Restart selectedProduct.Name p
         Process.stopProcesses processes
     return 0
 } 

@@ -79,6 +79,10 @@ let tests =
             let! settings = parse [| "/novr" |]
             Expect.equal settings.DisplayMode Pancake ""
         }
+        testTask "Matches /dryrun" {
+            let! settings = parse [| "/dryrun" |]
+            Expect.isTrue settings.DryRun ""
+        }
         testTask "Matches /autorun" {
             let! settings = parse [| "/autorun" |]
             Expect.equal settings.AutoRun true ""

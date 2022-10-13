@@ -6,7 +6,6 @@ let launchProcesses (processes:ProcessStartInfo list) =
     processes
     |> List.choose (fun p ->
         try
-            Log.info $"Starting process %s{p.FileName}"
             Process.Start(p) |> Some
         with
         | e ->

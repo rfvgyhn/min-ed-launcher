@@ -25,7 +25,8 @@ let defaults =
       ForceUpdate = Set.empty
       Processes = List.empty
       FilterOverrides = OrdinalIgnoreCaseMap.empty
-      AdditionalProducts = List.empty }
+      AdditionalProducts = List.empty
+      DryRun = false }
     
 [<RequireQualifiedAccess>]
 type FrontierCredResult = Found of string * string * string option | NotFound of string | UnexpectedFormat of string | Error of string
@@ -140,6 +141,7 @@ let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (arg
             | "/autorun", _                   -> { s with AutoRun = true }
             | "/autoquit", _                  -> { s with AutoQuit = true }
             | "/forcelocal", _                -> { s with ForceLocal = true }
+            | "/dryrun", _                    -> { s with DryRun = true }
             | arg, _ when arg.StartsWith('/')
                           && arg.Length > 1   -> { s with ProductWhitelist = s.ProductWhitelist.Add (arg.TrimStart('/')) }
             | _ -> s) defaults

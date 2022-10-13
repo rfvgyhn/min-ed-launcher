@@ -95,7 +95,8 @@ type LauncherSettings =
       ForceUpdate: string Set
       Processes: ProcessStartInfo list
       FilterOverrides: OrdinalIgnoreCaseMap<string>
-      AdditionalProducts: AuthorizedProduct list }
+      AdditionalProducts: AuthorizedProduct list
+      DryRun: bool }
 type ProductMode = Online | Offline
 type VersionInfo =
     { Name: string

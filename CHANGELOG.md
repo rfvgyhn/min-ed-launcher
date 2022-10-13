@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Enhancements
+- Add ability to run the launcher without launching any processes via the `/dryrun` flag
+
 ## [0.7.2] - 2022-10-10
 
 ### Enhancements

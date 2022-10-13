@@ -270,8 +270,8 @@ let createProcessInfo proton args product =
     startInfo.RedirectStandardError <- true
     startInfo
 
-type RunResult = Ok of Process | AlreadyRunning | Error of exn
-let run proton args (product:RunnableProduct)  =
+type RunResult = Ok of Process | AlreadyRunning | DryRun of ProcessStartInfo | Error of exn
+let run dryRun proton args (product:RunnableProduct)  =
     if isRunning product then
         AlreadyRunning
     else
@@ -279,7 +279,10 @@ let run proton args (product:RunnableProduct)  =
         
         Log.debug $"Process: %s{startInfo.FileName} %s{startInfo.Arguments}"
         
-        try
-            Process.Start(startInfo) |> Ok
-        with
-        | e -> Error e
+        if dryRun then
+            DryRun startInfo
+        else
+            try
+                Process.Start(startInfo) |> Ok
+            with
+            | e -> Error e

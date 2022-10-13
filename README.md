@@ -163,6 +163,7 @@ The following arguments are in addition to the above:
 | /edh4                  | Select Elite Dangerous Horizons 4.0 as the startup product                                                                       |
 | /frontier profile-name | Use this argument to login with a Frontier Store account. Keep the profile name to letters, numbers, dashes and underscores only |
 | /restart delay         | Restart the game after it has closed with _delay_ being the number of seconds given to cancel the restart (i.e `/restart 3`)     |
+| /dryrun                | Prints output without launching any processes                                                                                    |
 
 Note that the restart feature doesn't work with Epic accounts. After Elite launches, it invalidates
 the launcher's auth token and doesn't communicate the new token which then prevents the ability to
