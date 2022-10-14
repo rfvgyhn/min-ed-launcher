@@ -50,11 +50,9 @@ let logRuntimeInfo version args =
 
 [<EntryPoint>]
 let main argv =
-    async {
         use cts = new CancellationTokenSource()
 
         try
-            do! Async.SwitchToThreadPool ()
             let assembly = Assembly.GetExecutingAssembly()
             let version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion
             let args =
@@ -74,7 +72,7 @@ let main argv =
             
             logRuntimeInfo version args
             
-            return!
+            let run =
                 getSettings assembly args
                 |> TaskResult.bind (fun settings ->
                     taskResult {
@@ -91,10 +89,10 @@ let main argv =
                     Log.error msg
                     Console.waitForQuit())
                 |> TaskResult.defaultValue 1
-                |> Async.AwaitTask
+            run.GetAwaiter().GetResult()
+            
         with
-        | :? AggregateException as e when (e.InnerException :? HttpRequestException) ->
-            let e = e.InnerException :?> HttpRequestException
+        | :? HttpRequestException as e ->
             let at =
                 e.StackTrace.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
                 |> Seq.map (fun line -> line.TrimStart())
@@ -103,9 +101,8 @@ let main argv =
                 |> Option.defaultValue ""
             Log.error $"Network request failed. Are you connected to the internet? - {e.Message} {at}"
             Console.waitForQuit()
-            return 1
+            1
         | e ->
             Log.error $"Unhandled exception: {e}"
             Console.waitForQuit()
-            return 1
-    } |> Async.RunSynchronously
+            1
