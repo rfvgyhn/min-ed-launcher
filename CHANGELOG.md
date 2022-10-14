@@ -4,6 +4,7 @@
 
 ### Enhancements
 - Add ability to run the launcher without launching any processes via the `/dryrun` flag
+- Don't close console window if an error occurred even if `/autoquit` is specified. Makes it easier to see what went wrong compared to having to open the log file
 
 ## [0.7.2] - 2022-10-10
 

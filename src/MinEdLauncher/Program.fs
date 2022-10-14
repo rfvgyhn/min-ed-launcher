@@ -83,12 +83,13 @@ let main argv =
                         let! runResult = App.run settings version cts.Token |> TaskResult.mapError App.AppError.toDisplayString
 
                         if not settings.AutoQuit && not cts.Token.IsCancellationRequested then
-                            printfn "Press any key to quit..."
-                            Console.ReadKey() |> ignore
+                            Console.waitForQuit()
                             
                         return runResult
                     })
-                |> TaskResult.teeError Log.error
+                |> TaskResult.teeError (fun msg ->
+                    Log.error msg
+                    Console.waitForQuit())
                 |> TaskResult.defaultValue 1
                 |> Async.AwaitTask
         with
@@ -101,6 +102,10 @@ let main argv =
                 |> Seq.tryHead
                 |> Option.defaultValue ""
             Log.error $"Network request failed. Are you connected to the internet? - {e.Message} {at}"
+            Console.waitForQuit()
             return 1
-        | e -> Log.error $"Unhandled exception: {e}"; return 1
+        | e ->
+            Log.error $"Unhandled exception: {e}"
+            Console.waitForQuit()
+            return 1
     } |> Async.RunSynchronously

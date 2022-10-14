@@ -6,6 +6,11 @@ open MinEdLauncher.Http
 open MinEdLauncher.Types
 open System
 
+let waitForQuit () =
+    if not Console.IsInputRedirected then
+        printfn "Press any key to quit..."
+        Console.ReadKey() |> ignore
+
 let readPassword () =
     let rec readMask pw =
         let k = Console.ReadKey(true)
