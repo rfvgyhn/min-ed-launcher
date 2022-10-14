@@ -48,27 +48,29 @@ let logRuntimeInfo version args =
     Env: %s{envVars}
     """
 
+let applyStdin argv =
+    if Console.IsInputRedirected then
+        let input = Console.ReadLine()
+        if input <> null then
+            Log.debug $"STDIN: {input}"
+            let stdin =
+                Regex.Matches(input, @"[^\s""']+|""([^""]*)""|'([^']*)'", RegexOptions.Multiline)
+                |> Seq.filter (fun m -> not <| String.IsNullOrEmpty(m.Value))
+                |> Seq.map (fun m -> m.Value.Trim('\'', '"'))
+                |> Seq.toArray
+            Array.append stdin argv
+        else
+            argv
+    else argv
+
 [<EntryPoint>]
 let main argv =
         use cts = new CancellationTokenSource()
-
+        Console.CancelKeyPress.Add(fun _ -> cts.Cancel())
         try
             let assembly = Assembly.GetExecutingAssembly()
             let version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion
-            let args =
-                if Console.IsInputRedirected then
-                    let input = Console.ReadLine()
-                    if input <> null then
-                        Log.debug $"STDIN: {input}"
-                        let stdin =
-                            Regex.Matches(input, @"[^\s""']+|""([^""]*)""|'([^']*)'", RegexOptions.Multiline)
-                            |> Seq.filter (fun m -> not <| String.IsNullOrEmpty(m.Value))
-                            |> Seq.map (fun m -> m.Value.Trim('\'', '"'))
-                            |> Seq.toArray
-                        Array.append stdin argv
-                    else
-                        argv
-                else argv
+            let args = applyStdin argv
             
             logRuntimeInfo version args
             
