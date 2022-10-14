@@ -36,18 +36,17 @@ let login launcherVersion runningTime httpClient machineId (platform: Platform) 
         let! result = Permanent "DevAuthToken" |> Ok |> (authenticate None)
         return result }
     | Frontier details -> task {
-        let promptTwoFactorCode email =
-            printf $"Enter verification code that was sent to %s{email}: "
-            Console.ReadLine()
-        let promptUserPass() =
-            printfn "Enter Frontier credentials"
-            printf "Username (Email): "
-            let username = Console.ReadLine()
-            printf "Password: "
-            let password = Console.readPassword() |> Cobra.encrypt |> Result.defaultValue ""
-            username, password
         let credPath = Settings.frontierCredPath details.Profile
-        let! token = Api.login runningTime httpClient details machineId lang (Cobra.saveCredentials credPath) promptTwoFactorCode promptUserPass
+        let loginRequest: Api.LoginRequest =
+            { RunningTime = runningTime
+              HttpClient = httpClient
+              Details = details
+              MachineId = machineId
+              Lang = lang
+              SaveCredentials = Cobra.saveCredentials credPath
+              GetTwoFactor = Console.promptTwoFactorCode
+              GetUserPass = Console.promptUserPass }
+        let! token = Api.login loginRequest
         match token with
         | Ok (username, password, token) ->
             let! result = PasswordBased { Username = username; Password = password; Token = token } |> Ok |> (authenticate None)
@@ -79,99 +78,18 @@ let rec launchProduct dryRun proton processArgs restart productName product =
     
     match Product.run dryRun proton args product with
     | Product.RunResult.Ok p ->
-        let timeout = restart |> Option.defaultValue 3000L
-        let cancelRestart() =
-            let interval = 250
-            let stopwatch = Stopwatch()
-            Console.consumeAvailableKeys()
-            stopwatch.Start()
-            while Console.KeyAvailable = false && stopwatch.ElapsedMilliseconds < timeout do
-                System.Threading.Thread.Sleep interval
-                let remaining = timeout / 1000L - stopwatch.ElapsedMilliseconds / 1000L
-                Console.SetCursorPosition(0, Console.CursorTop)
-                Console.Write($"Restarting in %i{remaining} seconds. Press any key to quit.")
-                
-            let left = Console.CursorLeft
-            Console.SetCursorPosition(0, Console.CursorTop)
-            if Console.KeyAvailable then
-                Console.ReadKey() |> ignore
-                Console.WriteLine("Shutting down...".PadRight(left))
-                true
-            else
-                Console.WriteLine("Restarting...".PadRight(left))
-                false
-
         use p = p
         p.WaitForExit()
         Log.info $"Shutdown %s{productName}"
         
-        if restart.IsSome && not (cancelRestart()) then
+        let timeout = restart |> Option.defaultValue 3000L
+        if restart.IsSome && not (Console.cancelRestart timeout) then
             launchProduct dryRun proton processArgs restart productName product
     | Product.DryRun p ->
         Console.WriteLine("\tDry run")
         Console.WriteLine($"\t{p.FileName} {p.Arguments}")
     | Product.RunResult.AlreadyRunning -> Log.info $"%s{productName} is already running"
     | Product.RunResult.Error e -> Log.error $"Couldn't start selected product: %s{e.ToString()}"
-  
-let promptForProductToPlay (products: ProductDetails array) (cancellationToken:CancellationToken) =
-    printfn $"Select a product to launch (default=1):"
-    products
-    |> Array.indexed
-    |> Array.iter (fun (i, product) -> printfn $"%i{i + 1}) %s{product.Name}")
-        
-    let rec readInput() =
-        printf "Product: "
-        let userInput = Console.ReadKey(true)
-        printfn ""
-        let couldParse, index =
-            if userInput.Key = ConsoleKey.Enter then
-                true, 1
-            else
-                Int32.TryParse(userInput.KeyChar.ToString())
-        if cancellationToken.IsCancellationRequested then
-            None
-        else if couldParse && index > 0 && index < products.Length then
-            let product = products.[index - 1]
-            let filters = String.Join(", ", product.Filters)
-            Log.debug $"User selected %s{product.Name} - %s{product.Sku} - %s{filters}"
-            products.[index - 1] |> Some
-        else
-            printfn "Invalid selection"
-            readInput()
-    readInput()
-    
-let promptForProductsToUpdate (products: ProductDetails array) =
-    if products.Length > 0 then
-        printfn $"Select product(s) to update (eg: \"1\", \"1 2 3\") (default=None):"
-        products
-        |> Array.indexed
-        |> Array.iter (fun (i, product) -> printfn $"%i{i + 1}) %s{product.Name}")
-            
-        let rec readInput() =
-            let userInput = Console.ReadLine()
-            
-            if String.IsNullOrWhiteSpace(userInput) then
-                [||]
-            else
-                let selection =
-                    userInput
-                    |> Regex.split @"\D+"
-                    |> Array.choose (fun d ->
-                        if String.IsNullOrEmpty(d) then
-                            None
-                        else
-                            match Int32.Parse(d) with
-                            | n when n > 0 && n < products.Length -> Some n
-                            | _ -> None)
-                    |> Array.map (fun i -> products.[i - 1])
-                if selection.Length > 0 then
-                    selection
-                else
-                    printfn "Invalid selection"
-                    readInput()
-        readInput()
-    else
-        [||]
 
 let throttledAction (semaphore: SemaphoreSlim) (action: 'a -> Task<'b>) input =
     input
@@ -185,18 +103,16 @@ let throttledAction (semaphore: SemaphoreSlim) (action: 'a -> Task<'b>) input =
     |> Task.whenAll
 
 type UpdateProductPaths = { ProductDir: string; ProductCacheDir: string; CacheHashMap: string; ProductHashMap: string }
-let updateProduct downloader hashProgress paths (manifest: Types.ProductManifest.File[]) = task {
+let updateProduct downloader (hashProgress: ISampledProgress<int>) (cacheProgress: int -> IProgress<int>) paths (manifest: Types.ProductManifest.File[]) = task {
     let manifestMap =
         manifest
         |> Array.map (fun file -> Product.normalizeManifestPartialPath file.Path, file)
         |> Map.ofArray
     
     let tryGenHash file =
-        match Product.generateFileHashStr Product.hashFile file with
-        | Ok hash -> Some hash
-        | Error e ->
-           Log.warn $"Unable to get hash of file '%s{file}' - %s{e.ToString()}"
-           None
+        Product.generateFileHashStr Product.hashFile file
+        |> Result.teeError (fun e -> Log.warn $"Unable to get hash of file '%s{file}' - %s{e.ToString()}")
+        |> Result.toOption
 
     let verifyFiles (files: Http.FileDownloadResponse[]) =
         let invalidFiles = files |> Seq.filter (fun file -> file.Integrity = Http.Invalid) |> Seq.map (fun file -> file.FilePath)
@@ -208,34 +124,38 @@ let updateProduct downloader hashProgress paths (manifest: Types.ProductManifest
         | Ok () -> Log.debug $"Wrote hash cache to '%s{path}'"
         | Error e -> Log.warn $"Unable to write hash cache at '%s{path}' - %s{e}" }
     
-    let getFileHashes = Product.getFileHashes hashProgress tryGenHash File.Exists (manifestMap |> Map.keys)
-    let processFiles productHashMap cacheHashMap =
-        paths.ProductCacheDir
-        |> FileIO.ensureDirExists
-        |> Result.map (fun cacheDir ->
-            Log.info "Determining which files need to be updated..."
-            let validCachedHashes =
-                getFileHashes cacheHashMap cacheDir (Directory.EnumerateFiles(cacheDir, "*.*", SearchOption.AllDirectories))
-                |> Map.filter (fun file hash -> manifestMap.[file].Hash = hash)
-            let manifestKeys = manifestMap |> Map.keys
-            let productHashMap = productHashMap |> Map.filter (fun path _ -> File.Exists(Path.Combine(paths.ProductDir, path)))
-            let productHashes =
-                manifestKeys
-                |> Seq.except (validCachedHashes |> Map.keys)
-                |> Seq.map (fun path -> Path.Combine(paths.ProductDir, path))
-                |> getFileHashes productHashMap paths.ProductDir
-                |> Map.merge validCachedHashes 
-            let invalidFiles =
-                manifestKeys
-                |> Set.filter (fun file ->
-                    productHashes
-                    |> Map.tryFind file
-                    |> Option.filter (fun hash -> manifestMap.[file].Hash = hash)
-                    |> Option.isNone)
-                |> Seq.map (fun file -> Map.find file manifestMap)
-                |> Seq.toArray
-            invalidFiles, productHashes, validCachedHashes)
+    let checkDownloadCache getFileHashes (createProgress: int -> IProgress<int>) cacheHashMap cacheDir =
+        let downloadedFiles = Directory.EnumerateFiles(cacheDir, "*.*", SearchOption.AllDirectories) |> Seq.toList
+        let m = downloadedFiles
+                |> List.map (fun f -> f.Substring(cacheDir.Length + 1))
+                |> List.filter (fun f -> f <> "hashmap.txt") |> Set.ofList
+        let totalFiles = m.Count
+        let p = createProgress totalFiles
+        let hashes = getFileHashes p m cacheHashMap cacheDir (downloadedFiles :> string seq)
+        if p :? ISampledProgress<int> then (p :?> ISampledProgress<int>).Flush()
+        hashes
     
+    let checkProductFiles getFileHashes (progress: IProgress<int>) productHashMap validCachedHashes =
+        let manifestKeys = manifestMap |> Map.keys
+        let productHashMap = productHashMap |> Map.filter (fun path _ -> File.Exists(Path.Combine(paths.ProductDir, path)))
+        let productHashes =
+            manifestKeys
+            |> Seq.except (validCachedHashes |> Map.keys)
+            |> Seq.map (fun path -> Path.Combine(paths.ProductDir, path))
+            |> getFileHashes progress manifestKeys productHashMap paths.ProductDir
+            |> Map.merge validCachedHashes
+        if progress :? ISampledProgress<int> then (progress :?> ISampledProgress<int>).Flush()
+        let invalidFiles =
+            manifestKeys
+            |> Set.filter (fun file ->
+                productHashes
+                |> Map.tryFind file
+                |> Option.filter (fun hash -> manifestMap.[file].Hash = hash)
+                |> Option.isNone)
+            |> Seq.map (fun file -> Map.find file manifestMap)
+            |> Seq.toArray
+        invalidFiles, productHashes, validCachedHashes
+        
     let downloadFiles downloader cacheDir (files: Types.ProductManifest.File[]) =
         if files.Length > 0 then
             Log.info $"Downloading %d{files.Length} files"
@@ -244,21 +164,25 @@ let updateProduct downloader hashProgress paths (manifest: Types.ProductManifest
             Log.info "All files already up to date"
             [||] |> Ok |> Task.fromResult
 
-    let! cacheHashes = task {
-        match! Product.parseHashCache paths.CacheHashMap with
-        | Ok hashes -> return hashes
-        | Error e ->
-            Log.warn $"Unable to parse hash map at '%s{paths.CacheHashMap}' - %s{e}"
-            return Map.empty }
-    let! productHashes = task {
-        match! Product.parseHashCache paths.ProductHashMap with
-        | Ok hashes -> return hashes
-        | Error e ->
-            Log.warn $"Unable to parse hash map at '%s{paths.ProductHashMap}' - %s{e}"
-            return Map.empty }
+    let! cacheHashes =
+        Product.parseHashCache paths.CacheHashMap
+        |> TaskResult.teeError (fun e -> Log.warn $"Unable to parse hash map at '%s{paths.CacheHashMap}' - %s{e}")
+        |> TaskResult.defaultValue Map.empty
+        
+    let! productHashes =
+        Product.parseHashCache paths.ProductHashMap
+        |> TaskResult.teeError (fun e -> Log.warn $"Unable to parse hash map at '%s{paths.ProductHashMap}' - %s{e}")
+        |> TaskResult.defaultValue Map.empty
+    let getFileHashes = Product.getFileHashes tryGenHash File.Exists
     
     return!
-        processFiles productHashes cacheHashes
+        paths.ProductCacheDir
+        |> FileIO.ensureDirExists
+        |> Result.tee (fun _ -> Log.info "Determining which files need to be updated")
+        |> Result.tee (fun _ -> Log.info "Checking download cache")
+        |> Result.map (checkDownloadCache getFileHashes cacheProgress cacheHashes)
+        |> Result.tee (fun _ -> Log.info "Checking existing files")
+        |> Result.map (checkProductFiles getFileHashes hashProgress productHashes)
         |> Result.bindTask (fun (invalidFiles, productHashes, cacheHashes) -> task {
             let write = writeHashCache false
             do! write paths.ProductHashMap productHashes
@@ -356,8 +280,8 @@ let run settings launcherVersion cancellationToken = taskResult {
             p |> List.append settings.AdditionalProducts
               |> List.map applyFixes)
     
-    let names = authorizedProducts |> List.map (fun p -> p.Name)
-    Log.debug $"Authorized Products: %s{String.Join(',', names)}"
+    let names = authorizedProducts |> List.map (fun p -> p.Name) |> String.join ","
+    Log.debug $"Authorized Products: %s{names}"
     Log.info "Checking for updates"
     let checkForUpdates =
         let getProductDir = Cobra.getProductDir productsDir File.Exists File.ReadAllLines Directory.Exists
@@ -370,26 +294,7 @@ let run settings launcherVersion cancellationToken = taskResult {
         | Ok p -> return p
         | Error e -> Log.warn $"{e}"; return [] }
 
-    let availableProductsDisplay =
-        let max (f: ProductDetails -> string) =
-            if products.Length = 0 then
-                0
-            else
-                products
-                |> List.map (function | Playable p | RequiresUpdate p -> (f(p)).Length | _ -> 0)
-                |> List.max
-        let maxName = max (fun p -> p.Name)
-        let maxSku = max (fun p -> p.Sku)
-        let map msg (p: ProductDetails) = $"{p.Name.PadRight(maxName)} {p.Sku.PadRight(maxSku)} %s{msg}" 
-        let availableProducts =
-            products
-            |> List.choose (function | Playable p -> map "Up to Date" p |> Some
-                                     | RequiresUpdate p -> map "Requires Update" p |> Some
-                                     | Missing _ | Product.Unknown _ -> None)
-        match availableProducts with
-        | [] -> "None"
-        | p -> String.Join(Environment.NewLine + "\t", p)
-    Log.info $"Available Products:{Environment.NewLine}\t%s{availableProductsDisplay}"
+    Log.info $"Available Products:{Environment.NewLine}\t%s{Console.availableProductsDisplay products}"
 
     let productsRequiringUpdate = Product.filterByUpdateRequired settings.Platform settings.ForceUpdate products |> List.toArray
     let productsToUpdate =
@@ -397,7 +302,7 @@ let run settings launcherVersion cancellationToken = taskResult {
             if settings.AutoUpdate then
                 productsRequiringUpdate
             else
-                productsRequiringUpdate |> promptForProductsToUpdate
+                productsRequiringUpdate |> Console.promptForProductsToUpdate
         products
         |> Array.filter (fun p -> p.Metadata.IsNone)
         |> Array.iter (fun p -> Log.error $"Unknown product metadata for %s{p.Name}")
@@ -439,33 +344,18 @@ let run settings launcherVersion cancellationToken = taskResult {
                              ProductCacheDir = productCacheDir
                              CacheHashMap = Path.Combine(productCacheDir, "hashmap.txt")
                              ProductHashMap = Path.Combine(Environment.cacheDir, $"hashmap.%s{Path.GetFileName(productDir)}.txt") }
-            let mutable lastProgress = 0.
             let barLength = 30
-            let downloadProgress = Progress<DownloadProgress>(fun p ->
-                let completed = p.BytesSoFar = p.TotalBytes
-                if p.Elapsed.TotalMilliseconds - lastProgress >= 200. || completed then
-                    lastProgress <- p.Elapsed.TotalMilliseconds
-                    let total = p.TotalBytes |> Int64.toFriendlyByteString
-                    let speed =  (p.BytesSoFar / (int64 p.Elapsed.TotalMilliseconds) * 1000L |> Int64.toFriendlyByteString).PadLeft(6)
-                    let percent = float p.BytesSoFar / float p.TotalBytes
-                    let blocks = int (float barLength * percent)
-                    let bar = String.replicate blocks "#" + String.replicate (barLength - blocks) "-"
-                    Console.Write($"\r\tDownloading %s{total} %s{speed}/s [%s{bar}] {percent:P0}")
-                    if completed then Console.WriteLine()) :> IProgress<DownloadProgress>                    
+            let downloadProgress = Console.Progress(Console.productDownloadIndicator barLength)              
             let totalFiles = manifest.Files.Length
-            let digits = Math.Floor(Math.Log10(if totalFiles = 0 then 1 else totalFiles) + 1.) |> int
-            let hashProgress = Progress<int>(fun p ->
-                let percent = float p / float totalFiles
-                let blocks = int (float barLength * percent)
-                let bar = String.replicate blocks "#" + String.replicate (barLength - blocks) "-"
-                let file = p.ToString().PadLeft(digits)
-                Console.Write($"\r\tChecking file %s{file} of %i{totalFiles} [%s{bar}] {percent:P0}")
-                if p = totalFiles then Console.WriteLine())
+            let digits = Int.digitCount totalFiles
+            let hashProgress = Console.Progress(Console.productHashIndicator barLength digits totalFiles)
+            let cacheProgress totalFiles : IProgress<int> =
+                Console.Progress(Console.productHashIndicator barLength (Int.digitCount totalFiles) totalFiles)
             use semaphore = new SemaphoreSlim(settings.MaxConcurrentDownloads, settings.MaxConcurrentDownloads)
             let throttled progress = throttledAction semaphore (downloadFile httpClient Product.createHashAlgorithm cancellationToken progress)
             let downloader = { Download = throttled; Progress = downloadProgress }
             Console.CursorVisible <- false
-            match! updateProduct downloader hashProgress pathInfo manifest.Files with
+            match! updateProduct downloader hashProgress cacheProgress pathInfo manifest.Files with
             | Ok 0 -> return Some product
             | Ok _ ->
                 Console.CursorVisible <- true
@@ -490,7 +380,7 @@ let run settings launcherVersion cancellationToken = taskResult {
             playableProducts
             |> Product.selectProduct settings.ProductWhitelist
         else if playableProducts.Length > 0 then
-            promptForProductToPlay playableProducts cancellationToken
+            Console.promptForProductToPlay playableProducts cancellationToken
         else None
         |> Result.requireSome NoSelectedProduct
     

@@ -9,10 +9,11 @@ open System.Net.Http
 open System.Text
 open System.Threading.Tasks
 open HttpClientExtensions
+open MinEdLauncher.Types
 
 type DownloadProgress = { TotalFiles: int; BytesSoFar: int64; Elapsed: TimeSpan; TotalBytes: int64; }
 type DownloadAll<'a, 'b> = IProgress<int> -> 'a[] -> Task<'b[]>
-type Downloader<'a, 'b> = { Download: DownloadAll<'a, 'b>; Progress: IProgress<DownloadProgress> }
+type Downloader<'a, 'b> = { Download: DownloadAll<'a, 'b>; Progress: ISampledProgress<DownloadProgress> }
 type FileDownloadRequest = { RemotePath: string; TargetPath: string; ExpectedHash: string }
 type FileIntegrity = Valid | Invalid
 module FileIntegrity =

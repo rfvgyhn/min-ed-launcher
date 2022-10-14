@@ -115,17 +115,26 @@ let requestMachineToken (httpClient:HttpClient) machineId lang twoFactorToken tw
       "lang", lang ]
     |> postSingle httpClient "/1.1/user/token" "machineToken" "error_num"
 
-let rec login (runningTime: unit -> double) (httpClient:HttpClient) details machineId lang (saveCredentials: Credentials -> string option -> Task<Result<unit, string>>) (getTwoFactor: string -> string) (getUserPass: unit -> string * string) =
-    match details.Credentials, details.AuthToken with
+type LoginRequest =
+    { RunningTime: unit -> double
+      HttpClient: HttpClient
+      Details: FrontierDetails
+      MachineId: string
+      Lang: string
+      SaveCredentials: Credentials -> string option -> Task<Result<unit, string>>
+      GetTwoFactor: string -> string
+      GetUserPass: unit -> string * string }
+let rec login request =
+    match request.Details.Credentials, request.Details.AuthToken with
     | None, _ ->
-        let user, pass = getUserPass()
-        login runningTime httpClient { details with Credentials = Some { Username = user; Password = pass } } machineId lang saveCredentials getTwoFactor getUserPass
+        let user, pass = request.GetUserPass()
+        login { request with Details = { request.Details with Credentials = Some { Username = user; Password = pass } } }
     | Some cred, None ->
-        firstTimeSignin runningTime httpClient cred machineId lang
+        firstTimeSignin request.RunningTime request.HttpClient cred request.MachineId request.Lang
         |> Task.bindTaskResult (fun twoFactorToken ->
-            getTwoFactor cred.Username |> requestMachineToken httpClient machineId lang twoFactorToken)
+            request.GetTwoFactor cred.Username |> requestMachineToken request.HttpClient request.MachineId request.Lang twoFactorToken)
         |> Task.bindTaskResult (fun machineToken ->
-            saveCredentials cred (Some machineToken) |> Task.bindTaskResult (fun () -> Ok machineToken |> Task.fromResult))
+            request.SaveCredentials cred (Some machineToken) |> Task.bindTaskResult (fun () -> Ok machineToken |> Task.fromResult))
         |> Task.mapResult (fun token -> (cred.Username, cred.Password, token))
     | Some cred, Some authToken -> (cred.Username, cred.Password, authToken) |> Ok |> Task.fromResult
 

@@ -51,6 +51,7 @@
     <Compile Include="MachineId.fs" />
     <Compile Include="Epic.fs" />
     <Compile Include="Settings.fs" />
+    <Compile Include="Console.fs" />
     <Compile Include="App.fs" />
     <Compile Include="Program.fs" />
     <EmbeddedResource Include="settings.json" />

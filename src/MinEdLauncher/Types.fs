@@ -24,6 +24,33 @@ module OrdinalIgnoreCaseMap =
     let ofSeq<'Value> items = OrdinalIgnoreCaseMap<'Value>.Create(OrdinalIgnoreCaseComparer(), items)
     let empty<'Value> = OrdinalIgnoreCaseMap<'Value>.Empty(OrdinalIgnoreCaseComparer())
 
+type ISampledProgress<'T> =
+    inherit IProgress<'T>
+    abstract member Flush : unit -> unit
+
+type SampledProgress<'T>(interval: TimeSpan, handler: 'T -> unit, finishedHandler: unit -> unit) =
+    let stopwatch = Stopwatch()
+    let mutable lastReport = 0L
+    let mutable current : 'T option = None
+    let report value =
+        if not stopwatch.IsRunning then stopwatch.Start()
+        if lastReport = 0 || stopwatch.ElapsedMilliseconds - lastReport >= interval.Milliseconds then
+            lastReport <- stopwatch.ElapsedMilliseconds
+            handler value
+        current <- Some value
+    
+    interface IProgress<'T> with
+        member this.Report(value: 'T) = report value
+        
+    interface ISampledProgress<'T> with
+        member this.Flush() =
+            match current with
+            | None -> ()
+            | Some value ->
+                lastReport <- 0
+                report value
+                finishedHandler()
+
 type EpicDetails =
     { ExchangeCode: string
       Type: string

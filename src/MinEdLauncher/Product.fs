@@ -22,21 +22,24 @@ let private mapHashPair file hash = (file, hash)
 let private getFileRelativeDirectory relativeTo (file: string) = file.Replace(relativeTo, "").TrimStart(Path.DirectorySeparatorChar)
 
 let private generateFileHashes tryGenHash (progress: IProgress<int>) productDir (manifestFiles: string Set) (filePaths: string[]) =
-    let alreadyHashed = manifestFiles.Count - filePaths.Length
+    let files =
+        filePaths
+        |> Seq.map (getFileRelativeDirectory productDir)
+        |> Seq.intersect manifestFiles
+        |> Seq.indexed
+        |> Seq.toArray
+    let alreadyHashed = manifestFiles.Count - files.Length
     let tryGetHash (index, file) =
         let getFileAbsoluteDirectory file = Path.Combine(productDir, file)
         let hash = tryGenHash (getFileAbsoluteDirectory file) |> Option.map (mapHashPair file)
         progress.Report(index + 1 + alreadyHashed)
         hash
         
-    filePaths
-    |> Seq.map (getFileRelativeDirectory productDir)
-    |> Seq.intersect manifestFiles
-    |> Seq.indexed
-    |> Seq.choose tryGetHash
+    files
+    |> Array.choose tryGetHash
     |> Map.ofSeq
 
-let getFileHashes progress tryGenHash fileExists (manifestFiles: string Set) cache productDir (filePaths: string seq) =
+let getFileHashes tryGenHash fileExists progress (manifestFiles: string Set) cache productDir (filePaths: string seq) =
     let getHashFromCache cache file =
         cache
         |> Map.tryFind (getFileRelativeDirectory productDir file)
@@ -109,6 +112,7 @@ let downloadFiles downloader destDir (files: Types.ProductManifest.File[]) : Tas
         stopWatch.Start()
         let! result = downloader.Download relativeProgress requests
         stopWatch.Stop()
+        downloader.Progress.Flush()
         return Ok result
     with e -> return e.ToString() |> Error }
 

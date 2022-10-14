@@ -254,6 +254,10 @@ module String =
     let toLower (str: string) = str.ToLower()
     let ensureEndsWith (value: char) (str: string) = if str.EndsWith(value) then str else $"%s{str}%c{value}"
     
+module Int =
+    open System
+    let digitCount n = Math.Floor(Math.Log10(if n = 0 then 1 else n) + 1.) |> int
+    
 module Int64 =
     open System
     
@@ -450,29 +454,6 @@ module FileIO =
                 if File.Exists(targetFile) then File.Delete(targetFile)
                 File.Move(file, targetFile)))
         Directory.Delete(source, true);
-
-module Console =
-    open System
-    let readPassword () =
-        let rec readMask pw =
-            let k = Console.ReadKey(true)
-            match k.Key with
-            | ConsoleKey.Enter -> pw
-            | ConsoleKey.Backspace ->
-                match pw with
-                | [] -> readMask []
-                | _::t ->
-                    Console.Write "\b \b"
-                    readMask t
-            | _ ->
-                Console.Write "*"
-                readMask (k.KeyChar::pw)
-        let password = readMask [] |> Seq.rev |> String.Concat
-        Console.WriteLine ()
-        password
-    let consumeAvailableKeys () =
-        while Console.KeyAvailable do
-            Console.ReadKey() |> ignore
 
 module Regex =
     open System.Text.RegularExpressions
