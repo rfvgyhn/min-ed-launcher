@@ -32,24 +32,24 @@ type SampledProgress<'T>(interval: TimeSpan, handler: 'T -> unit, finishedHandle
     let stopwatch = Stopwatch()
     let mutable lastReport = 0L
     let mutable current : 'T option = None
-    let report value =
+    let report value = lock stopwatch (fun () ->
         if not stopwatch.IsRunning then stopwatch.Start()
         if lastReport = 0 || stopwatch.ElapsedMilliseconds - lastReport >= interval.Milliseconds then
             lastReport <- stopwatch.ElapsedMilliseconds
             handler value
-        current <- Some value
+        current <- Some value)
     
     interface IProgress<'T> with
         member this.Report(value: 'T) = report value
         
     interface ISampledProgress<'T> with
-        member this.Flush() =
+        member this.Flush() = lock stopwatch (fun () ->
             match current with
             | None -> ()
             | Some value ->
                 lastReport <- 0
                 report value
-                finishedHandler()
+                finishedHandler())
 
 type EpicDetails =
     { ExchangeCode: string
