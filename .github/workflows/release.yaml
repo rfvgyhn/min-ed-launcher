@@ -27,6 +27,14 @@ jobs:
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: '6.0.x'
+          
+      - name: Install Rust
+        if: ${{ matrix.target == 'win10-x64' }}
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
 
       - name: Publish Windows
         if: ${{ matrix.target == 'win10-x64' }}
