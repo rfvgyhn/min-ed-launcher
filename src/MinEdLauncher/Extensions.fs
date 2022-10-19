@@ -7,42 +7,14 @@ module Task =
     open System.Collections.Generic
     let fromResult r = Task.FromResult(r)
     let whenAll (tasks: IEnumerable<Task<'t>>) = Task.WhenAll(tasks)
-    
-    let bindTaskResult (f: 'T -> Task<Result<'U, 'TError>>) (result: Task<Result<'T, 'TError>>) = task { 
-        match! result with
-        | Ok v -> return! f v
-        | Error m -> return Error m 
-    }
-    let bindResult (f: 'T -> Result<'U, 'TError>) (result: Task<Result<'T, 'TError>>) = task { 
-        match! result with
-        | Ok v -> return f v
-        | Error m -> return Error m 
-    }
-    let mapResult f (result: Task<Result<'T, 'TError>>) = task { 
-        match! result with
-        | Ok v -> return Ok (f v)
-        | Error m -> return Error m
-    }
 
 module Result =
-    open System.Threading.Tasks
-    
-    let defaultValue value = function
-        | Ok v -> v
-        | Error _ -> value
     let defaultWith (defThunk: 'T -> 'U) = function
         | Ok v -> v
         | Error e -> defThunk e
     let bindTask f = function
         | Ok v -> f v
         | Error v -> Error v |> Task.fromResult
-    let mapTask f (result: Result<Task<'T>, 'TError>) =
-        match result with
-        | Ok v -> task {
-            let! result = v
-            return f result }
-        | Error v -> Error v |> Task.fromResult
-        
 
 module Seq =
     open System.Linq

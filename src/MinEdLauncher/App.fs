@@ -188,8 +188,8 @@ let updateProduct downloader (hashProgress: ISampledProgress<int>) (cacheProgres
             do! write paths.ProductHashMap productHashes
             do! write paths.CacheHashMap cacheHashes
             return Ok invalidFiles })
-        |> Task.bindTaskResult (downloadFiles downloader paths.ProductCacheDir)
-        |> Task.bindTaskResult (fun files -> task {
+        |> TaskResult.bind (downloadFiles downloader paths.ProductCacheDir)
+        |> TaskResult.bind (fun files -> task {
             if files.Length > 0 then
                 do! files
                     |> Seq.map (fun response ->

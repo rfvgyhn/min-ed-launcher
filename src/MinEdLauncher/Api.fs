@@ -6,6 +6,7 @@ open System.Net
 open System.Net.Http
 open System.Text
 open System.Threading.Tasks
+open FsToolkit.ErrorHandling
 open MinEdLauncher.Token
 open Types
 open Rop
@@ -131,11 +132,11 @@ let rec login request =
         login { request with Details = { request.Details with Credentials = Some { Username = user; Password = pass } } }
     | Some cred, None ->
         firstTimeSignin request.RunningTime request.HttpClient cred request.MachineId request.Lang
-        |> Task.bindTaskResult (fun twoFactorToken ->
+        |> TaskResult.bind (fun twoFactorToken ->
             request.GetTwoFactor cred.Username |> requestMachineToken request.HttpClient request.MachineId request.Lang twoFactorToken)
-        |> Task.bindTaskResult (fun machineToken ->
-            request.SaveCredentials cred (Some machineToken) |> Task.bindTaskResult (fun () -> Ok machineToken |> Task.fromResult))
-        |> Task.mapResult (fun token -> (cred.Username, cred.Password, token))
+        |> TaskResult.bind (fun machineToken ->
+            request.SaveCredentials cred (Some machineToken) |> TaskResult.bind (fun () -> Ok machineToken |> Task.fromResult))
+        |> TaskResult.map (fun token -> (cred.Username, cred.Password, token))
     | Some cred, Some authToken -> (cred.Username, cred.Password, authToken) |> Ok |> Task.fromResult
 
 let authenticate (runningTime: unit -> double) (token: AuthToken) platform machineId lang (httpClient:HttpClient) = task {
@@ -288,7 +289,7 @@ let checkForUpdate platform machineId (connection: Connection) product = task {
                 else
                     product |> RequiresUpdate |> Ok
             | _ ->
-                let content = content >>= Json.toString |> Result.defaultWith id
+                let content = content >>= Json.toString |> MinEdLauncher.Result.defaultWith id
                 let msg = $"Unexpected json object %s{content}"
                 Log.debug msg
                 Error msg

@@ -10,6 +10,7 @@ open System.Threading.Tasks
 open MinEdLauncher.Http
 open MinEdLauncher.Rop
 open MinEdLauncher.Types
+open FsToolkit.ErrorHandling
 
 let generateFileHashStr (hashFile: string -> Result<byte[], 'TError>) (file: string) =
     hashFile file
@@ -64,7 +65,7 @@ let parseHashCacheLines (lines: string seq) =
 let parseHashCache filePath =
     if File.Exists(filePath) then
         FileIO.readAllLines filePath
-        |> Task.mapResult parseHashCacheLines
+        |> TaskResult.map parseHashCacheLines
     else Map.empty |> Ok |> Task.fromResult
 
 let mapHashMapToLines hashMap =

@@ -9,6 +9,7 @@ open System.Resources
 open System.Runtime.InteropServices
 open System.Security.Cryptography
 open System.Text
+open FsToolkit.ErrorHandling
 open MinEdLauncher
 open Steam
 open Types
@@ -126,14 +127,14 @@ let saveCredentials path credentials machineToken =
         |> Result.bindTask (fun encryptedToken ->
             $"{credentials.Username}{nl}{credentials.Password}{nl}{encryptedToken}" |> FileIO.writeAllText path)
     | None -> $"{credentials.Username}{nl}{credentials.Password}" |> FileIO.writeAllText path
-    |> Task.bindTaskResult (fun () -> setUserOnly path |> Task.fromResult)
+    |> TaskResult.bind (fun () -> setUserOnly path |> Task.fromResult)
     
 let discardToken path =
     FileIO.readAllLines path
-    |> Task.bindTaskResult (fun lines ->
+    |> TaskResult.bind (fun lines ->
         String.Join(Environment.NewLine, lines |> Seq.take 2)
         |> FileIO.writeAllText path)
-    |> Task.bindTaskResult (fun () -> setUserOnly path |> Task.fromResult)
+    |> TaskResult.bind (fun () -> setUserOnly path |> Task.fromResult)
 
 let getGameLang cbLauncherDir langCode =
     let asm = Assembly.LoadFrom(Path.Combine(cbLauncherDir, $"LocalResources.dll"))
