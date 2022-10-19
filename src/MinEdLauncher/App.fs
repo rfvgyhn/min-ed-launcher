@@ -79,7 +79,10 @@ let rec launchProduct dryRun proton processArgs restart productName product =
     match Product.run dryRun proton args product with
     | Product.RunResult.Ok p ->
         use p = p
+        p.BeginErrorReadLine()
+        p.BeginOutputReadLine()
         p.WaitForExit()
+        p.Close()
         Log.info $"Shutdown %s{productName}"
         
         let timeout = restart |> Option.defaultValue 3000L

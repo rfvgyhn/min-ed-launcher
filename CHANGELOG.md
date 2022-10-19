@@ -7,6 +7,9 @@
 - Don't close console window if an error occurred even if `/autoquit` is specified. Makes it easier to see what went wrong compared to having to open the log file
 - Reduce Bootstrapper file size by about 9x
 
+### Bug Fixes
+- Fix game client not shutting down because of pending stdout/stderr stream (usually when running via lutris)
+
 ## [0.7.2] - 2022-10-10
 
 ### Enhancements
