@@ -288,6 +288,10 @@ Windows: `%LOCALAPPDATA%\min-ed-launcher\cache`
 Linux: `$XDG_CACHE_HOME/min-ed-launcher` (`~/.cache` if `$XDG_CACHE_HOME` isn't set)
 
 ## Build
+Two different toolchains are needed to build the entire project. .NET is used for the launcher itself and Rust is used
+for the bootstrapper. Since the bootstrapper is only used for users playing via Epic, you may not need to setup both.
+
+### Launcher
 1. Install the [.Net SDK]
 
     At least version 6. In general, min-ed-launcher follows the latest Current version of the SDK.
@@ -300,11 +304,21 @@ Linux: `$XDG_CACHE_HOME/min-ed-launcher` (`~/.cache` if `$XDG_CACHE_HOME` isn't 
    ```
    If you'd prefer a single, self-contained binary, use `publish` instead of `build`. See [publish.sh] or [publish.ps1] for more details. 
 
+### Bootstrapper
+This project is Windows specific and won't compile on other operating systems.
+
+1. [Install Rust]
+
+   In general, min-ed-launcher follows the latest _stable_ version of the compiler.
+2. After cloning the repo (mentioned above), compile via cargo:
+    ```
+    $ cargo build --release
+    $ .\target\release\bootstrap.exe
+    ```
 ### Release Artifacts
 Run either `publish.sh` or `publish.ps1` depending on your OS. These scripts make use of `dotnet publish`. Artifacts will end up in the `artifacts`folder.
 
-Note that the bootstrap project uses [NativeAOT] to link and compile the app and the .net runtime into a single native executable. It
-specifically targets Windows and won't publish on a non-Windows machine.
+Note that the bootstrap project specifically targets Windows and won't publish on a non-Windows machine.
 
 [preview-gif]: https://rfvgyhn.blob.core.windows.net/elite-dangerous/min-ed-launcher-demo.gif
 [Settings]: #settings
@@ -320,7 +334,7 @@ specifically targets Windows and won't publish on a non-Windows machine.
 [gnome-terminal]: https://wiki.gnome.org/Apps/Terminal
 [konsole]: https://konsole.kde.org/
 [.Net SDK]: https://dotnet.microsoft.com/download/dotnet
-[NativeAOT]: https://github.com/dotnet/runtimelab/tree/feature/NativeAOT
+[install rust]: https://www.rust-lang.org/tools/install
 [Features]: #features
 [Usage]: #usage
 [Steam]: #steam
