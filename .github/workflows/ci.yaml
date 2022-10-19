@@ -59,7 +59,7 @@ jobs:
           toolchain: stable
           profile: minimal
           override: true
-          components: clippy, rustfmt, cargo-edit
+          components: clippy, rustfmt
           
       - name: Run cargo clippy
         if: ${{ matrix.target == 'win10-x64' }}
@@ -75,19 +75,13 @@ jobs:
           command: fmt
           args: --all -- --check
             
-      - name: Set Bootstrap Version
-        if: ${{ matrix.target == 'win10-x64' }}
-        uses: actions-rs/cargo@v1
-        with:
-          command: set-version
-          args: ${{ steps.version.outputs.version }}${{ steps.version.outputs.version-suffix }}
-            
       - name: Publish Bootstrap
         if: ${{ matrix.target == 'win10-x64' }}
         shell: bash
         run: |
           target="${{ matrix.target }}"
           release_name="min-ed-launcher_v${{ steps.version.outputs.version }}_$target"
+          sed -i -e 's/0\.0\.0/${{ steps.version.outputs.version }}${{ steps.version.outputs.version-suffix }}/' Cargo.toml
           cargo build --release
           mv target/release/bootstrap.exe "artifacts/$release_name/MinEdLauncher.Boostrap.exe"
 
