@@ -107,9 +107,11 @@ let readCredentials path = task {
         return CredResult.NotFound path }
 
 let setUserOnly path =
-    if RuntimeInformation.IsOSPlatform(OSPlatform.Windows) then
+    // Use preprocessor directive instead of RuntimeInformation.IsOSPlatform so that self-contained exe doesn't
+    // try to extract MonoPosixHelper dlls to home/user/.cache/dotnet_bundle_extract
+#if WINDOWS
         Ok ()
-    else
+#else
         let file = Mono.Unix.UnixFileInfo(path)
         try
             file.FileAccessPermissions <- Mono.Unix.FileAccessPermissions.UserRead ||| Mono.Unix.FileAccessPermissions.UserWrite 
@@ -117,7 +119,7 @@ let setUserOnly path =
         with e ->
             File.Delete(path)
             Error $"Unable to set credential file permissions - {e}"
-
+#endif
 let saveCredentials path credentials machineToken =
     let nl = Environment.NewLine
     match machineToken with

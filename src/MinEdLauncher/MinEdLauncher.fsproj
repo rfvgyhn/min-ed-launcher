@@ -73,7 +73,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="6.0.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="6.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
-    <PackageReference Include="Mono.Posix.NETStandard" Version="5.20.1-preview" />
+    <PackageReference Include="Mono.Posix.NETStandard" Version="5.20.1-preview" Condition=" '$(Configuration)' == 'Debug' OR '$(Configuration)' == 'Release' " />
     <PackageReference Include="TypeShape" Version="10.0.0" />
     <PackageReference Include="FsConfig" Version="3.1.0" />
     <PackageReference Update="FSharp.Core" Version="6.0.6" />
