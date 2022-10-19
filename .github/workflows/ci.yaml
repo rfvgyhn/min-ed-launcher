@@ -51,14 +51,45 @@ jobs:
           target="${{ matrix.target }}"
           release_name="min-ed-launcher_v${{ steps.version.outputs.version }}_$target"
           dotnet publish src/MinEdLauncher/MinEdLauncher.fsproj -r "$target" --self-contained true -o "artifacts/$release_name" -c ${{ matrix.config }} -p:PublishSingleFile=true -p:VersionSuffix=${{ steps.version.outputs.version-suffix }}
-        
+
+      - name: Install Rust
+        if: ${{ matrix.target == 'win10-x64' }}
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+          components: clippy, rustfmt, cargo-edit
+          
+      - name: Run cargo clippy
+        if: ${{ matrix.target == 'win10-x64' }}
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: -- -D warnings
+            
+      - name: Run cargo fmt
+        if: ${{ matrix.target == 'win10-x64' }}
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+            
+      - name: Set Bootstrap Version
+        if: ${{ matrix.target == 'win10-x64' }}
+        uses: actions-rs/cargo@v1
+        with:
+          command: set-version
+          args: ${{ steps.version.outputs.version }}${{ steps.version.outputs.version-suffix }}
+            
       - name: Publish Bootstrap
         if: ${{ matrix.target == 'win10-x64' }}
         shell: bash
         run: |
           target="${{ matrix.target }}"
           release_name="min-ed-launcher_v${{ steps.version.outputs.version }}_$target"
-          dotnet publish src/MinEdLauncher.Bootstrap/MinEdLauncher.Bootstrap.csproj -r "$target" --self-contained true -o "artifacts/$release_name" -c Release -p:VersionSuffix=${{ steps.version.outputs.version-suffix }}
+          cargo build --release
+          mv target/release/bootstrap.exe "artifacts/$release_name/MinEdLauncher.Boostrap.exe"
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2

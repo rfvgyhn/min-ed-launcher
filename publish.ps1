@@ -4,13 +4,18 @@ $target="win10-x64"
 [xml]$proj = Get-Content src\Directory.Build.props
 $version=$proj.Project.PropertyGroup.VersionPrefix
 $release_name="min-ed-launcher_v${version}_$target"
+$target_dir="artifacts\$release_name"
 
-dotnet restore -r $target
-dotnet publish src\MinEdLauncher\MinEdLauncher.fsproj -r "$target" --self-contained true --no-restore -o "artifacts\$release_name" -c ReleaseWindows -p:PublishSingleFile=true
-dotnet publish src\MinEdLauncher.Bootstrap\MinEdLauncher.Bootstrap.csproj -r "$target" --self-contained true --no-restore -o "artifacts\$release_name" -c Release
-cp README.md,CHANGELOG.md "artifacts\$release_name"
-rm "artifacts\$release_name\*" -include *.json, *.pdb
+dotnet restore -r $target src\MinEdLauncher\MinEdLauncher.fsproj
+dotnet publish src\MinEdLauncher\MinEdLauncher.fsproj -r "$target" --self-contained true --no-restore -o "$target_dir" -c ReleaseWindows -p:PublishSingleFile=true
+$full_version=(Get-Item "$target_dir\MinEdLauncher.exe").VersionInfo.ProductVersion
+(Get-Content Cargo.toml).replace('0.0.0', "$full_version") | Set-Content Cargo.toml # Workaround for https://github.com/rust-lang/cargo/issues/6583
+cargo build --release
+(Get-Content Cargo.toml).replace("$full_version", '0.0.0') | Set-Content Cargo.toml # Workaround for https://github.com/rust-lang/cargo/issues/6583
+mv target/release/bootstrap.exe "$target_dir\MinEdLauncher.Bootstrap.exe"
+cp README.md,CHANGELOG.md "$target_dir"
+rm "$target_dir\*" -include *.json, *.pdb
 
-Compress-Archive -Path "artifacts\$release_name" -DestinationPath "artifacts\$release_name.zip" -Force
+Compress-Archive -Path "$target_dir" -DestinationPath "$target_dir.zip" -Force
 
-rm -r "artifacts\$release_name"
+rm -r "$target_dir"
