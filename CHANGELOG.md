@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.7.3] - 2022-10-20
 
 ### Enhancements
 - Add ability to run the launcher without launching any processes via the `/dryrun` flag
@@ -183,7 +183,8 @@ legendary launch --dry-run 9c203b6ed35846e8a4a9ff1e314f6593 2> >(grep "Launch pa
 
 Initial release
 
-[unreleased]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.7.2...HEAD
+[unreleased]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.7.3...HEAD
+[0.7.3]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.6.0...v0.7.0
