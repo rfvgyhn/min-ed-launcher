@@ -6,8 +6,7 @@ $version=$proj.Project.PropertyGroup.VersionPrefix
 $release_name="min-ed-launcher_v${version}_$target"
 $target_dir="artifacts\$release_name"
 
-dotnet restore -r $target src\MinEdLauncher\MinEdLauncher.fsproj
-dotnet publish src\MinEdLauncher\MinEdLauncher.fsproj -r "$target" --self-contained true --no-restore -o "$target_dir" -c ReleaseWindows -p:PublishSingleFile=true
+dotnet publish -r "$target" --self-contained -o "$target_dir" -c ReleaseWindows -p:PublishSingleFile=true src\MinEdLauncher\MinEdLauncher.fsproj
 $full_version=(Get-Item "$target_dir\MinEdLauncher.exe").VersionInfo.ProductVersion
 (Get-Content Cargo.toml).replace('0.0.0', "$full_version") | Set-Content Cargo.toml # Workaround for https://github.com/rust-lang/cargo/issues/6583
 cargo build --release

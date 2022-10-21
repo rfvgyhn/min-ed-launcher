@@ -34,6 +34,10 @@
     <DefineConstants>WINDOWS</DefineConstants>
     <RuntimeIdentifier>win10-x64</RuntimeIdentifier>
   </PropertyGroup>
+    
+  <PropertyGroup>
+    <IsLinux>!$(DefineConstants.Contains('WINDOWS'))</IsLinux>
+  </PropertyGroup>
 
   <ItemGroup>
     <Compile Include="Extensions.fs" />
@@ -55,7 +59,7 @@
     <Compile Include="App.fs" />
     <Compile Include="Program.fs" />
     <EmbeddedResource Include="settings.json" />
-    <Content Include="..\..\lib\libsteam_api.so" Condition=" '$(Configuration)' == 'Debug' OR '$(Configuration)' == 'Release' ">
+    <Content Include="..\..\lib\libsteam_api.so" Condition="$(IsLinux)">
       <Link>libsteam_api.so</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
@@ -73,7 +77,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="6.0.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="6.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
-    <PackageReference Include="Mono.Posix.NETStandard" Version="5.20.1-preview" Condition=" '$(Configuration)' == 'Debug' OR '$(Configuration)' == 'Release' " />
+    <PackageReference Include="Mono.Posix.NETStandard" Version="5.20.1-preview" Condition="$(IsLinux)" />
     <PackageReference Include="TypeShape" Version="10.0.0" />
     <PackageReference Include="FsConfig" Version="3.1.0" />
     <PackageReference Update="FSharp.Core" Version="6.0.6" />
