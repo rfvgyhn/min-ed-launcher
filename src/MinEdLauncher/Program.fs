@@ -79,7 +79,6 @@ let main argv =
                 |> TaskResult.bind (fun settings ->
                     taskResult {
                         Log.debug $"Settings: %A{settings}"
-                        Directory.SetCurrentDirectory(settings.CbLauncherDir)
                         let! runResult = App.run settings version cts.Token |> TaskResult.mapError App.AppError.toDisplayString
 
                         if not settings.AutoQuit && not cts.Token.IsCancellationRequested then

@@ -1,5 +1,6 @@
 module MinEdLauncher.Settings
 
+open FsToolkit.ErrorHandling
 open Types
 open System
 open System.IO
@@ -146,13 +147,9 @@ let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (arg
                           && arg.Length > 1   -> { s with ProductWhitelist = s.ProductWhitelist.Add (arg.TrimStart('/')) }
             | _ -> s) defaults
     
-    match cbLaunchDir
-          |> Option.map Ok |> Option.defaultWith (fun () -> findCbLaunchDir settings.Platform)
-          |> Result.map (fun launchDir -> { settings with CompatTool = compatTool; CbLauncherDir = launchDir }) with
-    | Ok settings ->
-        applyDeviceAuth settings
-    | Result.Error msg -> Result.Error msg |> Task.fromResult
-    
+    cbLaunchDir
+    |> Option.map Ok |> Option.defaultWith (fun () -> findCbLaunchDir settings.Platform)
+    |> Result.map (fun launchDir -> { settings with CompatTool = compatTool; CbLauncherDir = launchDir })
 
 [<CLIMutable>] type ProcessConfig = { FileName: string; Arguments: string option }
 [<CLIMutable>] type FilterConfig = { Sku: string; Filter: string }
@@ -233,7 +230,11 @@ let getSettings args appDir fileConfig = task {
         | Frontier _-> Cobra.potentialInstallPaths() @ Steam.potentialInstallPaths() |> findCbLaunchDir
         | _ -> Error "Unknown platform. Failed to find Elite Dangerous install directory"
     
-    let! settings = parseArgs defaults fallbackDirs args
+    let! settings =
+        parseArgs defaults fallbackDirs args
+        |> Result.tee (fun s -> Directory.SetCurrentDirectory(s.CbLauncherDir))
+        |> Result.bindTask applyDeviceAuth
+    
     return settings
            |> Result.map (fun settings -> { settings with ApiUri = apiUri
                                                           AutoUpdate = fileConfig.AutoUpdate

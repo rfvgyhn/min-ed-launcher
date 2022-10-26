@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Bug Fixes
+- Fix crash when trying to login with frontier credentials and current working directory isn't the same as Elite's game directory
+
 ## [0.7.3] - 2022-10-20
 
 ### Enhancements
