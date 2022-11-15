@@ -4,6 +4,8 @@
 
 ### Bug Fixes
 - Fix crash when trying to login with frontier credentials and current working directory isn't the same as Elite's game directory
+- Upgrade to .net 7
+  - Among other things, reduces binary size by about 23%
 
 ## [0.7.3] - 2022-10-20
 
