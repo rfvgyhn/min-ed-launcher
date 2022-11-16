@@ -52,26 +52,20 @@ jobs:
 
       - name: Install Rust
         if: ${{ matrix.target == 'win10-x64' }}
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: stable
-          profile: minimal
-          override: true
           components: clippy, rustfmt
           
       - name: Run cargo clippy
         if: ${{ matrix.target == 'win10-x64' }}
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -- -D warnings
+        run: |
+          cargo clippy -- -D warnings
             
       - name: Run cargo fmt
         if: ${{ matrix.target == 'win10-x64' }}
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+        run: |
+          cargo fmt --all -- --check
             
       - name: Publish Bootstrap
         if: ${{ matrix.target == 'win10-x64' }}
@@ -84,7 +78,7 @@ jobs:
           mv target/release/bootstrap.exe "artifacts/$release_name/MinEdLauncher.Boostrap.exe"
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: min-ed-launcher_${{ steps.version.outputs.version }}_${{ matrix.target }}
           path: "artifacts/*${{ matrix.target }}*/"
