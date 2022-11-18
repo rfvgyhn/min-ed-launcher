@@ -1,11 +1,13 @@
 # Changelog
 
-## [Unreleased]
+## [0.7.4] - 2022-11-18
+
+### Enhancements
+- Upgrade to .net 7
+    - Among other things, reduces binary size by about 23%
 
 ### Bug Fixes
 - Fix crash when trying to login with frontier credentials and current working directory isn't the same as Elite's game directory
-- Upgrade to .net 7
-  - Among other things, reduces binary size by about 23%
 
 ## [0.7.3] - 2022-10-20
 
@@ -190,7 +192,8 @@ legendary launch --dry-run 9c203b6ed35846e8a4a9ff1e314f6593 2> >(grep "Launch pa
 
 Initial release
 
-[unreleased]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.7.3...HEAD
+[unreleased]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.7.4...HEAD
+[0.7.4]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.7.3...v0.7.4
 [0.7.3]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.7.0...v0.7.1
