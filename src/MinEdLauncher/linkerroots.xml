@@ -3,4 +3,13 @@
     <assembly fullname="System.Runtime">
         <type fullname="System.Reflection.AssemblyTrademarkAttribute"/>
     </assembly>
+    <assembly fullname="Serilog.Sinks.Console">
+        <type fullname="Serilog.ConsoleLoggerConfigurationExtensions" />
+    </assembly>
+    <!-- Required for FsConfig to work -->
+    <assembly fullname="TypeShape" />
+    <assembly fullname="MinEdLauncher">
+        <!-- dotnet linker trims CLIMutable generated constructors -->
+        <type fullname="MinEdLauncher.Settings*" />
+    </assembly>
 </linker>

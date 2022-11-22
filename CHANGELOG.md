@@ -1,5 +1,10 @@
 # Changelog
 
+## [unreleased]
+
+### Bug Fixes
+- Fix crash due to missing types (introduced by upgrading to .net 7 in the last release)
+
 ## [0.7.4] - 2022-11-18
 
 ### Enhancements
