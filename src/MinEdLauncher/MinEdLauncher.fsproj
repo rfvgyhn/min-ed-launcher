@@ -67,22 +67,22 @@
 
   <ItemGroup>
     <PackageReference Include="FSharp.Data" Version="5.0.2" />
-    <PackageReference Include="FSharpx.Collections" Version="3.0.1" />
+    <PackageReference Include="FSharpx.Collections" Version="3.1.0" />
     <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
     <PackageReference Include="Serilog" Version="2.12.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="4.1.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
-    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="6.0.0" />
-    <PackageReference Include="System.Security.Permissions" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="6.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="7.0.0" />
+    <PackageReference Include="System.Security.Permissions" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="7.0.0" />
     <PackageReference Include="Mono.Posix.NETStandard" Version="5.20.1-preview" Condition="$(IsLinux)" />
     <PackageReference Include="TypeShape" Version="10.0.0" />
     <PackageReference Include="FsConfig" Version="3.1.0" />
-    <PackageReference Update="FSharp.Core" Version="6.0.6" />
-    <PackageReference Include="FsToolkit.ErrorHandling" Version="3.0.0-beta007" />
-    <PackageReference Include="FsToolkit.ErrorHandling.TaskResult" Version="3.0.0-beta007" />
+    <PackageReference Update="FSharp.Core" Version="7.0.0" />
+    <PackageReference Include="FsToolkit.ErrorHandling" Version="4.0.0" />
+    <PackageReference Include="FsToolkit.ErrorHandling.TaskResult" Version="4.0.0" />
   </ItemGroup>
 
 </Project>

@@ -32,8 +32,8 @@
     <PackageReference Include="Expecto" Version="9.0.4" />
     <PackageReference Include="Expecto.FsCheck" Version="9.0.4" />
     <PackageReference Include="YoloDev.Expecto.TestSdk" Version="0.13.3" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.3.1" />
-    <PackageReference Update="FSharp.Core" Version="6.0.6" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.4.0" />
+    <PackageReference Update="FSharp.Core" Version="7.0.0" />
   </ItemGroup>
 
   <ItemGroup>
