@@ -1,6 +1,6 @@
 <Project>
     <PropertyGroup>
-        <VersionPrefix>0.7.4</VersionPrefix>
+        <VersionPrefix>0.7.5</VersionPrefix>
     </PropertyGroup>
     <Target Name="SetSourceRevisionId" BeforeTargets="InitializeSourceControlInformation">
         <Exec Command="git describe --long --always --dirty --exclude=* --abbrev=8"
