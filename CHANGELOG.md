@@ -1,5 +1,16 @@
 # Changelog
 
+## [unreleased]
+
+### Breaking changes
+- Removed support for reading from STDIN. This will affect linux users launching via legendary.
+  - Instead of piping legendary's arguments into min-ed-launcher, use command substitution instead
+    
+    `WINEPREFIX=/your/wine/prefix /path/to/MinEdLauncher $(legendary launch --dry-run 9c203b6ed35846e8a4a9ff1e314f6593 2>&1 | grep "Launch parameters" | cut -d':' -f 3-) /autorun /edh4 /autoquit`
+
+### Bug Fixes
+- Fixed an issue where the launcher would hang because no data was available in STDIN.
+
 ## [0.7.5] - 2022-11-21
 
 ### Bug Fixes

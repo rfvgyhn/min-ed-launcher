@@ -121,9 +121,9 @@ Either configure the Epic client and use the provided Bootstrap exe or use [lege
 This method utilizes [legendary].
 
 1. Ensure you've authenticated, installed Elite Dangerous via [legendary] and setup your wine prefix
-2. Use the `--dry-run` flag and pipe the arguments to `MinEdLauncher`
+2. Use the `--dry-run` flag and pass the arguments to `MinEdLauncher` via command substitution
     ```sh
-    legendary launch --dry-run 9c203b6ed35846e8a4a9ff1e314f6593 2> >(grep "Launch parameters") | cut -d':' -f 3- | WINEPREFIX=/your/wine/prefix /path/to/MinEdLauncher /autorun /edh /autoquit
+    WINEPREFIX=/your/wine/prefix /path/to/MinEdLauncher $(legendary launch --dry-run 9c203b6ed35846e8a4a9ff1e314f6593 2>&1 | grep "Launch parameters" | cut -d':' -f 3-) /autorun /edh /autoquit
     ```
 
 #### Frontier
