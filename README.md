@@ -78,16 +78,16 @@ the default launcher or manually create and link your account(s).
     1. Right click _Elite Dangerous_ in your Steam library
     2. Select _properties_
     3. In the _general_ tab, click _Set Launch Options_
-    4. Windows users - Set the value to `cmd /c "MinEdLauncher.exe %command% /autorun /autoquit /EDH"`
+    4. Windows users - Set the value to `cmd /c "MinEdLauncher.exe %command% /autorun /autoquit /edh4"`
         
        Linux users - The command will depend on which terminal emulator you use. Examples for
        [alacritty], [gnome-terminal] and [konsole] are below.
           
-       `alacritty -e ./MinEdLauncher %command% /autorun /autoquit /EDH`
+       `alacritty -e ./MinEdLauncher %command% /autorun /autoquit /edh4`
        
-       `gnome-terminal -- ./MinEdLauncher %command% /autorun /autoquit /EDH`
+       `gnome-terminal -- ./MinEdLauncher %command% /autorun /autoquit /edh4`
     
-       `konsole -e ./MinEdLauncher %command% /autorun /autoquit /EDH`
+       `konsole -e ./MinEdLauncher %command% /autorun /autoquit /edh4`
 5. Launch your game as you normally would in Steam
 #### Epic
 1. Download the [latest release] for your operating system
@@ -109,13 +109,13 @@ Either configure the Epic client and use the provided Bootstrap exe or use [lege
       1. Click _Settings_ in the Epic Games Launcher
       2. Scroll down to the _Manage Games_ section and click _Elite Dangerous_
       3. Check _Additional Command Line Arguments_
-      4. Set the value to `/autorun /autoquit /EDH`
+      4. Set the value to `/autorun /autoquit /edh4`
   4. Launch your game as you normally would in Epic
 * Legendary
 
     Use legendary's `override-exe` argument via windows terminal
 
-    `legendary.exe launch 9c203b6ed35846e8a4a9ff1e314f6593 --override-exe MinEdLauncher.exe /autorun /edh /autoquit`
+    `legendary.exe launch 9c203b6ed35846e8a4a9ff1e314f6593 --override-exe MinEdLauncher.exe /autorun /edh4 /autoquit`
 
 ##### Linux
 This method utilizes [legendary].
@@ -123,7 +123,7 @@ This method utilizes [legendary].
 1. Ensure you've authenticated, installed Elite Dangerous via [legendary] and setup your wine prefix
 2. Use the `--dry-run` flag and pass the arguments to `MinEdLauncher` via command substitution
     ```sh
-    WINEPREFIX=/your/wine/prefix /path/to/MinEdLauncher $(legendary launch --dry-run 9c203b6ed35846e8a4a9ff1e314f6593 2>&1 | grep "Launch parameters" | cut -d':' -f 3-) /autorun /edh /autoquit
+    WINEPREFIX=/your/wine/prefix /path/to/MinEdLauncher $(legendary launch --dry-run 9c203b6ed35846e8a4a9ff1e314f6593 2>&1 | grep "Launch parameters" | cut -d':' -f 3-) /autorun /edh4 /autoquit
     ```
 
 #### Frontier
@@ -133,7 +133,7 @@ This method utilizes [legendary].
    `MinEdLauncher.Bootstrap` is for Epic only and may be ignored.
 4. Create a shortcut to `MinEdLauncher.exe` by right-clicking it and selecting _create shortcut_
 5. Right-click the newly made shortcut and select _properties_
-6. Add the `/frontier profile-name` argument + your other desired arguments to the end of the _Target_ textbox (e.g. `C:\path\to\MinEdLauncher.exe /frontier profile-name /autorun /autoquit /edh`)
+6. Add the `/frontier profile-name` argument + your other desired arguments to the end of the _Target_ textbox (e.g. `C:\path\to\MinEdLauncher.exe /frontier profile-name /autorun /autoquit /edh4`)
 7. Click _Ok_
 
 You can place this shortcut anywhere. It doesn't have to live in the Elite Dangerous install folder.
@@ -148,8 +148,8 @@ you to select a version of the game.
 |----------------|-----------------------------------------------------------|
 | /autoquit      | Automatically close the launcher when the game closes     |
 | /autorun       | Automatically start selected product when launcher starts |
-| /ed            | Select Elite Dangerous as the startup product             |
-| /edh           | Select Elite Dangerous Horizons as the startup product    |
+| /ed            | Select Legacy Elite Dangerous as the startup product      |
+| /edh           | Select Legacy Horizons as the startup product             |
 | /eda           | Select Elite Dangerous Arena as the startup product       |
 | /vr            | Tell the game that you want to play in VR mode            |
 | -auth_password | Epic exchange code. Used for authenticating with Epic     |
@@ -160,7 +160,7 @@ The following arguments are in addition to the above:
 | Argument               | Effect                                                                                                                           |
 |------------------------|----------------------------------------------------------------------------------------------------------------------------------|
 | /edo                   | Select Elite Dangerous Odyssey as the startup product                                                                            |
-| /edh4                  | Select Elite Dangerous Horizons 4.0 as the startup product                                                                       |
+| /edh4                  | Select Elite Dangerous Horizons as the startup product                                                                           |
 | /frontier profile-name | Use this argument to login with a Frontier Store account. Keep the profile name to letters, numbers, dashes and underscores only |
 | /restart delay         | Restart the game after it has closed with _delay_ being the number of seconds given to cancel the restart (i.e `/restart 3`)     |
 | /dryrun                | Prints output without launching any processes                                                                                    |
@@ -234,9 +234,9 @@ double backslash (`\\`) instead of a single backslash (`\`).
 By using the `/frontier profile-name` argument, you can login with any number of Frontier accounts with a
 single game installation. Your launch command might look like the following
 
-Windows: `cmd /c "MinEdLauncher.exe %command% /frontier profile-name /autorun /autoquit /EDH"`
+Windows: `cmd /c "MinEdLauncher.exe %command% /frontier profile-name /autorun /autoquit /edh4"`
 
-Linux: `alacritty -e ./MinEdLauncher %command% /frontier profile-name /autorun /autoquit /EDH`
+Linux: `alacritty -e ./MinEdLauncher %command% /frontier profile-name /autorun /autoquit /edh4`
 
 See the [setup] section above for how you might run this on your platform.
 
@@ -259,7 +259,7 @@ In order to authenticate with an Epic account:
         ```
     * **Manually** - Within the Epic launcher, click your username and select manage account. This will open a browser. The URL will contain an `exchangeCode=code`
     parameter. Copy the code before the page is redirected (can just hit the stop button in your browser).
-2. Add the `-auth_password=code` argument to your launch options. `cmd /c "MinEdLauncher.exe %command% /autoquit /EDH -auth_password=code"`
+2. Add the `-auth_password=code` argument to your launch options. `cmd /c "MinEdLauncher.exe %command% /autoquit /edh4 -auth_password=code"`
 
    You can also create a separate shortcut. Right click game in your Steam library and create desktop shortcut. Edit the properties of the shortcut
    to include the `-auth_password=code` argument. `"C:\Program Files (x86)\Steam\Steam.exe" -gameidlaunch 359320 -auth_password=code`. Then just
