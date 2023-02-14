@@ -25,6 +25,7 @@ let defaults =
       MaxConcurrentDownloads = 4
       ForceUpdate = Set.empty
       Processes = List.empty
+      ShutdownProcesses = List.empty
       FilterOverrides = OrdinalIgnoreCaseMap.empty
       AdditionalProducts = List.empty
       DryRun = false }
@@ -165,6 +166,7 @@ type Config =
       MaxConcurrentDownloads: int
       ForceUpdate: string list
       Processes: ProcessConfig list
+      ShutdownProcesses: ProcessConfig list
       FilterOverrides: FilterConfig list
       AdditionalProducts: AuthorizedProduct list }
 let parseConfig fileName =
@@ -181,24 +183,36 @@ let parseConfig fileName =
                 else
                     map key value)
             |> Seq.toList
+    let parseProcesses section =
+        parseKvps section "fileName" "arguments" (fun key value ->
+            Some { FileName = key; Arguments = if value = null then None else Some value })
     let parseAdditionalProducts() =
         configRoot.GetSection("additionalProducts").GetChildren()
         |> Seq.mapOrFail AuthorizedProduct.fromConfig
     match AppConfig(configRoot).Get<Config>() with
     | Ok config ->
         // FsConfig doesn't support list of records so handle it manually
-        let processes =
-            parseKvps "processes" "fileName" "arguments" (fun key value ->
-                Some { FileName = key; Arguments = if value = null then None else Some value })
+        let processes = parseProcesses "processes"
+        let shutdownProcesses = parseProcesses "shutdownProcesses"
         let filterOverrides =
             parseKvps "filterOverrides" "sku" "filter" (fun key value ->
                 if String.IsNullOrWhiteSpace(value) then None
                 else Some { Sku = key; Filter = value })
         match parseAdditionalProducts() with
-        | Ok additionalProducts -> { config with Processes = processes; FilterOverrides = filterOverrides; AdditionalProducts = additionalProducts } |> ConfigParseResult.Ok
+        | Ok additionalProducts -> { config with Processes = processes; ShutdownProcesses = shutdownProcesses; FilterOverrides = filterOverrides; AdditionalProducts = additionalProducts } |> ConfigParseResult.Ok
         | Error msg -> BadValue ("additionalProducts", msg) |> Error
     | Error error -> Error error
-    
+   
+let private mapProcessConfig p =
+    let pInfo = ProcessStartInfo()
+    pInfo.FileName <- p.FileName
+    pInfo.WorkingDirectory <- Path.GetDirectoryName(p.FileName)
+    pInfo.Arguments <- p.Arguments |> Option.defaultValue ""
+    pInfo.UseShellExecute <- false
+    pInfo.RedirectStandardOutput <- true
+    pInfo.RedirectStandardError <- true
+    pInfo.WindowStyle <- ProcessWindowStyle.Minimized
+    pInfo
 let getSettings args appDir fileConfig = task {
     let findCbLaunchDir paths =
         appDir :: paths
@@ -210,24 +224,15 @@ let getSettings args appDir fileConfig = task {
             | None -> Error "Failed to find Elite Dangerous install directory"
             | Some dir -> Ok dir
     let apiUri = Uri(fileConfig.ApiUri)
-    let processes =
-        fileConfig.Processes
-        |> List.map (fun p ->
-            let pInfo = ProcessStartInfo()
-            pInfo.FileName <- p.FileName
-            pInfo.WorkingDirectory <- Path.GetDirectoryName(p.FileName)
-            pInfo.Arguments <- p.Arguments |> Option.defaultValue ""
-            pInfo.UseShellExecute <- false
-            pInfo.RedirectStandardOutput <- true
-            pInfo.RedirectStandardError <- true
-            pInfo.WindowStyle <- ProcessWindowStyle.Minimized
-            pInfo)
+    let processes = fileConfig.Processes |> List.map mapProcessConfig
+    let shutdownProcesses = fileConfig.ShutdownProcesses |> List.map mapProcessConfig
     let filterOverrides = fileConfig.FilterOverrides |> Seq.map (fun o -> o.Sku, o.Filter) |> OrdinalIgnoreCaseMap.ofSeq
     let fallbackDirs platform =
         match platform with
         | Epic d -> Epic.potentialInstallPaths d.AppId |> findCbLaunchDir
         | Steam -> Steam.potentialInstallPaths() |> findCbLaunchDir
         | Frontier _-> Cobra.potentialInstallPaths() @ Steam.potentialInstallPaths() |> findCbLaunchDir
+        | Dev -> findCbLaunchDir []
         | _ -> Error "Unknown platform. Failed to find Elite Dangerous install directory"
     
     let! settings =
@@ -242,6 +247,7 @@ let getSettings args appDir fileConfig = task {
                                                           MaxConcurrentDownloads = fileConfig.MaxConcurrentDownloads
                                                           PreferredLanguage = fileConfig.Language
                                                           Processes = processes
+                                                          ShutdownProcesses = shutdownProcesses
                                                           FilterOverrides = filterOverrides
                                                           WatchForCrashes = fileConfig.WatchForCrashes
                                                           AdditionalProducts = fileConfig.AdditionalProducts }) }

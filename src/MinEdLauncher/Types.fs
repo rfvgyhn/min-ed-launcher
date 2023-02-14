@@ -121,6 +121,7 @@ type LauncherSettings =
       MaxConcurrentDownloads: int
       ForceUpdate: string Set
       Processes: ProcessStartInfo list
+      ShutdownProcesses: ProcessStartInfo list
       FilterOverrides: OrdinalIgnoreCaseMap<string>
       AdditionalProducts: AuthorizedProduct list
       DryRun: bool }

@@ -392,14 +392,17 @@ let run settings launcherVersion cancellationToken = taskResult {
     let gameLanguage = Cobra.getGameLang settings.CbLauncherDir settings.PreferredLanguage
     let processArgs() = Product.createArgString settings.DisplayMode gameLanguage connection.Session machineId (getRunningTime()) settings.WatchForCrashes settings.Platform SHA1.hashFile selectedProduct
     settings.Processes |> List.iter (fun p -> Log.info $"Starting process %s{p.FileName}")
-    let processes =
+    let startProcesses, shutdownProcesses =
         if settings.DryRun then
-            []
+            [], []
         else
-            Process.launchProcesses settings.Processes
+            settings.Processes, settings.ShutdownProcesses
     
     if not cancellationToken.IsCancellationRequested then
+        let startProcesses = Process.launchProcesses startProcesses
         launchProduct settings.DryRun settings.CompatTool processArgs settings.Restart selectedProduct.Name p
-        Process.stopProcesses processes
+        Process.stopProcesses startProcesses
+        settings.ShutdownProcesses |> List.iter (fun p -> Log.info $"Starting process %s{p.FileName}")
+        Process.launchProcesses shutdownProcesses |> Process.writeOutput
     return 0
 } 

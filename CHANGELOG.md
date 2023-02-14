@@ -2,6 +2,12 @@
 
 ## [unreleased]
 
+### New Features
+- Add support for running processes on launcher shutdown
+
+  To make use of this feature, add `shutdownProcesses` to your [settings.json]. It has the same format
+  as startup processes.
+
 ### Breaking changes
 - Removed support for reading from STDIN. This will affect linux users launching via legendary.
   - Instead of piping legendary's arguments into min-ed-launcher, use command substitution instead

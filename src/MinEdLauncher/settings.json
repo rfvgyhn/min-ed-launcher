@@ -6,6 +6,7 @@
     "maxConcurrentDownloads": 4,
     "forceUpdate": "",
     "processes": [],
+    "shutdownProcesses": [],
     "filterOverrides": [
         { "sku": "FORC-FDEV-DO-1000", "filter": "edo" },
         { "sku": "FORC-FDEV-DO-38-IN-40", "filter": "edh4" }
