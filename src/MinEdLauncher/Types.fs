@@ -118,6 +118,7 @@ type LauncherSettings =
       ApiUri: Uri
       Restart: int64 option
       AutoUpdate: bool
+      CheckForLauncherUpdates: bool
       MaxConcurrentDownloads: int
       ForceUpdate: string Set
       Processes: ProcessStartInfo list

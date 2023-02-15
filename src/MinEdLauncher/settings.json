@@ -3,6 +3,7 @@
     "watchForCrashes": false,
     "language": null,
     "autoUpdate": true,
+    "checkForLauncherUpdates": true,
     "maxConcurrentDownloads": 4,
     "forceUpdate": "",
     "processes": [],

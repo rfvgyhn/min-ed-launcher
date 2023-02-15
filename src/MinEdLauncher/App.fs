@@ -72,6 +72,21 @@ let printInfo (platform: Platform) productsDir cobraVersion =
     CobraBay Version: %s{cobraVersion}
     Products Dir: %s{productsDir}"""
     
+let private checkForLauncherUpdates httpClient cancellationToken currentVersion = task {
+    let releasesUrl = "https://github.com/rfvgyhn/min-ed-launcher/releases"
+    let! release = Github.getUpdatedLauncher currentVersion httpClient cancellationToken
+    release
+    |> Option.iter(function
+        | Github.Security d ->
+            let cves = d.Cves |> String.join ", "
+            Log.warn $"Security related launcher update available {currentVersion} -> {d.Details.Version}. Addresses CVE(s) %s{cves}. Download at %s{releasesUrl}"
+        | Github.Standard d -> Log.info $"Launcher update available {currentVersion} -> {d.Version}. Download at %s{releasesUrl}"
+    )
+    
+    if release.IsNone then
+        Log.debug $"Launcher is latest release {currentVersion}"
+}
+    
 let rec launchProduct dryRun proton processArgs restart productName product =
     let args = processArgs()
     Log.info $"Launching %s{productName}"
@@ -286,14 +301,18 @@ let run settings launcherVersion cancellationToken = taskResult {
     let names = authorizedProducts |> List.map (fun p -> p.Name) |> String.join ","
     Log.debug $"Authorized Products: %s{names}"
     Log.info "Checking for updates"
-    let checkForUpdates =
+    
+    if settings.CheckForLauncherUpdates then
+        do! checkForLauncherUpdates httpClient cancellationToken (Version.Parse(launcherVersion.Split('+')[0]))
+        
+    let checkForGameUpdates =
         let getProductDir = Cobra.getProductDir productsDir File.Exists File.ReadAllLines Directory.Exists
         authorizedProducts
         |> List.map (fun p -> Product.mapProduct (getProductDir p.DirectoryName) p)
         |> List.filter (function | Playable _ -> true | _ -> false)
         |> Api.checkForUpdates settings.Platform machineId connection
     let! products = task {
-        match! checkForUpdates with
+        match! checkForGameUpdates with
         | Ok p -> return p
         | Error e -> Log.warn $"{e}"; return [] }
 

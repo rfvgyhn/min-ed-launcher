@@ -22,6 +22,7 @@ let defaults =
       ApiUri = Uri("http://localhost:8080")
       Restart = None
       AutoUpdate = true
+      CheckForLauncherUpdates = true
       MaxConcurrentDownloads = 4
       ForceUpdate = Set.empty
       Processes = List.empty
@@ -162,6 +163,8 @@ type Config =
       Language: string option
       [<DefaultValue("true")>]
       AutoUpdate: bool
+      [<DefaultValue("true")>]
+      CheckForLauncherUpdates: bool
       [<DefaultValue("4")>]
       MaxConcurrentDownloads: int
       ForceUpdate: string list
@@ -243,6 +246,7 @@ let getSettings args appDir fileConfig = task {
     return settings
            |> Result.map (fun settings -> { settings with ApiUri = apiUri
                                                           AutoUpdate = fileConfig.AutoUpdate
+                                                          CheckForLauncherUpdates = fileConfig.CheckForLauncherUpdates
                                                           ForceUpdate = fileConfig.ForceUpdate |> Set.ofList
                                                           MaxConcurrentDownloads = fileConfig.MaxConcurrentDownloads
                                                           PreferredLanguage = fileConfig.Language

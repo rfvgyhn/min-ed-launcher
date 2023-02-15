@@ -46,6 +46,7 @@
     <Compile Include="Token.fs" />
     <Compile Include="Types.fs" />
     <Compile Include="Http.fs" />
+    <Compile Include="Github.fs" />
     <Compile Include="Product.fs" />
     <Compile Include="AuthorizedProduct.fs" />
     <Compile Include="Process.fs" />
