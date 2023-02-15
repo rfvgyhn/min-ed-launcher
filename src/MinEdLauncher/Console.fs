@@ -69,12 +69,11 @@ let cancelRestart timeout =
         Thread.Sleep interval
         let remaining = timeout / 1000L - stopwatch.ElapsedMilliseconds / 1000L
         Console.SetCursorPosition(0, Console.CursorTop)
-        Console.Write($"Restarting in %i{remaining} seconds. Press any key to quit.")
+        Console.Write($"Restarting in %i{remaining} seconds. Press <space> to start now. Press any other key to quit.")
         
     let left = Console.CursorLeft
     Console.SetCursorPosition(0, Console.CursorTop)
-    if Console.KeyAvailable then
-        Console.ReadKey() |> ignore
+    if Console.KeyAvailable && Console.ReadKey().Key <> ConsoleKey.Spacebar then
         Console.WriteLine("Shutting down...".PadRight(left))
         true
     else

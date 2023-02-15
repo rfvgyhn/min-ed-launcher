@@ -12,6 +12,10 @@
   Defaults to on but can be disabled by setting `checkForLauncherUpdates` to `false` in your 
   [settings file]. This is mainly to inform users of security related updates.
 
+### Enhancements
+- When using the restart feature, pressing `<space>` will immediately restart instead of having to wait
+  for the timeout to finish
+
 ### Breaking changes
 - Removed support for reading from STDIN. This will affect linux users launching via legendary.
   - Instead of piping legendary's arguments into min-ed-launcher, use command substitution instead
