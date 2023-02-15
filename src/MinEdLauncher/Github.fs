@@ -6,6 +6,7 @@ open System.Net.Http.Json
 open System.Text.Json.Serialization
 open System.Text.RegularExpressions
 
+[<CLIMutable>]
 type ReleaseJson = {
     [<JsonPropertyName("tag_name")>]
     TagName: string

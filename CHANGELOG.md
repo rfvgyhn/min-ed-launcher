@@ -1,5 +1,10 @@
 # Changelog
 
+## [unreleased]
+
+### Bug Fixes
+- Fix crash when checking for launcher updates due to missing types
+
 ## [0.8.0] - 2023-02-14
 
 ### New Features

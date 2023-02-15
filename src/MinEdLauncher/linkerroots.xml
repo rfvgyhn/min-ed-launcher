@@ -6,10 +6,17 @@
     <assembly fullname="Serilog.Sinks.Console">
         <type fullname="Serilog.ConsoleLoggerConfigurationExtensions" />
     </assembly>
+    <assembly fullname="FSharp.Core">
+        <type fullname="Microsoft.FSharp.Collections.ListModule">
+            <!-- Needed for deserializing github release json -->
+            <method name="OfSeq" />
+        </type>
+    </assembly>
     <!-- Required for FsConfig to work -->
     <assembly fullname="TypeShape" />
     <assembly fullname="MinEdLauncher">
         <!-- dotnet linker trims CLIMutable generated constructors -->
         <type fullname="MinEdLauncher.Settings*" />
+        <type fullname="MinEdLauncher.Github/ReleaseJson" />
     </assembly>
 </linker>
