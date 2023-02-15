@@ -22,6 +22,9 @@
     
     `WINEPREFIX=/your/wine/prefix /path/to/MinEdLauncher $(legendary launch --dry-run 9c203b6ed35846e8a4a9ff1e314f6593 2>&1 | grep "Launch parameters" | cut -d':' -f 3-) /autorun /edh4 /autoquit`
 
+### Security
+- Address [CVE-2023-21808] by building with latest version of .net SDK (7.0.200)
+
 ### Bug Fixes
 - Fixed an issue where the launcher would hang because no data was available in STDIN.
 
@@ -244,5 +247,6 @@ Initial release
 [Proton-GE]: https://github.com/GloriousEggroll/proton-ge-custom
 [CVE-2021-31204]: https://github.com/dotnet/announcements/issues/185
 [CVE-2021-31957]: https://github.com/dotnet/announcements/issues/189
+[CVE-2023-21808]: https://github.com/dotnet/announcements/issues/247
 [legendary]: https://github.com/derrod/legendary
 [settings file]: README.md#settings
