@@ -1,6 +1,6 @@
 # Changelog
 
-## [unreleased]
+## [0.8.0] - 2023-02-14
 
 ### New Features
 - Add support for running processes on launcher shutdown
@@ -225,7 +225,8 @@ legendary launch --dry-run 9c203b6ed35846e8a4a9ff1e314f6593 2> >(grep "Launch pa
 
 Initial release
 
-[unreleased]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.7.5...HEAD
+[unreleased]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.7.5...v0.8.0
 [0.7.5]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.7.4...v0.7.5
 [0.7.4]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.7.3...v0.7.4
 [0.7.3]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.7.2...v0.7.3
