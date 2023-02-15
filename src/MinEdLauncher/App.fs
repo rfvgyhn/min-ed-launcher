@@ -303,7 +303,7 @@ let run settings launcherVersion cancellationToken = taskResult {
     Log.info "Checking for updates"
     
     if settings.CheckForLauncherUpdates then
-        do! checkForLauncherUpdates httpClient cancellationToken (Version.Parse(launcherVersion.Split('+')[0]))
+        do! checkForLauncherUpdates httpClient cancellationToken (Version.Parse(launcherVersion.Split([|'+'; '-'|])[0]))
         
     let checkForGameUpdates =
         let getProductDir = Cobra.getProductDir productsDir File.Exists File.ReadAllLines Directory.Exists
