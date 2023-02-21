@@ -1,3 +1,4 @@
+<!-- https://github.com/dotnet/linker/blob/main/docs/data-formats.md -->
 <linker>
     <assembly fullname="mscorlib" />
     <assembly fullname="System.Runtime">
@@ -11,12 +12,23 @@
             <!-- Needed for deserializing github release json -->
             <method name="OfSeq" />
         </type>
+        <type fullname="Microsoft.FSharp.Collections.FSharpList`1">
+            <!-- Needed for %A format string with MinEdLauncher.LauncherSettings -->
+            <property name="Tag" />
+        </type>
     </assembly>
     <!-- Required for FsConfig to work -->
     <assembly fullname="TypeShape" />
+    <assembly fullname="FSharpx.Collections">
+        <!-- Needed for %A format string with MinEdLauncher.LauncherSettings -->
+        <type fullname="FSharpx.Collections.NonEmptyList`1"/>
+    </assembly>
     <assembly fullname="MinEdLauncher">
         <!-- dotnet linker trims CLIMutable generated constructors -->
         <type fullname="MinEdLauncher.Settings*" />
         <type fullname="MinEdLauncher.Github/ReleaseJson" />
+
+        <!-- Needed for %A format string with MinEdLauncher.LauncherSettings -->
+        <type fullname="MinEdLauncher.Types*" />
     </assembly>
 </linker>
