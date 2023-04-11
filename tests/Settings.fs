@@ -136,6 +136,7 @@ let tests =
         yield! [
             "non steam linux runtime",               [ Path.Combine("steamapps", "common", "Proton 5.0", "proton"); "protonAction" ]
             "non steam linux runtime custom folder", [ Path.Combine("Steam", "compatibilitytools.d", "Proton 5.0", "proton"); "protonAction" ]
+            "non steam linux runtime custom folder case insensitive", [ Path.Combine("sTeAm", "compatibilitytools.d", "proton 5.0", "Proton"); "protonAction" ]
         ] |> List.map (fun (name, protonArgs) ->
             test $"Matches proton args {name}" {
                 let launcherDir = "launchDir"
