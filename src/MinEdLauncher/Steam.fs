@@ -19,16 +19,18 @@ let potentialInstallPaths() =
 // process. Steam sets HOST_LC_ALL if LC_ALL is set to allow us to use
 // the real value.
 let fixLcAll() =
-    let hostLcAll = Environment.GetEnvironmentVariable("HOST_LC_ALL")
-    if not (String.IsNullOrEmpty(hostLcAll)) then
-        Environment.SetEnvironmentVariable("LC_ALL", hostLcAll)
-        Log.debug $"Overwrote LC_ALL with HOST_LC_ALL '{hostLcAll}'"
-        Threading.Thread.CurrentThread.CurrentUICulture <- CultureInfo.GetCultureInfo(hostLcAll)
-    else
-        Environment.SetEnvironmentVariable("LC_ALL", null)
-        Log.debug "Unset LC_ALL. Using $LANG to determine correct UI culture"
-        let lang = Environment.GetEnvironmentVariable("LANG").Split('.')[0]
-        Threading.Thread.CurrentThread.CurrentUICulture <- CultureInfo.GetCultureInfo(lang)
+    let lang =
+        let hostLcAll = Environment.GetEnvironmentVariable("HOST_LC_ALL")
+        if not (String.IsNullOrEmpty(hostLcAll)) then
+            Environment.SetEnvironmentVariable("LC_ALL", hostLcAll)
+            Log.debug $"Overwrote LC_ALL with HOST_LC_ALL '{hostLcAll}'"
+            hostLcAll
+        else
+            Environment.SetEnvironmentVariable("LC_ALL", null)
+            Log.debug "Unset LC_ALL. Using $LANG to determine correct UI culture"
+            Environment.GetEnvironmentVariable("LANG")
+
+    Threading.Thread.CurrentThread.CurrentUICulture <- CultureInfo.GetCultureInfo(lang.Split('.')[0])
 
 [<Literal>]
 let SteamLib =
