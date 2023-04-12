@@ -49,8 +49,8 @@ let private getErrorMessage errno =
 let private SIGTERM = 15
 [<Literal>]
 let private ESRCH = 3  
-let private terminate pid =
-    let code = kill(pid, SIGTERM)
+let private terminate (p: Process) =
+    let code = kill(p.Id, SIGTERM)
     let errno = Marshal.GetLastWin32Error()
     if code = -1 && errno <> ESRCH then // ESRCH = process does not exist, assume it exited
         getErrorMessage errno |> Error
@@ -64,11 +64,7 @@ let termProcess (p: Process) =
     if p.HasExited then
         Ok ()
     else
-#if WINDOWS
         match terminate p with
-#else
-        match terminate p.Id with
-#endif
         | Ok _ -> Ok ()
         | Error msg ->
             p.Kill()
