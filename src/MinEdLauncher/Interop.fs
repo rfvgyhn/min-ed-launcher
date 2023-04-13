@@ -67,5 +67,5 @@ let termProcess (p: Process) =
         match terminate p with
         | Ok _ -> Ok ()
         | Error msg ->
-            p.Kill()
+            p.Kill(true)
             Error $"Unable to gracefully stop %s{p.ProcessName}. Killed process instead. %s{msg}"
