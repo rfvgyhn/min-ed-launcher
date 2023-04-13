@@ -5,6 +5,7 @@
 ### Bug Fixes
 - Fix crash when HOST_LC_ALL contains a `.` character
 - Fix not all startup processes being terminated properly
+- Fix crash when attempting to terminate an already terminated process
 
 ## [0.8.1] - 2023-02-14
 
