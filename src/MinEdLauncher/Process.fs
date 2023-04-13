@@ -1,5 +1,6 @@
 module MinEdLauncher.Process
 
+open System.ComponentModel
 open System.Diagnostics
 
 let launchProcesses (processes:ProcessStartInfo list) =
@@ -8,6 +9,12 @@ let launchProcesses (processes:ProcessStartInfo list) =
         try
             Process.Start(p) |> Some
         with
+        | :? Win32Exception as e ->
+            Log.exn e $"""Unable to start process %s{p.FileName}
+    HRESULT: 0x{e.ErrorCode:X}
+    Win32 Error Code: {e.NativeErrorCode}
+    """
+            None
         | e ->
             Log.exn e $"Unable to start process %s{p.FileName}"
             None)
