@@ -157,13 +157,13 @@ you to select a version of the game.
 #### Min Launcher Specific
 The following arguments are in addition to the above:
 
-| Argument               | Effect                                                                                                                           |
-|------------------------|----------------------------------------------------------------------------------------------------------------------------------|
-| /edo                   | Select Elite Dangerous Odyssey as the startup product                                                                            |
-| /edh4                  | Select Elite Dangerous Horizons as the startup product                                                                           |
-| /frontier profile-name | Use this argument to login with a Frontier Store account. Keep the profile name to letters, numbers, dashes and underscores only |
-| /restart delay         | Restart the game after it has closed with _delay_ being the number of seconds given to cancel the restart (i.e `/restart 3`)     |
-| /dryrun                | Prints output without launching any processes                                                                                    |
+| Argument               | Effect                                                                                                                                                                                                  |
+|------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| /edo                   | Select Elite Dangerous Odyssey as the startup product                                                                                                                                                   |
+| /edh4                  | Select Elite Dangerous Horizons as the startup product                                                                                                                                                  |
+| /frontier profile-name | Use this argument to login with a Frontier Store account. `profile-name` can be any name you want. Keep it to letters, numbers, dashes and underscores. See more details in the [multi-account] section |
+| /restart delay         | Restart the game after it has closed with _delay_ being the number of seconds given to cancel the restart (i.e `/restart 3`)                                                                            |
+| /dryrun                | Prints output without launching any processes                                                                                                                                                           |
 
 Note that the restart feature doesn't work with Epic accounts. After Elite launches, it invalidates
 the launcher's auth token and doesn't communicate the new token which then prevents the ability to
@@ -363,3 +363,4 @@ Note that the bootstrap project specifically targets Windows and won't publish o
 [quirks]: https://github.com/rfvgyhn/min-ed-launcher/issues/45#issuecomment-1030312606
 [publish.sh]: publish.sh
 [publish.ps1]: publish.ps1
+[multi-account]: #frontier-account-via-steam-or-epic
