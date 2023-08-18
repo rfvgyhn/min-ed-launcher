@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Misc
+- Update Frontier auth API to use v3.0 endpoints to match changes in default launcher 
+
 ## [0.8.2] - 2023-04-12
 
 ### Security

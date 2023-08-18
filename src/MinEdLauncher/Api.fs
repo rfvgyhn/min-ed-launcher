@@ -107,14 +107,14 @@ let firstTimeSignin (runningTime: unit -> double) (httpClient:HttpClient) detail
           "machineId", machineId
           "lang", lang
           "fTime", runningTime().ToString() ]
-        |> postSingle httpClient "/1.1/user/auth" "encCode" "errorCode")
+        |> postSingle httpClient "/3.0/user/frontier/auth" "encCode" "errorCode")
 
 let requestMachineToken (httpClient:HttpClient) machineId lang twoFactorToken twoFactorCode =
     [ "machineId", machineId
       "plainCode", twoFactorCode
       "encCode", twoFactorToken
       "lang", lang ]
-    |> postSingle httpClient "/1.1/user/token" "machineToken" "error_num"
+    |> postSingle httpClient "/3.0/user/frontier/token" "machineToken" "error_num"
 
 type LoginRequest =
     { RunningTime: unit -> double
@@ -157,7 +157,7 @@ let authenticate (runningTime: unit -> double) (token: AuthToken) platform machi
             |> Result.map Encoding.UTF8.GetBytes
             |> Result.map Hex.toString
             |> Result.map (fun password ->
-                "/1.1/user/auth",
+                "/3.0/user/frontier/auth",
                 queryParams [ "email", Encoding.UTF8.GetBytes(username) |> Hex.toString
                               "password", password
                               "machineId", machineId
