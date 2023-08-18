@@ -2,6 +2,12 @@ module MinEdLauncher.MachineId
 open System
 open System.IO
 
+let makeId (machineId:string) (frontierId:string) =
+    machineId.Trim() + frontierId.Trim()
+    |> SHA1.hashString
+    |> Hex.toStringTrunc 16
+    |> fun s -> s.ToLowerInvariant()
+
 module WindowsRegistry =
     open Microsoft.Win32
     
@@ -29,6 +35,10 @@ module WindowsRegistry =
             
             Ok (machineId, frontierId)
         | Error msg -> Error msg
+        
+    let getWindowsId() =
+        getIds()
+        |> Result.map (fun (mId, fId) -> makeId mId fId)
     
 module WineRegistry =
     let private machineFilePath registryPath = Path.Combine(registryPath, "system.reg")
@@ -79,7 +89,7 @@ module WineRegistry =
         |> split "\""
         |> Array.last
         
-    let getIds registryPath = task {
+    let private getIds registryPath = task {
         match! ensureIdsExist registryPath with
         | Ok _ ->
             let machineId = readEntry (machineFilePath registryPath) machineEntry
@@ -87,6 +97,22 @@ module WineRegistry =
             
             return Ok (machineId, frontierId)
         | Error msg -> return Error msg
+    }
+    
+    let getId() = task {
+        let registryPath =
+            let steamCompat = Environment.GetEnvironmentVariable("STEAM_COMPAT_DATA_PATH")
+            let winePrefix = Environment.GetEnvironmentVariable("WINEPREFIX")
+            if not (String.IsNullOrEmpty(steamCompat)) then
+                Path.Combine(steamCompat, "pfx")
+            else
+                winePrefix
+        if String.IsNullOrEmpty(registryPath) then
+            return Error "Unable to find wine directory. Make sure either STEAM_COMPAT_DATA_PATH or WINEPREFIX is set"
+        else
+            match! getIds registryPath with
+            | Ok (machineId, frontierId) -> return Ok <| makeId machineId frontierId
+            | Error msg -> return Error msg
     }
     
 module Filesystem =
@@ -116,7 +142,7 @@ module Filesystem =
         | e -> return Error e.Message
     }
         
-    let getIds() = task {
+    let private getIds() = task {
         match! ensureIdsExist() with
         | Ok _ ->
             let! machineId = File.ReadAllLinesAsync(machinePath)
@@ -125,34 +151,15 @@ module Filesystem =
         | Error msg -> return Error msg
     }
     
-let getId (machineId:string) (frontierId:string) =
-    machineId.Trim() + frontierId.Trim()
-    |> SHA1.hashString
-    |> Hex.toStringTrunc 16
-    |> fun s -> s.ToLowerInvariant()
-
-let getWindowsId() =
-    match WindowsRegistry.getIds() with
-    | Ok (machineId, frontierId) -> Ok <| getId machineId frontierId
-    | Error msg -> Error msg
-
-let getWineId() = task {
-    let registryPath =
-        let steamCompat = Environment.GetEnvironmentVariable("STEAM_COMPAT_DATA_PATH")
-        let winePrefix = Environment.GetEnvironmentVariable("WINEPREFIX")
-        if not (String.IsNullOrEmpty(steamCompat)) then
-            Path.Combine(steamCompat, "pfx")
-        else
-            winePrefix
-    if String.IsNullOrEmpty(registryPath) then
-        return Error "Unable to find wine directory. Make sure either STEAM_COMPAT_DATA_PATH or WINEPREFIX is set"
-    else
-        match! WineRegistry.getIds registryPath with
-        | Ok (machineId, frontierId) -> return Ok <| getId machineId frontierId
+    let getId() = task {
+        match! getIds() with
+        | Ok (machineId, frontierId) -> return Ok <| makeId machineId frontierId
         | Error msg -> return Error msg
-}
-let getFilesystemId() = task {
-    match! Filesystem.getIds() with
-    | Ok (machineId, frontierId) -> return Ok <| getId machineId frontierId
-    | Error msg -> return Error msg
-}
+    }
+    
+let getId() =
+#if WINDOWS
+        WindowsRegistry.getId() |> Task.fromResult
+#else
+        WineRegistry.getId()
+#endif

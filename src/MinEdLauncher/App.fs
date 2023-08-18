@@ -271,11 +271,7 @@ let run settings launcherVersion cancellationToken = taskResult {
     
     Log.debug("Getting machine id")
     let! machineId =
-#if WINDOWS
-        MachineId.getWindowsId() |> Task.fromResult
-#else
-        MachineId.getWineId()
-#endif
+        MachineId.getId()
         |> TaskResult.mapError MachineId
 
     let lang = settings.PreferredLanguage |> Option.defaultValue "en"
