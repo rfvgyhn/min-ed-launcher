@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Bug Fixes
+- Fix launcher not shutting down when a startup process doesn't properly shutdown or takes too long to shutdown.
+  The timeout for taking too long can be configured via the new `shutdownTimeout` property in the [settings file].
+  It defaults to 10 seconds.
+
 ### Misc
 - Update Frontier auth API to use v3.0 endpoints to match changes in default launcher 
 

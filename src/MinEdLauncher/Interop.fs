@@ -26,7 +26,7 @@ let private terminate (p: Process) =
     if p.CloseMainWindow() then
         Ok ()
     else
-        Error ""
+        Error "Process has no main window or the main window is disabled"
 #else
 open Microsoft.FSharp.NativeInterop
 
@@ -60,12 +60,18 @@ let private terminate (p: Process) =
 let ansiColorSupported() = not (String.IsNullOrEmpty(Environment.GetEnvironmentVariable("TERM")))
 #endif
 
-let termProcess (p: Process) =
+let termProcess (timeout: TimeSpan) (p: Process) =
     if p.HasExited then
         Ok ()
     else
-        match terminate p with
-        | Ok _ -> Ok ()
-        | Error msg ->
+        terminate p
+        |> Result.bind(fun _ ->
+            if p.WaitForExit(timeout) then
+                Ok ()
+            else
+                Error $"Process took longer than %f{timeout.TotalSeconds} seconds to shutdown"
+            )
+        |> Result.mapError (fun msg ->
             p.Kill(true)
-            Error $"Unable to gracefully stop %s{p.ProcessName}. Killed process instead. %s{msg}"
+            $"Unable to gracefully stop %s{p.ProcessName}. Killed process instead. %s{msg}"
+            )

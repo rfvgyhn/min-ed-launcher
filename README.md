@@ -190,6 +190,7 @@ Linux: `$XDG_CONFIG_HOME/min-ed-launcher/settings.json` (`~/.config` if `$XDG_CO
 | forceUpdate             | By default, Steam and Epic updates are handled by their respective platform. In cases like the Odyssey alpha, FDev doesn't provide updates through Steam or Epic. This allows the launcher to force updates to be done via FDev servers by providing a comma delimited list of SKUs |
 | processes               | Additional applications to launch before launching the game                                                                                                                                                                                                                         |
 | shutdownProcesses       | Additional applications to launch after game has shutdown                                                                                                                                                                                                                           |
+| shutdownTimeout         | Time, in seconds, to wait for additional applications to shutdown before forcefully terminating them                                                                                                                                                                                |
 | filterOverrides         | Manually override a product's filter for use with launch options filter flag (e.g. /edo, /edh, etc...)                                                                                                                                                                              |
 | additionalProducts      | Provide extra products to the authorized product list. Useful for launching Horizons 4.0 when you own the Odyssey DLC                                                                                                                                                               |
 
@@ -222,6 +223,7 @@ double backslash (`\\`) instead of a single backslash (`\`).
       "arguments": "--arg1 --arg2"
     }
   ],
+  "shutdownTimeout": 10,
   "filterOverrides": [
     { "sku": "FORC-FDEV-DO-1000", "filter": "edo" },
     { "sku": "FORC-FDEV-DO-38-IN-40", "filter": "edh4" }

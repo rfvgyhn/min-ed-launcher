@@ -19,7 +19,7 @@ let launchProcesses (processes:ProcessStartInfo list) =
             Log.exn e $"Unable to start process %s{p.FileName}"
             None)
 
-let stopProcesses (processes: Process list) =
+let stopProcesses timeout (processes: Process list) =
     processes
     |> List.iter (fun p ->
         use p = p
@@ -27,7 +27,7 @@ let stopProcesses (processes: Process list) =
             Log.debug $"Process %i{p.Id} already exited"            
         else
             Log.debug $"Stopping process %s{p.ProcessName}"
-            match Interop.termProcess p with
+            match Interop.termProcess timeout p with
             | Ok () ->
                 p.StandardOutput.ReadToEnd() |> ignore
                 p.StandardError.ReadToEnd() |> ignore

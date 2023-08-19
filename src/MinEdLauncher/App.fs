@@ -416,7 +416,7 @@ let run settings launcherVersion cancellationToken = taskResult {
     if not cancellationToken.IsCancellationRequested then
         let startProcesses = Process.launchProcesses startProcesses
         launchProduct settings.DryRun settings.CompatTool processArgs settings.Restart selectedProduct.Name p
-        Process.stopProcesses startProcesses
+        Process.stopProcesses settings.ShutdownTimeout startProcesses
         settings.ShutdownProcesses |> List.iter (fun p -> Log.info $"Starting process %s{p.FileName}")
         Process.launchProcesses shutdownProcesses |> Process.writeOutput
     return 0

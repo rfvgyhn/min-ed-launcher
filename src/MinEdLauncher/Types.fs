@@ -125,7 +125,8 @@ type LauncherSettings =
       ShutdownProcesses: ProcessStartInfo list
       FilterOverrides: OrdinalIgnoreCaseMap<string>
       AdditionalProducts: AuthorizedProduct list
-      DryRun: bool }
+      DryRun: bool
+      ShutdownTimeout: TimeSpan }
 type ProductMode = Online | Offline
 type VersionInfo =
     { Name: string
