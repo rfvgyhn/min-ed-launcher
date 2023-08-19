@@ -27,7 +27,7 @@ module WindowsRegistry =
             with
             | e -> Error e.Message
     
-    let getIds() =
+    let private getIds() =
         match ensureIdsExist() with
         | Ok _ ->
             let machineId = Registry.LocalMachine.OpenSubKey(machinePath).GetValue(key).ToString()
@@ -36,7 +36,7 @@ module WindowsRegistry =
             Ok (machineId, frontierId)
         | Error msg -> Error msg
         
-    let getWindowsId() =
+    let getId() =
         getIds()
         |> Result.map (fun (mId, fId) -> makeId mId fId)
     
