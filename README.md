@@ -207,6 +207,7 @@ double backslash (`\\`) instead of a single backslash (`\`).
   "checkForLauncherUpdates": true,
   "maxConcurrentDownloads": 4,
   "forceUpdate": "PUBLIC_TEST_SERVER_OD",
+  "cacheDir": "C:\\path\\to\\dir",
   "processes": [
     {
       "fileName": "C:\\path\\to\\app.exe",

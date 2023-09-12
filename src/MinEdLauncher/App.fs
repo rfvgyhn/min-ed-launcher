@@ -222,6 +222,7 @@ let updateProduct downloader (hashProgress: ISampledProgress<int>) (cacheProgres
 type AppError =
     | Version of string
     | ProductsDirectory of string
+    | CacheDirectory of string
     | MachineId of string
     | AuthorizedProducts of string
     | Login of LoginError
@@ -233,6 +234,7 @@ module AppError =
     let toDisplayString = function
         | Version m -> $"Unable to get version: %s{m}"
         | ProductsDirectory m -> $"Unable to get products directory: %s{m}"
+        | CacheDirectory m -> $"Unable to get cache directory: %s{m}"
         | MachineId m -> $"Couldn't get machine id: %s{m}"
         | AuthorizedProducts m -> $"Couldn't get available products: %s{m}"
         | Login (ActionRequired m) -> $"Unsupported login action required: %s{m}"
@@ -350,6 +352,7 @@ let run settings launcherVersion cancellationToken = taskResult {
         let messages = failedManifests |> List.map (fun (name, error) -> $"%s{name} - %s{error}") |> String.join separator
         Log.error $"Unable to update the following products. Failed to get their manifests:%s{separator}%s{messages}"
     
+    let! cacheDir = settings.CacheDir |> FileIO.ensureDirExists |> Result.mapError CacheDirectory    
     let! updated =
         let productsDir = Path.Combine(settings.CbLauncherDir, "Products")
         
@@ -357,11 +360,11 @@ let run settings launcherVersion cancellationToken = taskResult {
         |> List.chooseTasksSequential (fun (product, manifest) -> task {
             Log.info $"Updating %s{product.Name}"
             let productDir = Path.Combine(productsDir, product.Directory)
-            let productCacheDir = Path.Combine(Environment.cacheDir, $"%s{manifest.Title}%s{manifest.Version}")
+            let productCacheDir = Path.Combine(cacheDir, $"%s{manifest.Title}%s{manifest.Version}")
             let pathInfo = { ProductDir = productDir
                              ProductCacheDir = productCacheDir
                              CacheHashMap = Path.Combine(productCacheDir, "hashmap.txt")
-                             ProductHashMap = Path.Combine(Environment.cacheDir, $"hashmap.%s{Path.GetFileName(productDir)}.txt") }
+                             ProductHashMap = Path.Combine(cacheDir, $"hashmap.%s{Path.GetFileName(productDir)}.txt") }
             let barLength = 30
             let downloadProgress = Console.Progress(Console.productDownloadIndicator barLength)              
             let totalFiles = manifest.Files.Length
@@ -379,7 +382,7 @@ let run settings launcherVersion cancellationToken = taskResult {
                 Console.CursorVisible <- true
                 File.Delete(pathInfo.CacheHashMap)
                 FileIO.mergeDirectories productDir productCacheDir
-                Log.debug $"Moved downloaded files from '%s{Environment.cacheDir}' to '%s{productDir}'"
+                Log.debug $"Moved downloaded files from '%s{cacheDir}' to '%s{productDir}'"
                 Log.info $"Finished updating %s{product.Name}"
                 return Some product
             | Error e ->

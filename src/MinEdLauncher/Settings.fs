@@ -30,7 +30,8 @@ let defaults =
       FilterOverrides = OrdinalIgnoreCaseMap.empty
       AdditionalProducts = List.empty
       DryRun = false
-      ShutdownTimeout = TimeSpan.FromSeconds(10) }
+      ShutdownTimeout = TimeSpan.FromSeconds(10)
+      CacheDir = "" }
     
 [<RequireQualifiedAccess>]
 type FrontierCredResult = Found of string * string * string option | NotFound of string | UnexpectedFormat of string | Error of string
@@ -174,7 +175,8 @@ type Config =
       FilterOverrides: FilterConfig list
       AdditionalProducts: AuthorizedProduct list
       [<DefaultValue("10")>]
-      ShutdownTimeout: int }
+      ShutdownTimeout: int
+      CacheDir: string option }
 let parseConfig fileName =
     let configRoot = ConfigurationBuilder()
                         .AddJsonFile(fileName, false)
@@ -258,4 +260,7 @@ let getSettings args appDir fileConfig = task {
                                                           FilterOverrides = filterOverrides
                                                           WatchForCrashes = fileConfig.WatchForCrashes
                                                           AdditionalProducts = fileConfig.AdditionalProducts
-                                                          ShutdownTimeout = TimeSpan.FromSeconds(fileConfig.ShutdownTimeout) }) }
+                                                          ShutdownTimeout = TimeSpan.FromSeconds(fileConfig.ShutdownTimeout)
+                                                          CacheDir = fileConfig.CacheDir |> Option.defaultValue Environment.cacheDir
+                                           })
+}

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### New Features
+- Add ability to specify cache directory in settings file since Windows users don't have an environment variable
+  like `XDG_CACHE_DIR` on Linux. Add `cacheDir` to your [settings file].
+
 ### Bug Fixes
 - Fix launcher not shutting down when a startup process doesn't properly shutdown or takes too long to shutdown.
   The timeout for taking too long can be configured via the new `shutdownTimeout` property in the [settings file].

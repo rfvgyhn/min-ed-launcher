@@ -126,7 +126,8 @@ type LauncherSettings =
       FilterOverrides: OrdinalIgnoreCaseMap<string>
       AdditionalProducts: AuthorizedProduct list
       DryRun: bool
-      ShutdownTimeout: TimeSpan }
+      ShutdownTimeout: TimeSpan
+      CacheDir: string }
 type ProductMode = Online | Offline
 type VersionInfo =
     { Name: string
