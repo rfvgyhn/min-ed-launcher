@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.9.0] - 2023-09-12
 
 ### New Features
 - Add ability to specify cache directory in settings file since Windows users don't have an environment variable
@@ -20,6 +20,9 @@
 - Fix launcher not shutting down when a startup process doesn't properly shutdown or takes too long to shutdown.
   The timeout for taking too long can be configured via the new `shutdownTimeout` property in the [settings file].
   It defaults to 10 seconds.
+
+### Security
+- Address [CVE-2023-36792], [CVE-2023-36793], [CVE-2023-36794], [CVE-2023-36796] and [CVE-2023-36799] by building with latest version of .net SDK (7.0.401)
 
 ### Misc
 - Update Frontier auth API to use v3.0 endpoints to match changes in default launcher 
@@ -264,7 +267,8 @@ legendary launch --dry-run 9c203b6ed35846e8a4a9ff1e314f6593 2> >(grep "Launch pa
 
 Initial release
 
-[unreleased]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.8.2...HEAD
+[unreleased]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.8.2...v0.9.0
 [0.8.2]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.7.5...v0.8.0
@@ -291,5 +295,10 @@ Initial release
 [CVE-2021-31957]: https://github.com/dotnet/announcements/issues/189
 [CVE-2023-21808]: https://github.com/dotnet/announcements/issues/247
 [CVE-2023-28260]: https://github.com/dotnet/announcements/issues/250
+[CVE-2023-36792]: https://github.com/dotnet/announcements/issues/271
+[CVE-2023-36793]: https://github.com/dotnet/announcements/issues/273
+[CVE-2023-36794]: https://github.com/dotnet/announcements/issues/272
+[CVE-2023-36796]: https://github.com/dotnet/announcements/issues/274
+[CVE-2023-36799]: https://github.com/dotnet/announcements/issues/275
 [legendary]: https://github.com/derrod/legendary
 [settings file]: README.md#settings
