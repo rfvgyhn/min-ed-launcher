@@ -181,6 +181,13 @@ let updateProduct downloader (hashProgress: ISampledProgress<int>) (cacheProgres
         else
             Log.info "All files already up to date"
             [||] |> Ok |> Task.fromResult
+            
+    let ensureDiskSpace dir (files: Types.ProductManifest.File[]) =
+        let totalSize = files |> Array.sumBy(fun f -> int64 f.Size)
+        if FileIO.hasEnoughDiskSpace totalSize dir then
+            Ok files
+        else
+            Error $"Not enough disk space available (%i{totalSize / (1024L * 1024L)}MB) at %s{dir}"
 
     let! cacheHashes =
         Product.parseHashCache paths.CacheHashMap
@@ -206,6 +213,7 @@ let updateProduct downloader (hashProgress: ISampledProgress<int>) (cacheProgres
             do! write paths.ProductHashMap productHashes
             do! write paths.CacheHashMap cacheHashes
             return Ok invalidFiles })
+        |> TaskResult.bind (fun files -> ensureDiskSpace paths.ProductCacheDir files |> Task.fromResult)
         |> TaskResult.bind (downloadFiles downloader paths.ProductCacheDir)
         |> TaskResult.bind (fun files -> task {
             if files.Length > 0 then

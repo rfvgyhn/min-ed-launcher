@@ -3,6 +3,7 @@ module MinEdLauncher.Interop
 
 open System.Diagnostics
 open System
+open System.IO
 open System.Runtime.InteropServices
 
 #if WINDOWS
@@ -15,6 +16,16 @@ let private ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004u;
 extern bool private GetConsoleMode(IntPtr hConsoleHandle, uint& lpMode)
 [<DllImport("kernel32.dll")>]
 extern IntPtr private GetStdHandle(int nStdHandle)
+[<DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)>]
+extern bool GetDiskFreeSpaceEx(string lpDirectoryName, int64& lpFreeBytesAvailable, int64& lpTotalNumberOfBytes, int64& lpTotalNumberOfFreeBytes);
+
+let freeDiskSpace path =
+    let mutable freeBytes = Unchecked.defaultof<int64>
+    let mutable dummy = Unchecked.defaultof<int64>
+    if GetDiskFreeSpaceEx(path, &freeBytes, &dummy, &dummy) then
+        Some freeBytes
+    else
+        None
 
 let ansiColorSupported() =
     let stdOut = GetStdHandle(STD_OUTPUT_HANDLE)
@@ -58,6 +69,13 @@ let private terminate (p: Process) =
         Ok code
         
 let ansiColorSupported() = not (String.IsNullOrEmpty(Environment.GetEnvironmentVariable("TERM")))
+
+let freeDiskSpace path =
+    try
+        let drive = DriveInfo(path)
+        Some drive.AvailableFreeSpace
+    with _ ->
+        None
 #endif
 
 let termProcess (timeout: TimeSpan) (p: Process) =

@@ -40,8 +40,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Extensions.fs" />
     <Compile Include="Interop.fs" />
+    <Compile Include="Extensions.fs" />
     <Compile Include="Log.fs" />
     <Compile Include="Token.fs" />
     <Compile Include="Types.fs" />

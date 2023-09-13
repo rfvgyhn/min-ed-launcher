@@ -411,6 +411,10 @@ module FileIO =
         | :? IOException -> Error "The directory specified by path is a file or the network name is not known."
         | :? NotSupportedException -> Error @"Contains a colon character (:) that is not part of a drive label (""C:\"")."
         
+    let hasEnoughDiskSpace size path =
+        let freeDiskSpace = Interop.freeDiskSpace path |> Option.defaultValue 0
+        freeDiskSpace > size
+        
     // https://stackoverflow.com/a/2553245/182821
     let mergeDirectories (target: string) (source: string) =
         let sourcePath = source.TrimEnd(Path.DirectorySeparatorChar, ' ')
