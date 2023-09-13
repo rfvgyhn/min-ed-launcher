@@ -127,7 +127,8 @@ type LauncherSettings =
       AdditionalProducts: AuthorizedProduct list
       DryRun: bool
       ShutdownTimeout: TimeSpan
-      CacheDir: string }
+      CacheDir: string
+      GameStartDelay: TimeSpan }
 type ProductMode = Online | Offline
 type VersionInfo =
     { Name: string

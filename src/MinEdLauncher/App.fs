@@ -426,6 +426,11 @@ let run settings launcherVersion cancellationToken = taskResult {
     
     if not cancellationToken.IsCancellationRequested then
         let startProcesses = Process.launchProcesses startProcesses
+        
+        if settings.GameStartDelay > TimeSpan.Zero then
+            Log.info $"Delaying game launch for %.2f{settings.GameStartDelay.TotalSeconds} seconds"
+            do! Task.Delay settings.GameStartDelay
+        
         launchProduct settings.DryRun settings.CompatTool processArgs settings.Restart selectedProduct.Name p
         Process.stopProcesses settings.ShutdownTimeout startProcesses
         settings.ShutdownProcesses |> List.iter (fun p -> Log.info $"Starting process %s{p.FileName}")

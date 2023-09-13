@@ -5,6 +5,8 @@
 ### New Features
 - Add ability to specify cache directory in settings file since Windows users don't have an environment variable
   like `XDG_CACHE_DIR` on Linux. Add `cacheDir` to your [settings file].
+- Add ability to delay ED launch for processes that have a long startup time. Can be configured via the new
+  `gameStartDelay` property in the [settings file]. Specify a value in seconds.
 
 ### Enhancements
 - Check if disk has enough free space before attempting to download game updates

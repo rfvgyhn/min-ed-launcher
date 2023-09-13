@@ -193,6 +193,7 @@ Linux: `$XDG_CONFIG_HOME/min-ed-launcher/settings.json` (`~/.config` if `$XDG_CO
 | shutdownTimeout         | Time, in seconds, to wait for additional applications to shutdown before forcefully terminating them                                                                                                                                                                                |
 | filterOverrides         | Manually override a product's filter for use with launch options filter flag (e.g. /edo, /edh, etc...)                                                                                                                                                                              |
 | additionalProducts      | Provide extra products to the authorized product list. Useful for launching Horizons 4.0 when you own the Odyssey DLC                                                                                                                                                               |
+| gameStartDelay          | Time to delay after starting processes but before starting ED. Defaults to zero                                                                                                                                                                                                     |
 
 When specifying a path for either `gameLocation` or `processes.fileName` on Windows, it's required to escape backslashes. Make sure to use a
 double backslash (`\\`) instead of a single backslash (`\`).
@@ -208,6 +209,7 @@ double backslash (`\\`) instead of a single backslash (`\`).
   "maxConcurrentDownloads": 4,
   "forceUpdate": "PUBLIC_TEST_SERVER_OD",
   "cacheDir": "C:\\path\\to\\dir",
+  "gameStartDelay": 0,
   "processes": [
     {
       "fileName": "C:\\path\\to\\app.exe",
