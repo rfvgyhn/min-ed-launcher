@@ -5,6 +5,9 @@ on:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
 
+env:
+  BUILD_URL: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
 jobs:
   release:
     name: Release
@@ -41,14 +44,19 @@ jobs:
         if: ${{ matrix.target == 'linux-x64' }}
         run: ./publish.sh
 
+      - name: Create Checksums
+        run: ci/checksums.sh
+
       - name: Create Release Notes
-        run: ci/latest-changes.sh > release-notes.txt
+        run: ci/release-notes.sh
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
           draft: true
-          files: "artifacts/min-ed-launcher*"
-          body_path: release-notes.txt
+          body_path: release-notes.md
+          files: |
+            artifacts/min-ed-launcher*
+            artifacts/shasum.txt          
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
