@@ -9,6 +9,9 @@
   `gameStartDelay` property in the [settings file]. Specify a value in seconds.
 - Add ability to delay shutdown for processes that need time to do stuff before exiting. Can be configured via the
   new `shutdownDelay` property in the [settings file]. Specify a value in seconds.
+- Launcher will now prompt for product selection after the game exits when `/autoquit` isn't specified. This will
+  allow users to select a different product without having to re-launch the launcher which more closely aligns with
+  the default launcher's behavior.
 
 ### Enhancements
 - Check if disk has enough free space before attempting to download game updates

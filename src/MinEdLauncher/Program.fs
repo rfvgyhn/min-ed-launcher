@@ -59,15 +59,14 @@ let main argv =
             
             let run =
                 getSettings assembly argv
-                |> TaskResult.bind (fun settings ->
-                    taskResult {
-                        Log.debug $"Settings: %A{settings}"
-                        let! runResult = App.run settings version cts.Token |> TaskResult.mapError App.AppError.toDisplayString
+                |> TaskResult.tee (fun settings -> Log.debug $"Settings: %A{settings}")
+                |> TaskResult.bind (fun settings -> taskResult {
+                    let! didLoop = App.run settings version cts.Token |> TaskResult.mapError App.AppError.toDisplayString
 
-                        if not settings.AutoQuit && not cts.Token.IsCancellationRequested then
-                            Console.waitForQuit()
-                            
-                        return runResult
+                    if not settings.AutoQuit && not didLoop && not cts.Token.IsCancellationRequested then
+                        Console.waitForQuit()
+                        
+                    return 0
                     })
                 |> TaskResult.teeError (fun msg ->
                     Log.error msg

@@ -34,7 +34,7 @@ module Seq =
             | false ->
                 mapping (source |> Seq.head) |> Result.bind (fun item -> loop (item::acc) (source |> Seq.tail))
         loop [] source
-    
+    let appendRev one two = Seq.append two one
 module List =
     open System.Threading.Tasks
     open System.Text

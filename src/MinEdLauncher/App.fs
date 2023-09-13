@@ -265,6 +265,52 @@ let private createGetRunningTime httpClient = task {
         (double remoteTime + runningTime.TotalSeconds)
 }
 
+let rec private launchLoop initialLaunch settings playableProducts processes cancellationToken processArgs = taskResult {      
+    let! selectedProduct = 
+        if settings.AutoRun && initialLaunch then
+            playableProducts
+            |> Product.selectProduct settings.ProductWhitelist
+            |> Option.map Console.ProductSelection.Product
+        else if playableProducts.Length > 0 then
+            Console.promptForProductToPlay playableProducts cancellationToken
+        else None
+        |> Result.requireSome NoSelectedProduct
+    let didLoop = not initialLaunch
+    
+    match selectedProduct with
+    | Console.ProductSelection.Exit -> return processes |> Option.defaultValue [], didLoop
+    | Console.ProductSelection.Product selectedProduct ->
+        let! p = Product.validateForRun settings.CbLauncherDir settings.WatchForCrashes selectedProduct |> Result.mapError InvalidProductState
+        let pArgs() = processArgs selectedProduct
+        let startProcesses =
+            match processes with
+            | Some _ -> []
+            | None ->
+                settings.Processes |> List.iter (fun p -> Log.info $"Starting process %s{p.FileName}")
+                
+                if settings.DryRun then
+                    []
+                else
+                    settings.Processes
+        
+        let processStartInfo = processes |> Option.defaultWith (fun () -> Process.launchProcesses startProcesses)
+        
+        if initialLaunch && settings.GameStartDelay > TimeSpan.Zero then
+            Log.info $"Delaying game launch for %.2f{settings.GameStartDelay.TotalSeconds} seconds"
+            do! Task.Delay settings.GameStartDelay
+        
+        launchProduct settings.DryRun settings.CompatTool pArgs settings.Restart selectedProduct.Name p
+        
+        if not settings.AutoQuit then
+            match settings.Platform with
+            | Epic _ ->
+                Log.warn "Unable to re-launch game without fully restarting the launcher when using an Epic account"
+                return processStartInfo, didLoop
+            | _ -> return! launchLoop false settings playableProducts (Some processStartInfo) cancellationToken processArgs
+        else
+            return processStartInfo, didLoop
+}
+
 let run settings launcherVersion cancellationToken = taskResult {
     if RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && settings.Platform = Steam then
         Steam.fixLcAll()
@@ -404,41 +450,19 @@ let run settings launcherVersion cancellationToken = taskResult {
         |> List.append updated
         |> List.sortBy (fun p -> p.SortKey)
         |> List.toArray
-    let! selectedProduct = 
-        if settings.AutoRun then
-            playableProducts
-            |> Product.selectProduct settings.ProductWhitelist
-        else if playableProducts.Length > 0 then
-            Console.promptForProductToPlay playableProducts cancellationToken
-        else None
-        |> Result.requireSome NoSelectedProduct
-    
-    let! p = Product.validateForRun settings.CbLauncherDir settings.WatchForCrashes selectedProduct |> Result.mapError InvalidProductState
     
     let gameLanguage = Cobra.getGameLang settings.CbLauncherDir settings.PreferredLanguage
-    let processArgs() = Product.createArgString settings.DisplayMode gameLanguage connection.Session machineId (getRunningTime()) settings.WatchForCrashes settings.Platform SHA1.hashFile selectedProduct
-    settings.Processes |> List.iter (fun p -> Log.info $"Starting process %s{p.FileName}")
-    let startProcesses, shutdownProcesses =
-        if settings.DryRun then
-            [], []
-        else
-            settings.Processes, settings.ShutdownProcesses
+    let processArgs = Product.createArgString settings.DisplayMode gameLanguage connection.Session machineId (getRunningTime()) settings.WatchForCrashes settings.Platform SHA1.hashFile
     
-    if not cancellationToken.IsCancellationRequested then
-        let startProcesses = Process.launchProcesses startProcesses
+    let! startProcesses, didLoop = launchLoop true settings playableProducts None cancellationToken processArgs
+    
+    if settings.ShutdownDelay > TimeSpan.Zero then
+        Log.info $"Delaying shutdown for %.2f{settings.ShutdownDelay.TotalSeconds} seconds"
+        do! Task.Delay settings.ShutdownDelay
         
-        if settings.GameStartDelay > TimeSpan.Zero then
-            Log.info $"Delaying game launch for %.2f{settings.GameStartDelay.TotalSeconds} seconds"
-            do! Task.Delay settings.GameStartDelay
-        
-        launchProduct settings.DryRun settings.CompatTool processArgs settings.Restart selectedProduct.Name p
-        
-        if settings.ShutdownDelay > TimeSpan.Zero then
-            Log.info $"Delaying shutdown for %.2f{settings.ShutdownDelay.TotalSeconds} seconds"
-            do! Task.Delay settings.ShutdownDelay
-        
-        Process.stopProcesses settings.ShutdownTimeout startProcesses
-        settings.ShutdownProcesses |> List.iter (fun p -> Log.info $"Starting process %s{p.FileName}")
-        Process.launchProcesses shutdownProcesses |> Process.writeOutput
-    return 0
+    Process.stopProcesses settings.ShutdownTimeout startProcesses
+    settings.ShutdownProcesses |> List.iter (fun p -> Log.info $"Starting process %s{p.FileName}")
+    Process.launchProcesses settings.ShutdownProcesses |> Process.writeOutput
+    
+    return didLoop
 } 

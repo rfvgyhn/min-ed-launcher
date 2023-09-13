@@ -29,11 +29,14 @@ let readPassword () =
     Console.WriteLine ()
     password
 
+type ProductSelection = Product of ProductDetails | Exit
 let promptForProductToPlay (products: ProductDetails array) (cancellationToken: CancellationToken) =
     printfn $"Select a product to launch (default=1):"
     products
-    |> Array.indexed
-    |> Array.iter (fun (i, product) -> printfn $"%i{i + 1}) %s{product.Name}")
+    |> Seq.map (fun p -> p.Name)
+    |> Seq.appendRev [ "Exit" ]
+    |> Seq.indexed
+    |> Seq.iter (fun (i, option) -> printfn $"%i{i + 1}) %s{option}")
         
     let rec readInput() =
         printf "Product: "
@@ -45,12 +48,14 @@ let promptForProductToPlay (products: ProductDetails array) (cancellationToken: 
             else
                 Int32.TryParse(userInput.KeyChar.ToString())
         if cancellationToken.IsCancellationRequested then
-            None
-        else if couldParse && index > 0 && index < products.Length then
-            let product = products.[index - 1]
+            Some Exit
+        else if couldParse && index > 0 && index <= products.Length then
+            let product = products[index - 1]
             let filters = String.Join(", ", product.Filters)
             Log.debug $"User selected %s{product.Name} - %s{product.Sku} - %s{filters}"
-            products.[index - 1] |> Some
+            products[index - 1] |> Product |> Some
+        else if couldParse && index = products.Length + 1 then
+            Some Exit
         else
             printfn "Invalid selection"
             readInput()
