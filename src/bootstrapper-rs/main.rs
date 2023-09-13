@@ -18,7 +18,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = env::args().skip(1).collect::<Vec<String>>().join(" ");
     let args_pcwstr = OsStr::new(args.as_str())
         .encode_wide()
-        .chain(Some(0).into_iter())
+        .chain(Some(0))
         .collect::<Vec<_>>();
     let result = unsafe {
         ShellExecuteW(
