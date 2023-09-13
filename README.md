@@ -193,10 +193,11 @@ Linux: `$XDG_CONFIG_HOME/min-ed-launcher/settings.json` (`~/.config` if `$XDG_CO
 | shutdownTimeout         | Time, in seconds, to wait for additional applications to shutdown before forcefully terminating them                                                                                                                                                                                |
 | filterOverrides         | Manually override a product's filter for use with launch options filter flag (e.g. /edo, /edh, etc...)                                                                                                                                                                              |
 | additionalProducts      | Provide extra products to the authorized product list. Useful for launching Horizons 4.0 when you own the Odyssey DLC                                                                                                                                                               |
+| cacheDir                | Path to directory used for downloading game updates. See [cache] section for default location                                                                                                                                                                                       |
 | gameStartDelay          | Time to delay after starting processes but before starting ED. Defaults to zero                                                                                                                                                                                                     |
 | shutdownDelay           | Time to delay before closing processes. Defaults to zero                                                                                                                                                                                                                            |
 
-When specifying a path for either `gameLocation` or `processes.fileName` on Windows, it's required to escape backslashes. Make sure to use a
+When specifying a path for `gameLocation`, `cacheDir` or `processes.fileName` on Windows, it's required to escape backslashes. Make sure to use a
 double backslash (`\\`) instead of a single backslash (`\`).
 
 ```json
@@ -302,6 +303,8 @@ The location of these files are in the standard cache location for your operatin
 Windows: `%LOCALAPPDATA%\min-ed-launcher\cache`
 
 Linux: `$XDG_CACHE_HOME/min-ed-launcher` (`~/.cache` if `$XDG_CACHE_HOME` isn't set)
+
+You can override the default location by specifying the `cacheDir` property in your [settings].
 
 ## Build
 Two different toolchains are needed to build the entire project. .NET is used for the launcher itself and Rust is used
