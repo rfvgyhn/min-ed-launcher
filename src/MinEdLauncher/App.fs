@@ -432,6 +432,11 @@ let run settings launcherVersion cancellationToken = taskResult {
             do! Task.Delay settings.GameStartDelay
         
         launchProduct settings.DryRun settings.CompatTool processArgs settings.Restart selectedProduct.Name p
+        
+        if settings.ShutdownDelay > TimeSpan.Zero then
+            Log.info $"Delaying shutdown for %.2f{settings.ShutdownDelay.TotalSeconds} seconds"
+            do! Task.Delay settings.ShutdownDelay
+        
         Process.stopProcesses settings.ShutdownTimeout startProcesses
         settings.ShutdownProcesses |> List.iter (fun p -> Log.info $"Starting process %s{p.FileName}")
         Process.launchProcesses shutdownProcesses |> Process.writeOutput

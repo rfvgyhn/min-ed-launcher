@@ -128,7 +128,8 @@ type LauncherSettings =
       DryRun: bool
       ShutdownTimeout: TimeSpan
       CacheDir: string
-      GameStartDelay: TimeSpan }
+      GameStartDelay: TimeSpan
+      ShutdownDelay: TimeSpan }
 type ProductMode = Online | Offline
 type VersionInfo =
     { Name: string

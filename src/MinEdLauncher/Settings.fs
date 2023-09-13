@@ -32,7 +32,8 @@ let defaults =
       DryRun = false
       ShutdownTimeout = TimeSpan.FromSeconds(10)
       CacheDir = ""
-      GameStartDelay = TimeSpan.Zero }
+      GameStartDelay = TimeSpan.Zero
+      ShutdownDelay = TimeSpan.Zero }
     
 [<RequireQualifiedAccess>]
 type FrontierCredResult = Found of string * string * string option | NotFound of string | UnexpectedFormat of string | Error of string
@@ -179,7 +180,9 @@ type Config =
       ShutdownTimeout: int
       CacheDir: string option
       [<DefaultValue("0")>]
-      GameStartDelay: int }
+      GameStartDelay: int
+      [<DefaultValue("0")>]
+      ShutdownDelay: int }
 let parseConfig fileName =
     let configRoot = ConfigurationBuilder()
                         .AddJsonFile(fileName, false)
@@ -265,6 +268,7 @@ let getSettings args appDir fileConfig = task {
                                                           AdditionalProducts = fileConfig.AdditionalProducts
                                                           ShutdownTimeout = TimeSpan.FromSeconds(fileConfig.ShutdownTimeout)
                                                           CacheDir = fileConfig.CacheDir |> Option.defaultValue Environment.cacheDir
-                                                          GameStartDelay = TimeSpan.FromSeconds(fileConfig.GameStartDelay) 
+                                                          GameStartDelay = TimeSpan.FromSeconds(fileConfig.GameStartDelay)
+                                                          ShutdownDelay = TimeSpan.FromSeconds(fileConfig.ShutdownDelay) 
                                            })
 }

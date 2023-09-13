@@ -7,6 +7,8 @@
   like `XDG_CACHE_DIR` on Linux. Add `cacheDir` to your [settings file].
 - Add ability to delay ED launch for processes that have a long startup time. Can be configured via the new
   `gameStartDelay` property in the [settings file]. Specify a value in seconds.
+- Add ability to delay shutdown for processes that need time to do stuff before exiting. Can be configured via the
+  new `shutdownDelay` property in the [settings file]. Specify a value in seconds.
 
 ### Enhancements
 - Check if disk has enough free space before attempting to download game updates
