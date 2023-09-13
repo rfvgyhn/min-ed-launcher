@@ -389,8 +389,8 @@ let run settings launcherVersion cancellationToken = taskResult {
             | Ok _ ->
                 Console.CursorVisible <- true
                 File.Delete(pathInfo.CacheHashMap)
-                FileIO.mergeDirectories productDir productCacheDir
-                Log.debug $"Moved downloaded files from '%s{cacheDir}' to '%s{productDir}'"
+                Log.info $"Moving downloaded files from '%s{cacheDir}' to '%s{productDir}'"
+                FileIO.mergeDirectories productDir productCacheDir                
                 Log.info $"Finished updating %s{product.Name}"
                 return Some product
             | Error e ->
