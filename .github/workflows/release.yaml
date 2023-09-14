@@ -69,7 +69,6 @@ jobs:
 
       - name: Show files
         run: ls -R
-        working-directory: artifacts
       
       - name: Create Checksums
         run: ci/checksums.sh
