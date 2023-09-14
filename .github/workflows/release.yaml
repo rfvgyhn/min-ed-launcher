@@ -4,13 +4,14 @@ on:
   push:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
 
 env:
   BUILD_URL: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
 jobs:
-  release:
-    name: Release
+  publish:
+    name: Publish
     strategy:
       matrix:
         kind: ['linux', 'windows']
@@ -43,7 +44,29 @@ jobs:
       - name: Publish Linux
         if: ${{ matrix.target == 'linux-x64' }}
         run: ./publish.sh
+        
+      - uses: actions/upload-artifact@v3
+        with:
+          path: artifacts/*
+          retention-days: 1
 
+  release:
+    name: Release
+    needs: Publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - uses: actions/download-artifact@v3
+        with:
+          path: artifacts
+          if-no-files-found: error
+
+      - name: Show files
+        run: ls -R
+        working-directory: artifacts
+      
       - name: Create Checksums
         run: ci/checksums.sh
 
