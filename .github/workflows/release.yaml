@@ -45,8 +45,10 @@ jobs:
         if: ${{ matrix.target == 'linux-x64' }}
         run: ./publish.sh
         
-      - uses: actions/upload-artifact@v3
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
         with:
+          name: artifacts
           path: artifacts/*
           retention-days: 1
 
@@ -58,9 +60,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - uses: actions/download-artifact@v3
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
         with:
-          path: artifacts
+          name: artifacts
+          path: ./
           if-no-files-found: error
 
       - name: Show files
