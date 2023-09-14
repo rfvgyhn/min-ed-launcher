@@ -51,6 +51,7 @@ jobs:
           name: artifacts
           path: artifacts/*
           retention-days: 1
+          if-no-files-found: error
 
   release:
     name: Release
@@ -65,7 +66,6 @@ jobs:
         with:
           name: artifacts
           path: ./
-          if-no-files-found: error
 
       - name: Show files
         run: ls -R
