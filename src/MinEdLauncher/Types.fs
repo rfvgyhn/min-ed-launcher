@@ -138,6 +138,7 @@ type VersionInfo =
       SteamAware: bool
       Version: Version
       Mode: ProductMode }
+    with static member Empty = { Name = ""; Executable = ""; UseWatchDog64 = false; SteamAware = false; Version = Version.Parse("0.0.0"); Mode = ProductMode.Offline }
 type ProductMetadata =
     { Hash: string
       LocalFile: string
@@ -148,24 +149,15 @@ type ProductDetails =
     { Sku: string
       Name: string
       Filters: OrdinalIgnoreCaseSet
-      Executable: string
-      UseWatchDog64: bool
-      SteamAware: bool
-      Version: Version
-      Mode: ProductMode
+      VInfo: VersionInfo
       Directory: string
       GameArgs: string
       ServerArgs: string
       SortKey: int
       Metadata: ProductMetadata option }
-type MissingProductDetails =
-    { Sku: string
-      Name: string
-      Filters: OrdinalIgnoreCaseSet
-      Directory: string }
 type ProductManifest = XmlProvider<"""<Manifest title="Win64_4_0_0_10_Alpha" version="2021.04.09.263090"><File><Path>AppConfig.xml</Path><Hash>b73379436461d1596b39f6aa07dd6d83724cca6d</Hash><Size>3366</Size><Download>http://path.to/file</Download></File><File><Path>AudioConfiguration.xml</Path><Hash>ad79d0c6ca5988175b45c929ec039e86cd6967f3</Hash><Size>2233</Size><Download>http://path.to/file2</Download></File></Manifest>""">
 type Product =
     | Playable of ProductDetails
     | RequiresUpdate of ProductDetails
-    | Missing of MissingProductDetails
+    | Missing of ProductDetails
     | Unknown of name:string

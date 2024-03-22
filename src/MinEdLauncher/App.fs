@@ -361,7 +361,7 @@ let run settings launcherVersion cancellationToken = taskResult {
         let getProductDir = Cobra.getProductDir productsDir File.Exists File.ReadAllLines Directory.Exists
         authorizedProducts
         |> List.map (fun p -> Product.mapProduct (getProductDir p.DirectoryName) p)
-        |> List.filter (function | Playable _ -> true | _ -> false)
+        |> List.filter (function | Playable _ | Missing _ -> true | _ -> false)
         |> Api.checkForUpdates settings.Platform machineId connection
     let! products = task {
         match! checkForGameUpdates with
@@ -438,7 +438,14 @@ let run settings launcherVersion cancellationToken = taskResult {
                 Log.info $"Moving downloaded files from '%s{cacheDir}' to '%s{productDir}'"
                 FileIO.mergeDirectories productDir productCacheDir                
                 Log.info $"Finished updating %s{product.Name}"
-                return Some product
+                
+                return
+                    if product.VInfo = VersionInfo.Empty then
+                        match Product.readVersionInfo productDir with
+                        | Product.VersionInfoStatus.Found v -> Some { product with VInfo = v }
+                        | _ -> Some product
+                    else
+                        Some product
             | Error e ->
                 Log.error $"Unable to download update for %s{product.Name} - %s{e}"
                 return None

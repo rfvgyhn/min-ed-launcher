@@ -257,17 +257,13 @@ let getProductManifest (httpClient: HttpClient) (uri: Uri) = task {
     with e -> return e.ToString() |> Error
 }
 
-let checkForUpdate platform machineId (connection: Connection) product = task {
-    match product with
-    | Unknown name -> return Error $"{name}: Can't check updates for unknown product"
-    | Missing p -> return Error $"{p.Name}: Can't check updates for missing product"
-    | RequiresUpdate product
-    | Playable product ->
+let checkForUpdate platform machineId (connection: Connection) (product: Product) = task {
+    let getData sku = task {
         let queryParams = [
             "machineToken", connection.Session.MachineToken
             "authToken", connection.Session.Token
             "machineId", machineId
-            "sku", product.Sku
+            "sku", sku
             "os", "win"
             "fTime", connection.RunningTime().ToString() ]
         use request = buildRequest "/3.0/user/installer" platform connection queryParams
@@ -283,16 +279,32 @@ let checkForUpdate platform machineId (connection: Connection) product = task {
             match version, remotePath, localFile, hash, size with
             | Ok version, Ok remotePath, Ok localFile, Ok hash, Ok size ->
                 let metadata = { Hash = hash; LocalFile = localFile; RemotePath = Uri(remotePath); Size = size; Version = version }
-                let product = { product with Metadata = Some metadata }
-                if version = product.Version then
-                    product |> Playable |> Ok
-                else
-                    product |> RequiresUpdate |> Ok
+                Ok metadata
             | _ ->
                 let content = content >>= Json.toString |> MinEdLauncher.Result.defaultWith id
                 let msg = $"Unexpected json object %s{content}"
                 Log.debug msg
                 Error msg
+    }
+    match product with
+    | Unknown name -> return Error $"{name}: Can't check updates for unknown product"
+    | Missing p ->
+        let! data = getData p.Sku
+        
+        return data |> Result.map(fun metadata -> { p with Metadata = Some metadata } |> Missing)
+    | RequiresUpdate product
+    | Playable product ->
+        let! data = getData product.Sku
+        
+        return data
+            |> Result.map(fun metadata ->
+                let product = { product with Metadata = Some metadata }
+                if metadata.Version = product.VInfo.Version then
+                    product |> Playable
+                else
+                    product |> RequiresUpdate
+            )
+    
 }
 
 let checkForUpdates platform machineId connection (products: Product list) = task {

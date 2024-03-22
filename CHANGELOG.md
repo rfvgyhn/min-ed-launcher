@@ -1,5 +1,10 @@
 # Changelog
 
+## [unreleased]
+
+### New Features
+- Add ability to download products if they aren't yet installed
+
 ## [0.9.0] - 2023-09-12
 
 ### New Features

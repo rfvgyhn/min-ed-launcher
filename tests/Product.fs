@@ -16,11 +16,7 @@ open MinEdLauncher.Tests.Extensions
             { Sku = ""
               Name = ""
               Filters = OrdinalIgnoreCaseSet.empty
-              Executable = ""
-              UseWatchDog64 = false
-              SteamAware = false
-              Version = System.Version()
-              Mode = Offline
+              VInfo = VersionInfo.Empty 
               Directory = ""
               GameArgs = ""
               ServerArgs = ""
@@ -44,25 +40,25 @@ open MinEdLauncher.Tests.Extensions
                     Expect.notStringContains actual "theLang" ""
                 }
                 test "Steam platform and steam aware product" {
-                    let product = { product with SteamAware = true }
+                    let product = { product with VInfo.SteamAware = true }
                     let actual = createArgString Vr None token "" getTimestamp false Steam hashFile product
                     
                     Expect.stringContains actual "/steam" ""
                 }
                 test "Steam platform and non steam aware product" {
-                    let product = { product with SteamAware = false }
+                    let product = { product with VInfo.SteamAware = false }
                     let actual = createArgString Vr None token "" getTimestamp false Steam hashFile product
                     
                     Expect.notStringContains actual "/steam" ""
                 }
                 test "Non steam platform and steam aware product" {
-                    let product = { product with SteamAware = true }
+                    let product = { product with VInfo.SteamAware = true }
                     let actual = createArgString Vr None token "" getTimestamp false Dev hashFile product
                     
                     Expect.notStringContains actual "/steam" ""
                 }
                 test "Non steam platform and non steam aware product" {
-                    let product = { product with SteamAware = false }
+                    let product = { product with VInfo.SteamAware = false }
                     let actual = createArgString Vr None token "" getTimestamp false Dev hashFile product
                     
                     Expect.notStringContains actual "/steam" ""
@@ -93,7 +89,7 @@ open MinEdLauncher.Tests.Extensions
                     let session = { EdSession.Empty with Token = "54321"; MachineToken = "12345" }
                     let serverArgs = "/some arg"
                     let gameArgs = "/gameargs"
-                    let product = { product with ServerArgs = serverArgs; Mode = Online; GameArgs = gameArgs }
+                    let product = { product with ServerArgs = serverArgs; VInfo.Mode = Online; GameArgs = gameArgs }
                     let actual = createArgString Vr None session "" getTimestamp false Dev hashFile product
                     
                     let expected = $"\"ServerToken %s{session.MachineToken} %s{session.Token} %s{serverArgs}\""
@@ -107,7 +103,7 @@ open MinEdLauncher.Tests.Extensions
                     let timeStamp = 12345.12345
                     let hashFile = fun _ -> Result.Ok [|228uy; 20uy; 11uy; 154uy;|]
                     let version = System.Version(1, 2, 3)
-                    let product = { product with ServerArgs = serverArgs; Mode = Online; Version = version; Directory = Path.Combine("path", "to"); Executable = "theExe.exe" }
+                    let product = { product with ServerArgs = serverArgs; VInfo.Mode = Online; VInfo.Version = version; Directory = Path.Combine("path", "to"); VInfo.Executable = "theExe.exe" }
                     let actual = createArgString Vr None session machineId timeStamp true Dev hashFile product
                     
                     let expectedExe = sprintf "/Executable \"%s\"" (Path.Combine("path", "to", "theExe.exe"))
@@ -354,15 +350,15 @@ open MinEdLauncher.Tests.Extensions
                 test "only returns products that require update" {
                     let playable = { product with Sku = "Playable" }
                     let needsUpdate = { product with Sku = "NeedsUpdate" }
-                    let products = [ Playable playable ; RequiresUpdate needsUpdate ]
+                    let products = [ Playable playable ; RequiresUpdate needsUpdate ; Missing needsUpdate ]
                     
                     let result = filterByUpdateRequired Dev Set.empty products
                     
-                    Expect.hasLength result 1 ""
+                    Expect.hasLength result 2 ""
                     Expect.allEqual result needsUpdate ""
                 }
                 test "epic excludes all if no override specified" {
-                    let products = [ RequiresUpdate product ]
+                    let products = [ RequiresUpdate product; Missing product ]
                     
                     let result = filterByUpdateRequired (Epic EpicDetails.Empty) Set.empty products
                     
@@ -372,8 +368,8 @@ open MinEdLauncher.Tests.Extensions
                     let override1 = { product with Sku = "1" }
                     let override2 = { product with Sku = "2" }
                     let notOverride = { product with Sku = "3" }
-                    let products = [ override1; override2; notOverride ] |> List.map RequiresUpdate
-                    let force = [ override1; override2 ] |> List.map (fun p -> p.Sku) |> Set.ofList 
+                    let products = [ RequiresUpdate override1; Missing override2; RequiresUpdate notOverride; Missing notOverride ]
+                    let force = [ override1; override2 ] |> List.map _.Sku |> Set.ofList 
                     
                     let result = filterByUpdateRequired (Epic EpicDetails.Empty) force products
                     
@@ -381,7 +377,7 @@ open MinEdLauncher.Tests.Extensions
                     Expect.all result (fun p -> p.Sku <> notOverride.Sku) ""
                 }
                 test "steam excludes all if no override specified" {
-                    let products = [ RequiresUpdate product ]
+                    let products = [ RequiresUpdate product; Missing product ]
                     
                     let result = filterByUpdateRequired Steam Set.empty products
                     
@@ -391,8 +387,8 @@ open MinEdLauncher.Tests.Extensions
                     let override1 = { product with Sku = "1" }
                     let override2 = { product with Sku = "2" }
                     let notOverride = { product with Sku = "3" }
-                    let products = [ override1; override2; notOverride ] |> List.map RequiresUpdate
-                    let force = [ override1; override2 ] |> List.map (fun p -> p.Sku) |> Set.ofList 
+                    let products = [ RequiresUpdate override1; Missing override2; RequiresUpdate notOverride; Missing notOverride ]
+                    let force = [ override1; override2 ] |> List.map _.Sku |> Set.ofList 
                     
                     let result = filterByUpdateRequired Steam force products
                     

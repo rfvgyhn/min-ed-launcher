@@ -127,7 +127,7 @@ let filterByUpdateRequired platform updateOverride (products: Product list) =
         | Frontier _ | Oculus _ | Dev -> details
 
     products
-    |> List.choose (fun p -> match p with | RequiresUpdate p -> Some p | _ -> None)
+    |> List.choose (fun p -> match p with | RequiresUpdate p | Missing p -> Some p | _ -> None)
     |> updateable
 
 let selectProduct (whitelist: OrdinalIgnoreCaseSet) (products: ProductDetails[]) =
@@ -141,7 +141,7 @@ let selectProduct (whitelist: OrdinalIgnoreCaseSet) (products: ProductDetails[])
 let createArgString vr (lang: string option) edSession machineId timestamp watchForCrashes platform hashFile (product:ProductDetails) =
     let targetOptions = String.Join(" ", [
         if lang.IsSome then "/language " + lang.Value 
-        match platform, product.SteamAware with
+        match platform, product.VInfo.SteamAware with
             | Steam, true -> "/steam"
             | Epic _, _ ->
                 let refresh = edSession.PlatformToken.GetRefreshToken() |> Option.defaultValue ""
@@ -152,16 +152,16 @@ let createArgString vr (lang: string option) edSession machineId timestamp watch
             | _ -> "/novr"
         if not (String.IsNullOrEmpty(product.GameArgs)) then product.GameArgs ])
     let online =
-        match product.Mode with
+        match product.VInfo.Mode with
         | Offline -> false
         | Online -> true
     let prepareQuotes (input: string) = if watchForCrashes then input.Replace("\"", "\"\"") else input
     let serverToken = if online then $"ServerToken %s{edSession.MachineToken} %s{edSession.Token} %s{product.ServerArgs}" else ""
     let combined = $"\"%s{serverToken}\" %s{targetOptions}" |> prepareQuotes
-    let fullExePath = Path.Combine(product.Directory, product.Executable)
+    let fullExePath = Path.Combine(product.Directory, product.VInfo.Executable)
     let exeHash = fullExePath |> hashFile |> Result.map Hex.toString |> Result.map (fun p -> p.ToUpperInvariant()) |> Result.defaultValue ""
     if watchForCrashes && online then
-        let version = product.Version.ToString()
+        let version = product.VInfo.Version.ToString()
         sprintf "/Executable \"%s\" /ExecutableArgs \"%s\" /MachineToken %s /Version %s /AuthToken %s /MachineId %s /Time %s /ExecutableHash \"%s\""
             fullExePath combined edSession.MachineToken version (edSession.Token) machineId (timestamp.ToString()) exeHash
     else
@@ -202,22 +202,23 @@ let mapProduct productsDir (product:AuthorizedProduct) =
         Playable { Sku = product.Sku
                    Name = product.Name
                    Filters = filters
-                   Executable = v.Executable
-                   UseWatchDog64 = v.UseWatchDog64
-                   SteamAware = v.SteamAware
-                   Version = v.Version
-                   Mode = v.Mode
+                   VInfo = v 
                    Directory = directory
                    GameArgs = product.GameArgs
                    ServerArgs = serverArgs
                    SortKey = product.SortKey
                    Metadata = None }
     | NotFound file ->
-        Log.debug $"Disabling '%s{product.Name}'. Unable to find product at '%s{file}'"
+        Log.debug $"Unable to find product's version info at '%s{file}'"
         Missing { Sku = product.Sku
                   Name = product.Name
                   Filters = filters
-                  Directory = directory }
+                  VInfo = VersionInfo.Empty
+                  Directory = directory
+                  GameArgs = product.GameArgs
+                  ServerArgs = serverArgs
+                  SortKey = product.SortKey
+                  Metadata = None }
     | Failed msg ->
         Log.error $"Unable to parse product %s{product.Name}: %s{msg}"
         Product.Unknown product.Name
@@ -230,8 +231,8 @@ type RunnableProduct =
       Mode: ProductMode
       ServerArgs: string }
 let validateForRun launcherDir watchForCrashes (product: ProductDetails) =
-    let productFullPath = Path.Combine(product.Directory, product.Executable)
-    let watchDogFullPath = if product.UseWatchDog64 then Path.Combine(launcherDir, "WatchDog64.exe") else Path.Combine(launcherDir, "WatchDog.exe") 
+    let productFullPath = Path.Combine(product.Directory, product.VInfo.Executable)
+    let watchDogFullPath = if product.VInfo.UseWatchDog64 then Path.Combine(launcherDir, "WatchDog64.exe") else Path.Combine(launcherDir, "WatchDog.exe") 
     if not (File.Exists(productFullPath)) then
         Error $"Unable to find product exe at '%s{productFullPath}'"
     elif watchForCrashes && not (File.Exists(watchDogFullPath)) then
@@ -240,9 +241,9 @@ let validateForRun launcherDir watchForCrashes (product: ProductDetails) =
         let exePath = if watchForCrashes then watchDogFullPath else productFullPath
         Ok { Executable = FileInfo(exePath)
              WorkingDir = DirectoryInfo(Path.GetDirectoryName(productFullPath))
-             Version = product.Version
-             SteamAware = product.SteamAware
-             Mode = product.Mode
+             Version = product.VInfo.Version
+             SteamAware = product.VInfo.SteamAware
+             Mode = product.VInfo.Mode
              ServerArgs = product.ServerArgs }
     
 let isRunning (product:RunnableProduct) =
