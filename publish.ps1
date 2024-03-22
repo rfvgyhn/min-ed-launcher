@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-$target="win10-x64"
+$target="win-x64"
 [xml]$proj = Get-Content src\Directory.Build.props
 $version=$proj.Project.PropertyGroup.VersionPrefix
 $release_name="min-ed-launcher_v${version}_$target"
