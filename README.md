@@ -1,4 +1,8 @@
 # Minimal Elite Dangerous Launcher
+
+![GitHub Downloads (all assets, all releases)]
+![GitHub Downloads (all assets, latest release)]
+
 Cross-platform launcher for the game Elite Dangerous. Created mainly to avoid the long startup
 time of the default launcher when running on Linux. Can be used with Steam, Epic and Frontier
 accounts on both Windows and Linux.
@@ -376,3 +380,5 @@ Note that the bootstrap project specifically targets Windows and won't publish o
 [publish.ps1]: publish.ps1
 [multi-account]: #frontier-account-via-steam-or-epic
 [Linked Thirdparty Accounts]: https://user.frontierstore.net/user/info
+[GitHub Downloads (all assets, all releases)]: https://img.shields.io/github/downloads/rfvgyhn/min-ed-launcher/total
+[GitHub Downloads (all assets, latest release)]: https://img.shields.io/github/downloads/rfvgyhn/min-ed-launcher/latest/total
