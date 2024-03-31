@@ -62,7 +62,8 @@ accounts on both Windows and Linux.
 ## Usage
 
 This launcher doesn't setup/link new accounts. You'll need to either launch Elite Dangerous at least once with
-the default launcher or manually create and link your account(s).
+the default launcher or manually create and link your account(s) via the [Linked Thirdparty Accounts] section of
+Frontier's website. Linking is only required if you purchased the game via Steam or Epic.
 
 ### Setup
 #### Steam
@@ -374,3 +375,4 @@ Note that the bootstrap project specifically targets Windows and won't publish o
 [publish.sh]: publish.sh
 [publish.ps1]: publish.ps1
 [multi-account]: #frontier-account-via-steam-or-epic
+[Linked Thirdparty Accounts]: https://user.frontierstore.net/user/info
