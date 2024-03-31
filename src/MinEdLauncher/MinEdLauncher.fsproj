@@ -24,7 +24,7 @@
   
   <PropertyGroup Condition=" '$(Configuration)' == 'DebugWindows' ">
     <DefineConstants>TRACE;DEBUG;WINDOWS</DefineConstants>
-    <RuntimeIdentifier>win10-x64</RuntimeIdentifier>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'ReleaseWindows' ">
@@ -33,7 +33,7 @@
     <Optimize Condition="'$(Optimize)' == '' ">true</Optimize>
     <Tailcalls Condition="'$(Tailcalls)' == '' ">true</Tailcalls>
     <DefineConstants>WINDOWS</DefineConstants>
-    <RuntimeIdentifier>win10-x64</RuntimeIdentifier>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
   </PropertyGroup>
     
   <PropertyGroup>

@@ -20,7 +20,7 @@ jobs:
             config: Release
           - kind: windows
             os: windows-latest
-            target: win10-x64
+            target: win-x64
             config: ReleaseWindows
     runs-on: ${{ matrix.os }}
     steps:
@@ -54,24 +54,24 @@ jobs:
           dotnet publish src/MinEdLauncher/MinEdLauncher.fsproj -r "$target" --self-contained true -o "artifacts/$release_name" -c ${{ matrix.config }} -p:PublishSingleFile=true -p:VersionSuffix=${{ steps.version.outputs.version-suffix }}
 
       - name: Install Rust
-        if: ${{ matrix.target == 'win10-x64' }}
+        if: ${{ matrix.target == 'win-x64' }}
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
           components: clippy, rustfmt
           
       - name: Run cargo clippy
-        if: ${{ matrix.target == 'win10-x64' }}
+        if: ${{ matrix.target == 'win-x64' }}
         run: |
           cargo clippy -- -D warnings
             
       - name: Run cargo fmt
-        if: ${{ matrix.target == 'win10-x64' }}
+        if: ${{ matrix.target == 'win-x64' }}
         run: |
           cargo fmt --all -- --check
             
       - name: Publish Bootstrap
-        if: ${{ matrix.target == 'win10-x64' }}
+        if: ${{ matrix.target == 'win-x64' }}
         shell: bash
         run: |
           target="${{ matrix.target }}"
