@@ -14,6 +14,7 @@ open FsToolkit.ErrorHandling
 
 type LoginError =
 | ActionRequired of string
+| CouldntConfirmOwnership of Platform
 | Failure of string
 let login launcherVersion runningTime httpClient machineId (platform: Platform) lang =
     let authenticate disposable = function
@@ -27,7 +28,9 @@ let login launcherVersion runningTime httpClient machineId (platform: Platform) 
             | Api.RegistrationRequired uri -> return ActionRequired <| $"Registration is required at %A{uri}" |> Error
             | Api.LinkAvailable uri -> return ActionRequired <| $"Link available at %A{uri}" |> Error
             | Api.Denied msg -> return Failure msg |> Error
-            | Api.Failed msg -> return Failure msg |> Error }
+            | Api.Failed msg -> return Failure msg |> Error
+            | Api.CouldntConfirmOwnership -> return CouldntConfirmOwnership platform |> Error
+            }
         | Error msg -> Failure msg |> Error |> Task.fromResult
         
     match platform with
@@ -247,6 +250,20 @@ module AppError =
         | AuthorizedProducts m -> $"Couldn't get available products: %s{m}"
         | Login (ActionRequired m) -> $"Unsupported login action required: %s{m}"
         | Login (Failure m) -> $"Couldn't login: %s{m}"
+        | Login (CouldntConfirmOwnership platform) ->
+            let possibleFixes =
+                [
+                    $"Ensure you've linked your {platform.Name} account to your Frontier account. https://user.frontierstore.net/user/info"
+                    if platform = Steam then
+                        "Restart Steam"
+                        "Log out and log back in to Steam"
+                        "Restart your computer"
+                    "Wait a minute or two and retry"
+                    "Wait longer"
+                ]
+                |> List.map (fun s -> "    " + s)
+                |> String.join Environment.NewLine
+            $"Frontier was unable to verify that you own the game. This happens intermittently. Possible fixes include:{Environment.NewLine}{possibleFixes}"
         | NoSelectedProduct -> "No selected project"
         | InvalidProductState m -> $"Couldn't start selected product: %s{m}"
 

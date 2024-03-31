@@ -1,6 +1,7 @@
 module MinEdLauncher.Api
 
 open System
+open System.IO
 open System.IO.Compression
 open System.Net
 open System.Net.Http
@@ -32,6 +33,7 @@ type AuthResult =
 | LinkAvailable of Uri
 | Denied of string
 | Failed of string
+| CouldntConfirmOwnership
 
 let private buildUri (host: Uri) (path: string) queryParams =
     let builder = UriBuilder(host)
@@ -169,6 +171,13 @@ let authenticate (runningTime: unit -> double) (token: AuthToken) platform machi
     match info with
     | Error m -> return Failed m
     | Ok (path, query, parseMachineToken) ->
+        let isHtml (stream: Stream) =
+            let htmlHeader = "<!DOCTYPE html";
+            let buffer = Array.zeroCreate(htmlHeader.Length);
+            stream.Read(buffer, 0, buffer.Length) |> ignore
+            stream.Seek(0, SeekOrigin.Begin) |> ignore
+            Encoding.UTF8.GetString(buffer) = htmlHeader
+            
         use request = new HttpRequestMessage()
         request.RequestUri <- buildUri httpClient.BaseAddress path query
         match platform with
@@ -178,54 +187,60 @@ let authenticate (runningTime: unit -> double) (token: AuthToken) platform machi
         
         use! response = httpClient.SendAsync(request)
         use! content = response.Content.ReadAsStreamAsync()
-        let content = content |> Json.parseStream >>= Json.rootElement
-        let mapResult f = function
-            | Ok value -> f value
-            | Error msg -> Failed msg
-        let parseError content =
-            let errorValue = content >>= Json.parseEitherProp "error_enum" "errorCode" >>= Json.toString |> Result.defaultValue "Unknown"
-            let errorMessage = content >>= Json.parseProp "message" >>= Json.toString |> Result.defaultValue ""
-            errorValue, errorMessage
         
-        return
-            match response.StatusCode with
-            | code when int code < 300 ->
-                let fdevAuthToken = content >>= Json.parseProp "authToken" >>= Json.toString
-                let machineToken = parseMachineToken content
-                let registeredName = content >>= Json.parseProp "registeredName"
-                                         >>= Json.toString
-                                         |> Result.defaultValue $"%s{platform.Name} User"
-                let errorValue = content >>= Json.parseEitherProp "error_enum" "errorCode" >>= Json.toString
-                let errorMessage = content >>= Json.parseProp "message" >>= Json.toString
-                
-                match fdevAuthToken, machineToken, errorValue, errorMessage with
-                | Error _, Error _, Ok value, Ok msg -> Failed $"%s{value} - %s{msg}"
-                | Ok fdevToken, Ok machineToken, _, _ ->
-                    let session = { Token = fdevToken; PlatformToken = token; Name = registeredName; MachineToken = machineToken }
-                    Authorized <| new Connection(httpClient, session, runningTime)
-                | Error msg, _, _, _
-                | _, Error msg, _, _ -> Failed msg
-            | HttpStatusCode.Found ->
-                content >>= Json.parseProp "Location"
-                        >>= Json.asUri
-                        |> mapResult RegistrationRequired
-            | HttpStatusCode.TemporaryRedirect ->
-                content >>= Json.parseProp "Location"
-                        >>= Json.asUri
-                        |> mapResult LinkAvailable
-            | HttpStatusCode.BadRequest ->
-                let errValue, errMessage = content |> parseError
-                $"Bad Request: %s{errValue} - %s{errMessage}" |> Denied
-            | HttpStatusCode.Forbidden ->
-                let errValue, errMessage = content |> parseError
-                $"Forbidden: %s{errValue} - %s{errMessage}" |> Denied
-            | HttpStatusCode.Unauthorized ->
-                let errValue, errMessage = content |> parseError
-                $"Unauthorized: %s{errValue} - %s{errMessage}" |> Denied
-            | HttpStatusCode.ServiceUnavailable ->
-                Failed "Service unavailable"
-            | code ->
-                Failed $"%i{int code}: %s{response.ReasonPhrase}"
+        // API returns an HTML login page when it can't verify game ownership. Sometimes happens with Steam accounts
+        // API doesn't respond with Content-Type header so check the first few bytes
+        if isHtml content then
+            return CouldntConfirmOwnership
+        else
+            let content = content |> Json.parseStream >>= Json.rootElement
+            let mapResult f = function
+                | Ok value -> f value
+                | Error msg -> Failed msg
+            let parseError content =
+                let errorValue = content >>= Json.parseEitherProp "error_enum" "errorCode" >>= Json.toString |> Result.defaultValue "Unknown"
+                let errorMessage = content >>= Json.parseProp "message" >>= Json.toString |> Result.defaultValue ""
+                errorValue, errorMessage
+            
+            return
+                match response.StatusCode with
+                | code when int code < 300 ->
+                    let fdevAuthToken = content >>= Json.parseProp "authToken" >>= Json.toString
+                    let machineToken = parseMachineToken content
+                    let registeredName = content >>= Json.parseProp "registeredName"
+                                             >>= Json.toString
+                                             |> Result.defaultValue $"%s{platform.Name} User"
+                    let errorValue = content >>= Json.parseEitherProp "error_enum" "errorCode" >>= Json.toString
+                    let errorMessage = content >>= Json.parseProp "message" >>= Json.toString
+                    
+                    match fdevAuthToken, machineToken, errorValue, errorMessage with
+                    | Error _, Error _, Ok value, Ok msg -> Failed $"%s{value} - %s{msg}"
+                    | Ok fdevToken, Ok machineToken, _, _ ->
+                        let session = { Token = fdevToken; PlatformToken = token; Name = registeredName; MachineToken = machineToken }
+                        Authorized <| new Connection(httpClient, session, runningTime)
+                    | Error msg, _, _, _
+                    | _, Error msg, _, _ -> Failed msg
+                | HttpStatusCode.Found ->
+                    content >>= Json.parseProp "Location"
+                            >>= Json.asUri
+                            |> mapResult RegistrationRequired
+                | HttpStatusCode.TemporaryRedirect ->
+                    content >>= Json.parseProp "Location"
+                            >>= Json.asUri
+                            |> mapResult LinkAvailable
+                | HttpStatusCode.BadRequest ->
+                    let errValue, errMessage = content |> parseError
+                    $"Bad Request: %s{errValue} - %s{errMessage}" |> Denied
+                | HttpStatusCode.Forbidden ->
+                    let errValue, errMessage = content |> parseError
+                    $"Forbidden: %s{errValue} - %s{errMessage}" |> Denied
+                | HttpStatusCode.Unauthorized ->
+                    let errValue, errMessage = content |> parseError
+                    $"Unauthorized: %s{errValue} - %s{errMessage}" |> Denied
+                | HttpStatusCode.ServiceUnavailable ->
+                    Failed "Service unavailable"
+                | code ->
+                    Failed $"%i{int code}: %s{response.ReasonPhrase}"
 }
 
 let getAuthorizedProducts platform lang (connection: Connection) = task {

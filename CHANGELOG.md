@@ -4,6 +4,9 @@
 
 ### New Features
 - Add ability to download products if they aren't yet installed
+- Show a more helpful message instead of generic JSON error when Frontier API couldn't verify game ownership.
+  
+  This error happens intermittently with Steam licenses.
 
 ## [0.9.0] - 2023-09-12
 
