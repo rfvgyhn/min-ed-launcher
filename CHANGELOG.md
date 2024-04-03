@@ -8,6 +8,11 @@
   
   This error happens intermittently with Steam licenses.
 
+### Breaking changes
+- `/vr` no longer implies `/autorun`. This allows for users to select a game version while also specifying VR mode.
+
+  If you relied on this behavior, you'll need to append `/autorun` to your launch options going forward.
+
 ## [0.9.0] - 2023-09-12
 
 ### New Features

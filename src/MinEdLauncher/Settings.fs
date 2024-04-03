@@ -143,7 +143,7 @@ let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (arg
             | "-epicapp", Some id             -> { s with Platform = epicArg (AppId id) }
             | "/oculus", Some nonce           -> { s with Platform = Oculus nonce; ForceLocal = true }
             | "/restart", PosDouble delay     -> { s with Restart = delay * 1000. |> int64 |> Some }
-            | "/vr", _                        -> { s with DisplayMode = Vr; AutoRun = true }
+            | "/vr", _                        -> { s with DisplayMode = Vr }
             | "/novr", _                      -> { s with DisplayMode = Pancake }
             | "/autorun", _                   -> { s with AutoRun = true }
             | "/autoquit", _                  -> { s with AutoQuit = true }
