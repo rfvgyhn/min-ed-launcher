@@ -51,7 +51,7 @@ fn write_error(msg: &str) -> Result<(), Box<dyn std::error::Error>> {
     .iter()
     .collect();
 
-    let write = fs::create_dir_all(&file_path.parent().unwrap()).and_then(|()| {
+    let write = fs::create_dir_all(file_path.parent().unwrap()).and_then(|()| {
         let mut file = OpenOptions::new()
             .append(true)
             .create(true)
