@@ -8,6 +8,9 @@
   
   This error happens intermittently with Steam licenses.
 
+### Enhancements
+- The launcher will now keep going even if there's an error when checking for a launcher update.
+
 ### Breaking changes
 - `/vr` no longer implies `/autorun`. This allows for users to select a game version while also specifying VR mode.
 

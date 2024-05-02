@@ -79,15 +79,22 @@ let private checkForLauncherUpdates httpClient cancellationToken currentVersion 
     let releasesUrl = "https://github.com/rfvgyhn/min-ed-launcher/releases"
     let! release = Github.getUpdatedLauncher currentVersion httpClient cancellationToken
     release
-    |> Option.iter(function
-        | Github.Security d ->
-            let cves = d.Cves |> String.join ", "
-            Log.warn $"Security related launcher update available {currentVersion} -> {d.Details.Version}. Addresses CVE(s) %s{cves}. Download at %s{releasesUrl}"
-        | Github.Standard d -> Log.info $"Launcher update available {currentVersion} -> {d.Version}. Download at %s{releasesUrl}"
+    |> Result.teeError(fun e ->
+        Log.warn "Failed to check for launcher updates"
+        Log.debug $"Failed to check for launcher updates. {e}"
     )
-    
-    if release.IsNone then
-        Log.debug $"Launcher is latest release {currentVersion}"
+    |> Result.iter(fun release ->
+        release
+        |> Option.iter(function
+            | Github.Security d ->
+                let cves = d.Cves |> String.join ", "
+                Log.warn $"Security related launcher update available {currentVersion} -> {d.Details.Version}. Addresses CVE(s) %s{cves}. Download at %s{releasesUrl}"
+            | Github.Standard d -> Log.info $"Launcher update available {currentVersion} -> {d.Version}. Download at %s{releasesUrl}"
+        )
+        
+        if release.IsNone then
+            Log.debug $"Launcher is latest release {currentVersion}"
+    )
 }
     
 let rec launchProduct dryRun proton processArgs restart productName product =

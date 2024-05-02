@@ -1,6 +1,7 @@
 module MinEdLauncher.Github
 
 open System
+open System.Net
 open System.Net.Http
 open System.Net.Http.Json
 open System.Text.Json.Serialization
@@ -67,9 +68,16 @@ let releasesSince version (releases: ReleaseJson list) =
     )
 
 let getUpdatedLauncher version (httpClient: HttpClient) cancellationToken = task {
-    let! releases = httpClient.GetFromJsonAsync<ReleaseJson list>("https://api.github.com/repos/rfvgyhn/min-ed-launcher/releases", cancellationToken)
-
-    return releases
-    |> releasesSince version
-    |> mergeReleases
+    try
+        raise (HttpRequestException("asdf", Exception("inner"), HttpStatusCode.Forbidden))
+        let! releases = httpClient.GetFromJsonAsync<ReleaseJson list>("https://api.github.com/repos/rfvgyhn/min-ed-launcher/releases", cancellationToken)
+        
+        return releases
+        |> releasesSince version
+        |> mergeReleases
+        |> Ok
+    with
+    | e ->
+        return (Error e)
+    
 }
