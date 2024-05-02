@@ -16,6 +16,9 @@
 
   If you relied on this behavior, you'll need to append `/autorun` to your launch options going forward.
 
+### Bug fixes
+- Prevent bootstrapper from not logging errors if log directory didn't already exist
+
 ## [0.9.0] - 2023-09-12
 
 ### New Features

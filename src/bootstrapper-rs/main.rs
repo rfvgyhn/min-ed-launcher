@@ -1,12 +1,12 @@
 #[cfg(not(target_os = "windows"))]
 compile_error!("Can only be built on Windows");
 
-use std::env;
 use std::ffi::OsStr;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::os::windows::ffi::OsStrExt;
 use std::path::PathBuf;
+use std::{env, fs};
 use windows::core::{w, PCWSTR};
 use windows::Win32::Foundation::GetLastError;
 use windows::Win32::UI::Shell::{
@@ -50,12 +50,18 @@ fn write_error(msg: &str) -> Result<(), Box<dyn std::error::Error>> {
     ]
     .iter()
     .collect();
-    let mut file = OpenOptions::new()
-        .append(true)
-        .create(true)
-        .open(&file_path)?;
 
-    if let Err(e) = writeln!(&mut file, "Bootstrapper Error MinEdLauncher.exe: {}", msg) {
+    let write = fs::create_dir_all(&file_path.parent().unwrap()).and_then(|()| {
+        let mut file = OpenOptions::new()
+            .append(true)
+            .create(true)
+            .open(&file_path)?;
+
+        eprintln!("Bootstrapper Error MinEdLauncher.exe: {}", msg);
+        writeln!(&mut file, "Bootstrapper Error MinEdLauncher.exe: {}", msg)
+    });
+
+    if let Err(e) = write {
         eprintln!("Couldn't write to {}: {}", file_path.display(), e);
     }
 
