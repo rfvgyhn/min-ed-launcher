@@ -22,6 +22,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "root", "root", "{DCB76620-F
 		src\Directory.Build.props = src\Directory.Build.props
 		CHANGELOG.md = CHANGELOG.md
 		Cargo.toml = Cargo.toml
+		src\Directory.Packages.props = src\Directory.Packages.props
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MinEdLauncher.Bootstrap", "MinEdLauncher.Bootstrap", "{8204622F-C7D5-42CF-967E-223FCCDCCAB4}"
