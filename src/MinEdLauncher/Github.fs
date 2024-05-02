@@ -69,7 +69,6 @@ let releasesSince version (releases: ReleaseJson list) =
 
 let getUpdatedLauncher version (httpClient: HttpClient) cancellationToken = task {
     try
-        raise (HttpRequestException("asdf", Exception("inner"), HttpStatusCode.Forbidden))
         let! releases = httpClient.GetFromJsonAsync<ReleaseJson list>("https://api.github.com/repos/rfvgyhn/min-ed-launcher/releases", cancellationToken)
         
         return releases
