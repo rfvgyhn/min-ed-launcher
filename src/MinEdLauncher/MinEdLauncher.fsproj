@@ -84,11 +84,7 @@
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
     <PackageReference Include="System.Security.Permissions" Version="8.0.0" />
     <PackageReference Include="TypeShape" Version="10.0.0" />
-    <PackageReference Update="FSharp.Core" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageVersion Update="FsConfig" Version="4.1.0" />
+    <PackageReference Update="FSharp.Core" Version="8.0.200" />
   </ItemGroup>
 
 </Project>
