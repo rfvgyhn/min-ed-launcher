@@ -394,18 +394,33 @@ let run settings launcherVersion cancellationToken = taskResult {
 
     Log.info $"Available Products:{Environment.NewLine}\t%s{Console.availableProductsDisplay products}"
 
-    let productsRequiringUpdate = Product.filterByUpdateRequired settings.Platform settings.ForceUpdate products |> List.toArray
+    let missingToInstall =
+        let missing =
+            products
+            |> Product.filterByMissing
+            |> Product.filterByUpdateable settings.Platform settings.ForceUpdate
+            |> List.toArray
+        if settings.AutoRun then
+            Product.selectProduct settings.ProductWhitelist missing |> Option.map(fun p -> [| p |]) |> Option.defaultWith(fun () -> [||])
+        else
+            missing |> Console.promptForProductsToUpdate "install"
+    let productsRequiringUpdate =
+        products
+        |> Product.filterByUpdateRequired
+        |> Product.filterByUpdateable settings.Platform settings.ForceUpdate
+        |> List.toArray
     let productsToUpdate =
         let products =
             if settings.AutoUpdate then
                 productsRequiringUpdate
             else
-                productsRequiringUpdate |> Console.promptForProductsToUpdate
+                productsRequiringUpdate |> Console.promptForProductsToUpdate "update"
+            |> Array.append missingToInstall
         products
-        |> Array.filter (fun p -> p.Metadata.IsNone)
+        |> Array.filter (_.Metadata.IsNone)
         |> Array.iter (fun p -> Log.error $"Unknown product metadata for %s{p.Name}")
         
-        products |> Array.filter (fun p -> p.Metadata.IsSome)
+        products |> Array.filter (_.Metadata.IsSome)
 
     let! productManifests =
         if productsToUpdate.Length > 0 then

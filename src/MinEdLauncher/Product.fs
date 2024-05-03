@@ -117,18 +117,19 @@ let downloadFiles downloader destDir (files: Types.ProductManifest.File[]) : Tas
         return Ok result
     with e -> return e.ToString() |> Error }
 
-let filterByUpdateRequired platform updateOverride (products: Product list) =
-    // Steam and Epic updates should be handled by their CDNs.
-    // Sometimes FDev doesn't release updates through them though (e.g. Odyssey alpha)
-    // so allow users to specify if they want to override that behavior
-    let updateable (details: ProductDetails list) =
+// Steam and Epic updates should be handled by their CDNs.
+// Sometimes FDev doesn't release updates through them though (e.g. Odyssey alpha)
+// so allow users to specify if they want to override that behavior
+let filterByUpdateable platform updateOverride (details: ProductDetails list) =
         match platform with
         | Steam | Epic _ -> details |> List.filter (fun p -> updateOverride |> Set.contains p.Sku)
         | Frontier _ | Oculus _ | Dev -> details
 
-    products
-    |> List.choose (fun p -> match p with | RequiresUpdate p | Missing p -> Some p | _ -> None)
-    |> updateable
+let filterByMissing (products: Product list) =
+    products |> List.choose (function | Missing p -> Some p | _ -> None)
+
+let filterByUpdateRequired (products: Product list) =
+    products |> List.choose (function | RequiresUpdate p -> Some p | _ -> None)
 
 let selectProduct (whitelist: OrdinalIgnoreCaseSet) (products: ProductDetails[]) =
     if whitelist.IsEmpty then

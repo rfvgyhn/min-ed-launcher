@@ -350,17 +350,19 @@ open MinEdLauncher.Tests.Extensions
                 test "only returns products that require update" {
                     let playable = { product with Sku = "Playable" }
                     let needsUpdate = { product with Sku = "NeedsUpdate" }
-                    let products = [ Playable playable ; RequiresUpdate needsUpdate ; Missing needsUpdate ]
+                    let missing = { product with Sku = "Missing" }
+                    let products = [ Playable playable ; RequiresUpdate needsUpdate ; Missing missing ]
                     
-                    let result = filterByUpdateRequired Dev Set.empty products
+                    let result = filterByUpdateRequired products
                     
-                    Expect.hasLength result 2 ""
-                    Expect.allEqual result needsUpdate ""
-                }
+                    Expect.hasLength result 1 ""
+                    Expect.equal result[0] needsUpdate ""
+                } ]
+            testList "filterByUpdateable" [
                 test "epic excludes all if no override specified" {
-                    let products = [ RequiresUpdate product; Missing product ]
+                    let products = [ product; product ]
                     
-                    let result = filterByUpdateRequired (Epic EpicDetails.Empty) Set.empty products
+                    let result = filterByUpdateable (Epic EpicDetails.Empty) Set.empty products
                     
                     Expect.isEmpty result ""
                 }
@@ -368,18 +370,18 @@ open MinEdLauncher.Tests.Extensions
                     let override1 = { product with Sku = "1" }
                     let override2 = { product with Sku = "2" }
                     let notOverride = { product with Sku = "3" }
-                    let products = [ RequiresUpdate override1; Missing override2; RequiresUpdate notOverride; Missing notOverride ]
+                    let products = [ override1; override2; notOverride ]
                     let force = [ override1; override2 ] |> List.map _.Sku |> Set.ofList 
                     
-                    let result = filterByUpdateRequired (Epic EpicDetails.Empty) force products
+                    let result = filterByUpdateable (Epic EpicDetails.Empty) force products
                     
                     Expect.hasLength result 2 ""
                     Expect.all result (fun p -> p.Sku <> notOverride.Sku) ""
                 }
                 test "steam excludes all if no override specified" {
-                    let products = [ RequiresUpdate product; Missing product ]
+                    let products = [ product; product ]
                     
-                    let result = filterByUpdateRequired Steam Set.empty products
+                    let result = filterByUpdateable Steam Set.empty products
                     
                     Expect.isEmpty result ""
                 }
@@ -387,19 +389,21 @@ open MinEdLauncher.Tests.Extensions
                     let override1 = { product with Sku = "1" }
                     let override2 = { product with Sku = "2" }
                     let notOverride = { product with Sku = "3" }
-                    let products = [ RequiresUpdate override1; Missing override2; RequiresUpdate notOverride; Missing notOverride ]
+                    let products = [ override1; override2; notOverride ]
                     let force = [ override1; override2 ] |> List.map _.Sku |> Set.ofList 
                     
-                    let result = filterByUpdateRequired Steam force products
+                    let result = filterByUpdateable Steam force products
                     
                     Expect.hasLength result 2 ""
                     Expect.all result (fun p -> p.Sku <> notOverride.Sku) ""
                 }
                 test "frontier includes all" {
-                    let products = [ product; product ]
+                    let p1 = { product with Sku = "1" }
+                    let p2 = { product with Sku = "2" }
+                    let products = [ p1; p2 ]
                     let platform = Frontier FrontierDetails.Empty
                     
-                    let result = filterByUpdateRequired platform Set.empty (products |> List.map RequiresUpdate)
+                    let result = filterByUpdateable platform Set.empty products
                     
                     Expect.sequenceEqual result products ""
                 } ]

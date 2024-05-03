@@ -96,9 +96,9 @@ let promptUserPass() =
     let password = readPassword() |> Cobra.encrypt |> Result.defaultValue ""
     username, password
 
-let promptForProductsToUpdate (products: ProductDetails array) =
+let promptForProductsToUpdate verb (products: ProductDetails array) =
     if products.Length > 0 then
-        printfn $"Select product(s) to update (eg: \"1\", \"1 2 3\") (default=None):"
+        printfn $"Select product(s) to %s{verb} (eg: \"1\", \"1 2 3\") (default=None):"
         products
         |> Array.indexed
         |> Array.iter (fun (i, product) -> printfn $"%i{i + 1}) %s{product.Name}")
@@ -117,7 +117,7 @@ let promptForProductsToUpdate (products: ProductDetails array) =
                             None
                         else
                             match Int32.Parse(d) with
-                            | n when n > 0 && n < products.Length -> Some n
+                            | n when n > 0 && n <= products.Length -> Some n
                             | _ -> None)
                     |> Array.map (fun i -> products.[i - 1])
                 if selection.Length > 0 then
