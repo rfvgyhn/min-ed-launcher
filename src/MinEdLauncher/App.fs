@@ -97,7 +97,7 @@ let private checkForLauncherUpdates httpClient cancellationToken currentVersion 
     )
 }
     
-let rec launchProduct dryRun proton processArgs restart productName product =
+let launchProduct dryRun proton processArgs productName product =
     let args = processArgs()
     Log.info $"Launching %s{productName}"
     
@@ -109,10 +109,6 @@ let rec launchProduct dryRun proton processArgs restart productName product =
         p.WaitForExit()
         p.Close()
         Log.info $"Shutdown %s{productName}"
-        
-        let timeout = restart |> Option.defaultValue 3000L
-        if restart.IsSome && not (Console.cancelRestart timeout) then
-            launchProduct dryRun proton processArgs restart productName product
     | Product.DryRun p ->
         Console.WriteLine("\tDry run")
         Console.WriteLine($"\t{p.FileName} {p.Arguments}")
@@ -289,7 +285,7 @@ let private createGetRunningTime httpClient = task {
         (double remoteTime + runningTime.TotalSeconds)
 }
 
-let rec private launchLoop initialLaunch settings playableProducts processes cancellationToken processArgs = taskResult {      
+let rec private launchLoop initialLaunch settings playableProducts persistentRunning relaunchRunning cancellationToken processArgs = taskResult {      
     let! selectedProduct = 
         if settings.AutoRun && initialLaunch then
             playableProducts
@@ -302,37 +298,51 @@ let rec private launchLoop initialLaunch settings playableProducts processes can
     let didLoop = not initialLaunch
     
     match selectedProduct with
-    | Console.ProductSelection.Exit -> return processes |> Option.defaultValue [], didLoop
+    | Console.ProductSelection.Exit ->
+        return (persistentRunning |> Option.defaultValue []) @ (relaunchRunning |> Option.defaultValue []), didLoop
     | Console.ProductSelection.Product selectedProduct ->
         let! p = Product.validateForRun settings.CbLauncherDir settings.WatchForCrashes selectedProduct |> Result.mapError InvalidProductState
         let pArgs() = processArgs selectedProduct
-        let startProcesses =
-            match processes with
-            | Some _ -> []
+        let logStart (ps: ProcessStartInfo list) = ps |> List.iter (fun p -> Log.info $"Starting process %s{p.FileName}")        
+        let persistentStartInfos, relaunchStartInfos =
+            let relaunchProcesses = settings.Processes |> List.filter _.RestartOnRelaunch |> List.map _.Info
+            match persistentRunning with
+            | Some _ ->
+                relaunchProcesses |> logStart
+                [], relaunchProcesses
             | None ->
-                settings.Processes |> List.iter (fun p -> Log.info $"Starting process %s{p.FileName}")
+                settings.Processes |> List.map _.Info |> logStart
                 
                 if settings.DryRun then
-                    []
+                    [], []
                 else
-                    settings.Processes
+                    settings.Processes |> List.filter (fun p -> not p.RestartOnRelaunch) |> List.map _.Info, relaunchProcesses
         
-        let processStartInfo = processes |> Option.defaultWith (fun () -> Process.launchProcesses startProcesses)
+        
+        let persistentProcesses = persistentRunning |> Option.defaultWith (fun () -> Process.launchProcesses persistentStartInfos)
+        let mutable relaunchProcesses = Process.launchProcesses relaunchStartInfos
         
         if initialLaunch && settings.GameStartDelay > TimeSpan.Zero then
             Log.info $"Delaying game launch for %.2f{settings.GameStartDelay.TotalSeconds} seconds"
             do! Task.Delay settings.GameStartDelay
         
-        launchProduct settings.DryRun settings.CompatTool pArgs settings.Restart selectedProduct.Name p
+        launchProduct settings.DryRun settings.CompatTool pArgs selectedProduct.Name p
+        
+        let timeout = settings.Restart |> Option.defaultValue 3000L
+        while settings.Restart.IsSome && not (Console.cancelRestart timeout) do
+            Process.stopProcesses settings.ShutdownTimeout relaunchProcesses
+            logStart relaunchStartInfos
+            relaunchProcesses <- Process.launchProcesses relaunchStartInfos
+            launchProduct settings.DryRun settings.CompatTool pArgs selectedProduct.Name p
         
         if not settings.AutoQuit then
             match settings.Platform with
             | Epic _ ->
                 Log.warn "Unable to re-launch game without fully restarting the launcher when using an Epic account"
-                return processStartInfo, didLoop
-            | _ -> return! launchLoop false settings playableProducts (Some processStartInfo) cancellationToken processArgs
+                return persistentProcesses @ relaunchProcesses, didLoop
+            | _ -> return! launchLoop false settings playableProducts (Some persistentProcesses) (Some relaunchProcesses) cancellationToken processArgs
         else
-            return processStartInfo, didLoop
+            return persistentProcesses @ relaunchProcesses, didLoop
 }
 
 let run settings launcherVersion cancellationToken = taskResult {
@@ -500,13 +510,13 @@ let run settings launcherVersion cancellationToken = taskResult {
     let gameLanguage = Cobra.getGameLang settings.CbLauncherDir settings.PreferredLanguage
     let processArgs = Product.createArgString settings.DisplayMode gameLanguage connection.Session machineId (getRunningTime()) settings.WatchForCrashes settings.Platform SHA1.hashFile
     
-    let! startProcesses, didLoop = launchLoop true settings playableProducts None cancellationToken processArgs
+    let! runningProcesses, didLoop = launchLoop true settings playableProducts None None cancellationToken processArgs
     
     if settings.ShutdownDelay > TimeSpan.Zero then
         Log.info $"Delaying shutdown for %.2f{settings.ShutdownDelay.TotalSeconds} seconds"
         do! Task.Delay settings.ShutdownDelay
         
-    Process.stopProcesses settings.ShutdownTimeout startProcesses
+    Process.stopProcesses settings.ShutdownTimeout runningProcesses
     settings.ShutdownProcesses |> List.iter (fun p -> Log.info $"Starting process %s{p.FileName}")
     Process.launchProcesses settings.ShutdownProcesses |> Process.writeOutput
     

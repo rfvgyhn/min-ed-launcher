@@ -1,5 +1,17 @@
 # Changelog
 
+## [unreleased]
+
+### New Features
+- Add ability to restart applications when the `/restart` flag is specified. Useful for when running 3DMigoto/EDHM_UI in VR.
+  Set the new `restartOnRelaunch` property to true in your [settings file].
+  ```json
+  "processes": [{
+    "fileName": "path\\to\\exe",
+    "restartOnRelaunch": true  
+  }]
+  ```
+
 ## [0.10.1] - 2024-05-03
 
 ### Bug Fixes
