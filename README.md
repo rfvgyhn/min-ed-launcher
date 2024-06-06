@@ -123,13 +123,18 @@ Either configure the Epic client and use the provided Bootstrap exe or use [lege
     `legendary.exe launch 9c203b6ed35846e8a4a9ff1e314f6593 --override-exe MinEdLauncher.exe /autorun /edo /autoquit`
 
 ##### Linux
-This method utilizes [legendary].
+This method utilizes [Legendary].
 
 1. Ensure you've authenticated, installed Elite Dangerous via [legendary] and setup your wine prefix
-2. Use the `--dry-run` flag and pass the arguments to `MinEdLauncher` via command substitution
-    ```sh
-    WINEPREFIX=/your/wine/prefix /path/to/MinEdLauncher $(legendary launch --dry-run 9c203b6ed35846e8a4a9ff1e314f6593 2>&1 | grep "Launch parameters" | cut -d':' -f 3-) /autorun /edo /autoquit
-    ```
+2. Pass an exchange code to the launcher by either
+   1. Using the `--dry-run` flag and passing the arguments directly to `MinEdLauncher` via command substitution
+       ```sh
+       WINEPREFIX=/your/wine/prefix /path/to/MinEdLauncher $(legendary launch --dry-run 9c203b6ed35846e8a4a9ff1e314f6593 2>&1 | grep "Launch parameters" | cut -d':' -f 3-) /autorun /edo /autoquit
+       ```
+   2. Using the `get-token` command and passing it to `MinEdLauncher` via Steam and command substitution
+       ```shell
+       steam -gameidlaunch 359320 -auth_password=$(legendary get-token 2>&1 | cut -d':' -f 3- | xargs)
+       ```
 
 #### Frontier
 1. Download the [latest release] for Windows
@@ -285,9 +290,9 @@ There is rudimentary support for running your Epic account via Steam. Running a 
 In order to authenticate with an Epic account:
 1. Get an Epic exchange code. This part is really clunky and will need to be done for every launch as the exchange code expires after one use.
    
-    * **Legendary** - Extract the code via [legendary]'s `--dry-run` option.
+    * **Legendary** - Get a code via [Legendary].
         ```sh
-        legendary launch --dry-run 9c203b6ed35846e8a4a9ff1e314f6593 2> >(grep AUTH_PASSWORD) | sed -ne 's/^.*-AUTH_PASSWORD=\([a-z0-9]*\).*$/\1/p'
+        legendary get-token
         ```
     * **Manually** - Within the Epic launcher, click your username and select manage account. This will open a browser. The URL will contain an `exchangeCode=code`
     parameter. Copy the code before the page is redirected (can just hit the stop button in your browser).
