@@ -11,6 +11,11 @@
     "restartOnRelaunch": true  
   }]
   ```
+  
+### Enhancements
+- Enable restart feature for Epic users. It's still not as seamless as non-Epic accounts. Requires the usage of [Legendary]
+  or [Heroic]. Once you've logged in with either, you can go back to using the normal Epic launcher if you wish. It will
+  require re-logging in every few days though, so it may be preferable to just stick with the alternate launchers.
 
 ## [0.10.1] - 2024-05-03
 
@@ -339,4 +344,5 @@ Initial release
 [CVE-2023-36796]: https://github.com/dotnet/announcements/issues/274
 [CVE-2023-36799]: https://github.com/dotnet/announcements/issues/275
 [legendary]: https://github.com/derrod/legendary
+[heroic]: https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher
 [settings file]: README.md#settings

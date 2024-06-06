@@ -62,10 +62,11 @@ let login launcherVersion runningTime httpClient machineId (platform: Platform) 
         let! result = steam.Login() |> Result.map (fun steamUser -> Permanent steamUser.SessionToken) |> (authenticate None)
         return result }
     | Epic details -> task {
-        match! Epic.login launcherVersion details with
+        match! Epic.loginWithCode launcherVersion details.ExchangeCode with
         | Ok t ->
-            let tokenManager = new RefreshableTokenManager(t, Epic.refreshToken launcherVersion)
-            let! result = tokenManager.Get |> Expires |> Ok |> (authenticate (Some tokenManager)) 
+            let loginViaLegendary() = Legendary.getAccessToken() |> Result.bindTask (Epic.loginWithExistingToken launcherVersion)
+            let tokenManager = new RefreshableTokenManager(t, Epic.refreshToken launcherVersion, loginViaLegendary)
+            let! result = {| Get = tokenManager.Get; Renew = tokenManager.Renew |} |> Expires |> Ok |> (authenticate (Some tokenManager)) 
             return result
         | Error msg -> return Failure msg |> Error }
 
@@ -242,6 +243,7 @@ type AppError =
     | Login of LoginError
     | NoSelectedProduct
     | InvalidProductState of string
+    | InvalidSession of string
     
 [<RequireQualifiedAccess>]
 module AppError =
@@ -269,6 +271,7 @@ module AppError =
             $"Frontier was unable to verify that you own the game. This happens intermittently. Possible fixes include:{Environment.NewLine}{possibleFixes}"
         | NoSelectedProduct -> "No selected project"
         | InvalidProductState m -> $"Couldn't start selected product: %s{m}"
+        | InvalidSession m -> $"Invalid session: %s{m}"
 
 let private createGetRunningTime httpClient = task {
     let localTime = DateTime.UtcNow
@@ -285,7 +288,13 @@ let private createGetRunningTime httpClient = task {
         (double remoteTime + runningTime.TotalSeconds)
 }
 
-let rec private launchLoop initialLaunch settings playableProducts persistentRunning relaunchRunning cancellationToken processArgs = taskResult {      
+let private renewEpicTokenIfNeeded platform token =
+    match platform, token with
+    | Epic _, Expires t -> t.Renew()
+    | _ -> Ok () |> Task.fromResult
+    |> TaskResult.mapError InvalidSession
+
+let rec private launchLoop initialLaunch settings playableProducts (session: EdSession) persistentRunning relaunchRunning cancellationToken processArgs = taskResult {      
     let! selectedProduct = 
         if settings.AutoRun && initialLaunch then
             playableProducts
@@ -318,6 +327,8 @@ let rec private launchLoop initialLaunch settings playableProducts persistentRun
                 else
                     settings.Processes |> List.filter (fun p -> not p.RestartOnRelaunch) |> List.map _.Info, relaunchProcesses
         
+        if not initialLaunch then
+            do! renewEpicTokenIfNeeded settings.Platform session.PlatformToken
         
         let persistentProcesses = persistentRunning |> Option.defaultWith (fun () -> Process.launchProcesses persistentStartInfos)
         let mutable relaunchProcesses = Process.launchProcesses relaunchStartInfos
@@ -333,14 +344,13 @@ let rec private launchLoop initialLaunch settings playableProducts persistentRun
             Process.stopProcesses settings.ShutdownTimeout relaunchProcesses
             logStart relaunchStartInfos
             relaunchProcesses <- Process.launchProcesses relaunchStartInfos
+            
+            do! renewEpicTokenIfNeeded settings.Platform session.PlatformToken
+            
             launchProduct settings.DryRun settings.CompatTool pArgs selectedProduct.Name p
         
         if not settings.AutoQuit then
-            match settings.Platform with
-            | Epic _ ->
-                Log.warn "Unable to re-launch game without fully restarting the launcher when using an Epic account"
-                return persistentProcesses @ relaunchProcesses, didLoop
-            | _ -> return! launchLoop false settings playableProducts (Some persistentProcesses) (Some relaunchProcesses) cancellationToken processArgs
+            return! launchLoop false settings playableProducts session (Some persistentProcesses) (Some relaunchProcesses) cancellationToken processArgs
         else
             return persistentProcesses @ relaunchProcesses, didLoop
 }
@@ -510,7 +520,7 @@ let run settings launcherVersion cancellationToken = taskResult {
     let gameLanguage = Cobra.getGameLang settings.CbLauncherDir settings.PreferredLanguage
     let processArgs = Product.createArgString settings.DisplayMode gameLanguage connection.Session machineId (getRunningTime()) settings.WatchForCrashes settings.Platform SHA1.hashFile
     
-    let! runningProcesses, didLoop = launchLoop true settings playableProducts None None cancellationToken processArgs
+    let! runningProcesses, didLoop = launchLoop true settings playableProducts connection.Session None None cancellationToken processArgs
     
     if settings.ShutdownDelay > TimeSpan.Zero then
         Log.info $"Delaying shutdown for %.2f{settings.ShutdownDelay.TotalSeconds} seconds"

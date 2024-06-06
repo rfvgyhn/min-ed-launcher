@@ -157,7 +157,7 @@ module Json =
         | false, _ -> Error $"Unable to convert string to long '%s{str}'"
     let asDateTime (prop:JsonElement) =
         let str = prop.ToString()
-        match DateTime.TryParse(str) with
+        match DateTimeOffset.TryParse(str) with
         | true, value -> Ok value
         | false, _ -> Error $"Unable to parse string as DateTime '%s{str}'"
     let asUri (prop:JsonElement) =
@@ -166,6 +166,11 @@ module Json =
         | false, _ -> Error $"Unable to parse '%s{prop.ToString()}' as Uri"
     let toString (prop:JsonElement) =
         Ok <| prop.ToString()
+    let asString (prop:JsonElement) =
+        try
+            prop.GetString() |> Ok
+        with
+        | :? InvalidOperationException -> Error $"Unable to parse '%s{prop.ToString()}' as string"
     let asVersion (prop:JsonElement) =
         match Version.TryParse(prop.ToString()) with
         | true, value -> Ok value
@@ -454,7 +459,7 @@ module Environment =
         let appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
         Path.Combine(appData, AppFolderName, subDir)
     
-    let configDir =
+    let configDirFor name =
         let specialFolder =
             if RuntimeInformation.IsOSPlatform(OSPlatform.Windows) then
                 Environment.SpecialFolder.LocalApplicationData
@@ -462,7 +467,9 @@ module Environment =
                 Environment.SpecialFolder.ApplicationData
         
         let path = Environment.GetFolderPath(specialFolder)
-        Path.Combine(path, AppFolderName)
+        Path.Combine(path, name)
+    
+    let configDir = configDirFor AppFolderName
         
     let cacheDir =
         if RuntimeInformation.IsOSPlatform(OSPlatform.Windows) then

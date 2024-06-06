@@ -55,8 +55,8 @@ accounts on both Windows and Linux.
 * **Auto-restart**
 
   Automatically restart your game. This can be useful if you're [grinding] for manufactured 
-  engineering materials. Off by default. This feature isn't supported on the Epic platform.
-  See the [Min-Launcher-Specific] section for more details.
+  engineering materials. Off by default. For the Epic platform, this feature requires either 
+  [Legendary] or [Heroic]. See the [Epic accounts and the /restart feature] section for more details.
 
 * **Multi-Account**
 
@@ -170,9 +170,17 @@ The following arguments are in addition to the above:
 | /restart delay         | Restart the game after it has closed with _delay_ being the number of seconds given to cancel the restart (i.e `/restart 3`)                                                                            |
 | /dryrun                | Prints output without launching any processes                                                                                                                                                           |
 
-Note that the restart feature doesn't work with Epic accounts. After Elite launches, it invalidates
-the launcher's auth token and doesn't communicate the new token which then prevents the ability to
-login with FDev servers a second time.
+##### Epic accounts and the /restart feature
+The restart feature requires either [Legendary] or [Heroic] to work with Epic accounts.
+
+After Elite launches, it invalidates the launcher's initial Epic auth token and doesn't communicate
+the new token which then prevents the ability to login with FDev servers a second time. To work around
+this, min-ed-launcher can use a more privileged Epic token (created by Legendary/Heroic) to generate
+the needed auth tokens. Simply logging in with Legendary or Heroic will allow min-ed-launcher to restart
+without re-launching.
+
+Once you've logged in with either, you can go back to using the normal Epic launcher if you wish. It 
+will require re-logging in every few days though, so it may be preferable to just stick with the alternate launchers.
 
 ### Settings
 The settings file controls additional settings for the launcher that go beyond what the default
@@ -369,6 +377,7 @@ Note that the bootstrap project specifically targets Windows and won't publish o
 [Arguments]: #arguments
 [Shared]: #shared
 [Min-Launcher-Specific]: #min-launcher-specific
+[Epic accounts and the /restart feature]: #epic-accounts-and-the-restart-feature
 [Multi-Account]: #multi-account
 [Frontier account via Steam or Epic]: #frontier-account-via-steam-or-epic
 [Epic account via Steam]: #epic-account-via-steam
@@ -377,6 +386,7 @@ Note that the bootstrap project specifically targets Windows and won't publish o
 [Build]: #build
 [Release Artifacts]: #release-artifacts
 [legendary]: https://github.com/derrod/legendary
+[heroic]: https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher
 [quirks]: https://github.com/rfvgyhn/min-ed-launcher/issues/45#issuecomment-1030312606
 [publish.sh]: publish.sh
 [publish.ps1]: publish.ps1

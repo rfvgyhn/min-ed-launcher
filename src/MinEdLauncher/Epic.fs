@@ -1,6 +1,6 @@
 module MinEdLauncher.Epic
 
-open Types
+open FsToolkit.ErrorHandling
 open Rop
 open MinEdLauncher.Token
 open System
@@ -102,7 +102,7 @@ let private requestToStr formValues contentHeaders (request: HttpRequestMessage)
     |> Http.dumpHeaders [ request.Headers; contentHeaders ] 2
     sb.ToString()
 
-let private request launcherVersion (formValues: string list) : Task<Result<RefreshableToken, string>> =
+let private requestToken launcherVersion (formValues: string list) : Task<Result<RefreshableToken, string>> =
     match epicValues.Force() with
     | Ok (clientId, clientSecret, dId) -> task {
         let formValues =
@@ -131,11 +131,37 @@ let private request launcherVersion (formValues: string list) : Task<Result<Refr
             Log.debug $"Requesting epic token failed: %s{content}"
             return $"%i{int response.StatusCode}: %s{response.ReasonPhrase}" |> Error }
     | Error msg -> Error msg |> Task.fromResult
+
+let private requestAsEpic path applyOptions = task {
+    use httpClient = new HttpClient()
+    use request = new HttpRequestMessage()
     
-let login launcherVersion epicDetails =             
-    request launcherVersion [ "grant_type=exchange_code"
-                              $"exchange_code=%s{epicDetails.ExchangeCode}" ]
+    applyOptions request
+    
+    request.RequestUri <- Uri($"https://account-public-service-prod03.ol.epicgames.com%s{path}")
+    request.Headers.TryAddWithoutValidation("User-Agent", "UELauncher/11.0.1-14907503+++Portal+Release-Live Windows/10.0.19041.1.256.64bit") |> ignore
+    
+    return! httpClient.SendAsync(request)
+}
+
+let private generateExchangeCode token = task {
+    let! response = requestAsEpic "/account/api/oauth/exchange" (fun r -> r.Headers.Authorization <- AuthenticationHeaderValue("bearer", token))
+    
+    if response.IsSuccessStatusCode then
+        Log.debug "Requesting epic exchange code success"
+        use! content = response.Content.ReadAsStreamAsync()
+        return content |> Json.parseStream >>= Json.rootElement >>= Json.parseProp "code" >>= Json.toString
+    else
+        let! content = response.Content.ReadAsStringAsync()
+        Log.debug $"Requesting epic exchange code failed: %s{content}"
+        return $"%i{int response.StatusCode}: %s{response.ReasonPhrase}" |> Error }
+
+let loginWithCode launcherVersion exchangeCode =             
+    requestToken launcherVersion [ "grant_type=exchange_code"; $"exchange_code=%s{exchangeCode}" ]
     
 let refreshToken launcherVersion (token: RefreshableToken) =
-    request launcherVersion [ "grant_type=refresh_token"
-                              $"refresh_token=%s{token.RefreshToken}" ]
+    requestToken launcherVersion [ "grant_type=refresh_token"; $"refresh_token=%s{token.RefreshToken}" ]
+
+let loginWithExistingToken launcherVersion token =
+    generateExchangeCode token
+    |> TaskResult.bind(loginWithCode launcherVersion) 

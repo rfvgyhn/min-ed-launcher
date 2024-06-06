@@ -64,13 +64,15 @@ open MinEdLauncher.Tests.Extensions
                     Expect.notStringContains actual "/steam" ""
                 }
                 test "Epic platform contains refresh token" {
-                    let token = { EdSession.Empty with PlatformToken = Expires (fun () -> { RefreshableToken.Empty with RefreshToken = "asdf" }) }
+                    let get = fun () -> { RefreshableToken.Empty with RefreshToken = "asdf" }
+                    let token = { EdSession.Empty with PlatformToken = Expires {| Get = get; Renew = fun () -> Task.fromResult (Result.Ok()) |} }
                     let actual = createArgString Vr None token "" getTimestamp false (Epic EpicDetails.Empty) hashFile product
                     
                     Expect.stringContains actual "\"EpicToken asdf\"" ""
                 }
                 test "Non epic platform doesn't contain refresh token" {
-                    let token = { EdSession.Empty with PlatformToken = Expires (fun () -> { RefreshableToken.Empty with RefreshToken = "asdf" }) }
+                    let get = fun () -> { RefreshableToken.Empty with RefreshToken = "asdf" }
+                    let token = { EdSession.Empty with PlatformToken = Expires {| Get = get; Renew = fun _ -> Task.fromResult (Result.Ok()) |} }
                     let actual = createArgString Vr None token "" getTimestamp false Dev hashFile product
                     
                     Expect.notStringContains actual "\"EpicToken" ""

@@ -3,6 +3,7 @@ module MinEdLauncher.Token
 open System
 open System.Threading.Tasks
 open System.Timers
+open FsToolkit.ErrorHandling
 
 type RefreshableToken =
         { Token: string
@@ -14,7 +15,7 @@ type private RefreshableTokenMessage =
     | Get of replyChannel: AsyncReplyChannel<RefreshableToken>
     | Refresh of RefreshableToken
 
-type RefreshableTokenManager(initialToken, refresh: (RefreshableToken -> Task<Result<RefreshableToken, string>>)) =
+type RefreshableTokenManager(initialToken, refresh: RefreshableToken -> Task<Result<RefreshableToken, string>>, renew: unit -> Task<Result<RefreshableToken, string>>) =
     let agent = MailboxProcessor.Start(fun inbox ->
         let rec loop token = async {
             match! inbox.Receive() with
@@ -38,22 +39,28 @@ type RefreshableTokenManager(initialToken, refresh: (RefreshableToken -> Task<Re
             timer.Start()
     
     member this.Get() = agent.PostAndReply Get
+    member this.Renew() = task {
+        return!
+            renew()
+            |> TaskResult.tee(fun t -> Refresh t |> agent.Post)
+            |> TaskResult.map(fun _ -> ())
+    }
     interface IDisposable with
         member _.Dispose() =
             timer.Dispose()
 
 type PasswordToken = { Username: string; Password: string; Token: string }
 type AuthToken =
-    | Expires of (unit -> RefreshableToken)
+    | Expires of {| Get: unit -> RefreshableToken; Renew: unit -> Task<Result<unit, string>> |}
     | Permanent of string
     | PasswordBased of PasswordToken
     member this.GetAccessToken() =
            match this with
-           | Expires t -> t().Token
+           | Expires t -> t.Get().Token
            | Permanent t -> t
            | PasswordBased t -> t.Token
     member this.GetRefreshToken() =
            match this with
-           | Expires t -> Some (t().RefreshToken)
+           | Expires t -> Some (t.Get().RefreshToken)
            | Permanent _ -> None
            | PasswordBased _ -> None
