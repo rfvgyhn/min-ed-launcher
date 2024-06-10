@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Minimal ED Launcher
+Comment=Launches the game Elite: Dangerous
+Exec=MinEdLauncher %F
+Terminal=true
+Type=Application
+Keywords=elite;ed;launcher;
+Icon=min-ed-launcher
+Categories=Game;

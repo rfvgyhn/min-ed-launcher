@@ -23,6 +23,7 @@ accounts on both Windows and Linux.
     * [Multi-Account]
         * [Frontier account via Steam or Epic]
         * [Epic account via Steam]
+    * [Icon on Linux]
     * [Troubleshooting]
     * [Cache]
 * [Build]
@@ -92,7 +93,7 @@ Frontier's website. Linking is only required if you purchased the game via Steam
        
        `gnome-terminal -- ./MinEdLauncher %command% /autorun /autoquit /edo`
     
-       `konsole -e ./MinEdLauncher %command% /autorun /autoquit /edo`
+       `konsole --name min-ed-launcher -e ./MinEdLauncher %command% /autorun /autoquit /edo`
 5. Launch your game as you normally would in Steam
 #### Epic
 1. Download the [latest release] for your operating system
@@ -310,6 +311,20 @@ Example _Target_ field for a shortcut that launches Odyssey:
 
 `"C:\Program Files (x86)\Steam\Steam.exe" -gameidlaunch 359320 /edo`
 
+### Icon on Linux
+1. Copy the included `min-ed-launcher.svg` file to your environment's default icon location
+
+   Common icon locations are `~/.local/share/icons/hicolor/scalable/apps` and `/usr/share/icons/scalable/apps`.
+2. Copy the included `min-ed-launcher.desktop` file to your environment's default application launcher location
+
+   Common locations are `~/.local/share/applications` and `/usr/share/applications`
+
+   You may need to update your cache by running `update-desktop-database` pointed at whereever you copied the
+   desktop file. e.g. `update-desktop-database ~/.local/share/applications/`
+3. Set the WM_CLASS/Application Id property in your launch options. How you do this will depend on your terminal 
+   emulator. Examples are below:
+   * Alacritty - `alacritty --class min-ed-launcher -e ./MinEdLauncher %command% /autorun /autoquit /edo`
+   * kitty - `kitty --class min-ed-launcher ./MinEdLauncher %command% /autorun /autoquit /edo`
 
 ### Troubleshooting
 Debug logging is placed in the standard log location for your operating system:
@@ -386,6 +401,7 @@ Note that the bootstrap project specifically targets Windows and won't publish o
 [Multi-Account]: #multi-account
 [Frontier account via Steam or Epic]: #frontier-account-via-steam-or-epic
 [Epic account via Steam]: #epic-account-via-steam
+[Icon on Linux]: #icon-on-linux
 [Troubleshooting]: #troubleshooting
 [Cache]: #cache
 [Build]: #build

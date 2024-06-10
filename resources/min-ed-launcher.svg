@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<svg
+   version="1.1"
+   width="1033.1444"
+   height="872.3761"
+   viewBox="0 0 1033.1444 872.3761"
+   id="svg1"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <g
+     id="logo"
+     style="fill:none;stroke:#f07b05;stroke-width:25;stroke-opacity:1"
+     transform="translate(10,22.768973)">
+    <path
+       d="M 518,840.48308 879.92783,488.69982 880.5,392.5 943,334.24956 V 233.27369 L 1021.25,162.00338 1022,14 636,366.24807 V 470.52572 L 518,579 400.00021,470.5 400,366.24807 14,14 v 74 l 0.75,74.00338 78.25,71.27031 v 100.97587 l 62.5,58.25044 0.57214,96.19098 z"
+       id="wings"
+       transform="translate(-11.5,-8.3077568)"/>
+    <path
+       d="M 597,458.67358 V 395.3958 L 595.94873,331.46831 518,397.75 440.05127,331.46831 439,395.3958 v 63.27778 l 78.59617,72.18268 z"
+       id="head"
+       transform="translate(-11.5,-8.3077568)" />
+  </g>
+</svg>

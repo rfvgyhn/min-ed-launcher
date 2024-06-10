@@ -38,6 +38,11 @@
     
   <PropertyGroup>
     <IsLinux>!$(DefineConstants.Contains('WINDOWS'))</IsLinux>
+    <IsWindows>$(DefineConstants.Contains('WINDOWS'))</IsWindows>
+  </PropertyGroup>
+  
+  <PropertyGroup Condition="$(IsWindows) And Exists('..\..\resources\min-ed-launcher.ico')">
+    <ApplicationIcon>..\..\resources\min-ed-launcher.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
