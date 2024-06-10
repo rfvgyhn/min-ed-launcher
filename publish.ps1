@@ -31,7 +31,7 @@ function Create-Icon {
 
     # Remove PNG files
     Foreach($image in $pngImages) {
-        #Remove-Item $image
+        Remove-Item $image
     }
 }
 
