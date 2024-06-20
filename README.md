@@ -93,7 +93,7 @@ Frontier's website. Linking is only required if you purchased the game via Steam
        
        `gnome-terminal -- ./MinEdLauncher %command% /autorun /autoquit /edo`
     
-       `konsole --name min-ed-launcher -e ./MinEdLauncher %command% /autorun /autoquit /edo`
+       `konsole -e ./MinEdLauncher %command% /autorun /autoquit /edo`
 5. Launch your game as you normally would in Steam
 #### Epic
 1. Download the [latest release] for your operating system
