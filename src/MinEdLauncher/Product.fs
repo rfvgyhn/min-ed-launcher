@@ -247,18 +247,6 @@ let validateForRun launcherDir watchForCrashes (product: ProductDetails) =
              Mode = product.VInfo.Mode
              ServerArgs = product.ServerArgs }
     
-let isRunning (product:RunnableProduct) =
-    let exeName = product.Executable.Name
-    
-    if RuntimeInformation.IsOSPlatform(OSPlatform.Windows) then
-        Process.GetProcessesByName(exeName).Length > 0 // TODO: check that this is true when running on Windows
-    else
-        Process.GetProcesses() // When running via wine, process name can be truncated and the main module is wine so check all module names
-        |> Array.exists (fun p ->
-            p.Modules
-            |> Seq.cast<ProcessModule>
-            |> Seq.exists (fun m -> m.ModuleName = exeName))
-
 let createProcessInfo proton args product =
     let fileName, arguments =
         match proton with
@@ -279,17 +267,14 @@ let createProcessInfo proton args product =
 
 type RunResult = Ok of Process | AlreadyRunning | DryRun of ProcessStartInfo | Error of exn
 let run dryRun proton args (product:RunnableProduct)  =
-    if isRunning product then
-        AlreadyRunning
+    let startInfo = createProcessInfo proton args product
+    
+    Log.debug $"Process: %s{startInfo.FileName} %s{startInfo.Arguments}"
+    
+    if dryRun then
+        DryRun startInfo
     else
-        let startInfo = createProcessInfo proton args product
-        
-        Log.debug $"Process: %s{startInfo.FileName} %s{startInfo.Arguments}"
-        
-        if dryRun then
-            DryRun startInfo
-        else
-            try
-                Process.Start(startInfo) |> Ok
-            with
-            | e -> Error e
+        try
+            Process.Start(startInfo) |> Ok
+        with
+        | e -> Error e
