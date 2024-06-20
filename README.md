@@ -314,7 +314,7 @@ Example _Target_ field for a shortcut that launches Odyssey:
 ### Icon on Linux
 1. Copy the included `min-ed-launcher.svg` file to your environment's default icon location
 
-   Common icon locations are `~/.local/share/icons/hicolor/scalable/apps` and `/usr/share/icons/scalable/apps`.
+   Common icon locations are `~/.local/share/icons/hicolor/scalable/apps` and `/usr/share/icons/hicolor/scalable/apps`.
 2. Copy the included `min-ed-launcher.desktop` file to your environment's default application launcher location
 
    Common locations are `~/.local/share/applications` and `/usr/share/applications`
