@@ -15,7 +15,9 @@
 ### Enhancements
 - Enable restart feature for Epic users. It's still not as seamless as non-Epic accounts. Requires the usage of [Legendary]
   or [Heroic]. Once you've logged in with either, you can go back to using the normal Epic launcher if you wish. It will
-  require re-logging in every few days though, so it may be preferable to just stick with the alternate launchers.
+  require re-logging in every few days though, so it may be preferable to just stick with the alternate launchers. 
+  [The Wiki](https://github.com/rfvgyhn/min-ed-launcher/wiki/Using-Legendary-on-Windows) has instructions on how to setup 
+  Legendary.
 - Added an [icon](resources/min-ed-launcher.svg) for the app. Linux users can check the [readme](README.md#icon-on-linux) 
   for setup instructions.
 - The launcher will now exit instead of waiting for Elite to exit if the following conditions are met:
