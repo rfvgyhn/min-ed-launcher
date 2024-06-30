@@ -17,7 +17,11 @@
   or [Heroic]. Once you've logged in with either, you can go back to using the normal Epic launcher if you wish. It will
   require re-logging in every few days though, so it may be preferable to just stick with the alternate launchers.
 - Added an [icon](resources/min-ed-launcher.svg) for the app. Linux users can check the [readme](README.md#icon-on-linux) 
-  for setup instructions.  
+  for setup instructions.
+- The launcher will now exit instead of waiting for Elite to exit if the following conditions are met:
+  1. `/autoquit` is specified
+  2. `/restart` is not specified
+  3. No external apps specified in `settings.json` (`processes`, `shutdownProcesses`)
 
 ## [0.10.1] - 2024-05-03
 

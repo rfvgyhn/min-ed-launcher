@@ -247,6 +247,16 @@ let validateForRun launcherDir watchForCrashes (product: ProductDetails) =
              Mode = product.VInfo.Mode
              ServerArgs = product.ServerArgs }
     
+let isRunning (product:RunnableProduct) =
+    let exeName = Path.GetFileNameWithoutExtension(product.Executable.Name)
+    
+    if RuntimeInformation.IsOSPlatform(OSPlatform.Windows) then
+        Process.GetProcessesByName(exeName).Length > 0
+    else
+        // Process.ProcessName seems to be truncated on linux. Not sure if it's always the case or only sometimes
+        // so check both truncated name and full name
+        Process.GetProcessesByName(exeName[..14]).Length > 0 || Process.GetProcessesByName(exeName).Length > 0
+
 let createProcessInfo proton args product =
     let fileName, arguments =
         match proton with

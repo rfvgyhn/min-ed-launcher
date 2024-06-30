@@ -98,18 +98,19 @@ let private checkForLauncherUpdates httpClient cancellationToken currentVersion 
     )
 }
     
-let launchProduct dryRun proton processArgs productName product =
+let launchProduct dryRun proton processArgs productName waitForExit product =
     let args = processArgs()
     Log.info $"Launching %s{productName}"
     
     match Product.run dryRun proton args product with
     | Product.RunResult.Ok p ->
-        use p = p
         p.BeginErrorReadLine()
         p.BeginOutputReadLine()
-        p.WaitForExit()
-        p.Close()
-        Log.info $"Shutdown %s{productName}"
+        if waitForExit then
+            use p = p
+            p.WaitForExit()
+            p.Close()
+            Log.info $"Shutdown %s{productName}"
     | Product.DryRun p ->
         Console.WriteLine("\tDry run")
         Console.WriteLine($"\t{p.FileName} {p.Arguments}")
@@ -337,22 +338,36 @@ let rec private launchLoop initialLaunch settings playableProducts (session: EdS
             Log.info $"Delaying game launch for %.2f{settings.GameStartDelay.TotalSeconds} seconds"
             do! Task.Delay settings.GameStartDelay
         
-        launchProduct settings.DryRun settings.CompatTool pArgs selectedProduct.Name p
+        let waitForEdExit = not settings.AutoQuit || settings.Restart.IsSome || not settings.Processes.IsEmpty || not settings.ShutdownProcesses.IsEmpty
         
-        let timeout = settings.Restart |> Option.defaultValue 3000L
-        while settings.Restart.IsSome && not (Console.cancelRestart timeout) do
-            Process.stopProcesses settings.ShutdownTimeout relaunchProcesses
-            logStart relaunchStartInfos
-            relaunchProcesses <- Process.launchProcesses relaunchStartInfos
-            
-            do! renewEpicTokenIfNeeded settings.Platform session.PlatformToken
-            
-            launchProduct settings.DryRun settings.CompatTool pArgs selectedProduct.Name p
+        launchProduct settings.DryRun settings.CompatTool pArgs selectedProduct.Name waitForEdExit p
         
-        if not settings.AutoQuit then
-            return! launchLoop false settings playableProducts session (Some persistentProcesses) (Some relaunchProcesses) cancellationToken processArgs
+        if not waitForEdExit then
+            // Wait for ED Process to start before exiting
+            let maxTries = 30
+            let mutable tries = 0
+            while tries < maxTries do
+                if not (Product.isRunning p) then
+                    do! Task.Delay(TimeSpan.FromSeconds(1))
+                    tries <- tries + 1
+                else
+                    tries <- maxTries
+            return [], didLoop
         else
-            return persistentProcesses @ relaunchProcesses, didLoop
+            let timeout = settings.Restart |> Option.defaultValue 3000L
+            while settings.Restart.IsSome && not (Console.cancelRestart timeout) do
+                Process.stopProcesses settings.ShutdownTimeout relaunchProcesses
+                logStart relaunchStartInfos
+                relaunchProcesses <- Process.launchProcesses relaunchStartInfos
+                
+                do! renewEpicTokenIfNeeded settings.Platform session.PlatformToken
+                
+                launchProduct settings.DryRun settings.CompatTool pArgs selectedProduct.Name true p
+            
+            if not settings.AutoQuit then
+                return! launchLoop false settings playableProducts session (Some persistentProcesses) (Some relaunchProcesses) cancellationToken processArgs
+            else
+                return persistentProcesses @ relaunchProcesses, didLoop
 }
 
 let run settings launcherVersion cancellationToken = taskResult {
