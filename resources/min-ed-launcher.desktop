@@ -1,9 +1,16 @@
 [Desktop Entry]
 Name=Minimal ED Launcher
 Comment=Launches the game Elite: Dangerous
-Exec=MinEdLauncher %F
+# If you don't have MinEdLauncher in your $PATH, specify the absolute path
+# e.g. "/mnt/games/steam/steamapps/common/Elite Dangerous/MinEdLauncher"
+# You may also specify env vars and program args
+# e.g. env WINEPREFIX=/path/to/ed/wine/prefix MinEdLauncher /autorun /autoquit /edo
+Exec=MinEdLauncher
+# Change to false if you want Min ED Launcher to show up in your application launcher
+NoDisplay=true
 Terminal=true
 Type=Application
-Keywords=elite;ed;launcher;
+Keywords=elite;ed;launcher;min-ed-launcher;
 Icon=min-ed-launcher
+StartupWMClass=min-ed-launcher
 Categories=Game;
