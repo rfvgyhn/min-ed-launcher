@@ -1,6 +1,6 @@
 # Changelog
 
-## [unreleased]
+## [0.11.0] - 2024-07-08
 
 ### New Features
 - Add ability to restart applications when the `/restart` flag is specified. Useful for when running 3DMigoto/EDHM_UI in VR.
@@ -316,7 +316,8 @@ legendary launch --dry-run 9c203b6ed35846e8a4a9ff1e314f6593 2> >(grep "Launch pa
 
 Initial release
 
-[unreleased]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.10.1...HEAD
+[unreleased]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.10.1...v0.11.0
 [0.10.1]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.8.2...v0.9.0
