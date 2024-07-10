@@ -7,6 +7,9 @@
   of `/autoquit` which is to wait for Elite to exit before closing the launcher.
 - Make reading [log file] a bit easier by writing a separator between launcher runs.
 
+### Security
+- Address [CVE-2024-30105] and [CVE-2024-38095] by building with latest version of .Net SDK (8.0.303)
+
 ## [0.11.0] - 2024-07-08
 
 ### New Features
@@ -359,6 +362,8 @@ Initial release
 [CVE-2023-36794]: https://github.com/dotnet/announcements/issues/272
 [CVE-2023-36796]: https://github.com/dotnet/announcements/issues/274
 [CVE-2023-36799]: https://github.com/dotnet/announcements/issues/275
+[CVE-2024-30105]: https://github.com/dotnet/announcements/issues/315
+[CVE-2024-38095]: https://github.com/dotnet/announcements/issues/312
 [legendary]: https://github.com/derrod/legendary
 [heroic]: https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher
 [settings file]: README.md#settings
