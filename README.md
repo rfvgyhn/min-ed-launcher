@@ -349,7 +349,7 @@ for the bootstrapper. Since the bootstrapper is only used for users playing via 
 ### Launcher
 1. Install the [.Net SDK]
 
-    At least version 7. In general, min-ed-launcher follows the latest version of the SDK.
+    At least version 8. In general, min-ed-launcher follows the latest version of the SDK.
 2. Clone repository and build
     ```
     $ git clone https://github.com/rfvgyhn/min-ed-launcher
