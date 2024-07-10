@@ -157,7 +157,7 @@ you to select a version of the game.
 
 | Argument       | Effect                                                    |
 |----------------|-----------------------------------------------------------|
-| /autoquit      | Automatically close the launcher when the game closes     |
+| /autoquit      | Automatically close the launcher when the game starts     |
 | /autorun       | Automatically start selected product when launcher starts |
 | /ed            | Select Legacy Elite Dangerous as the startup product      |
 | /edh           | Select Legacy Horizons as the startup product             |
@@ -170,6 +170,7 @@ The following arguments are in addition to the above:
 
 | Argument               | Effect                                                                                                                                                                                                  |
 |------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| /autoquit waitForExit  | Automatically close the launcher when the game closes                                                                                                                                                   |
 | /edo                   | Select Elite Dangerous Odyssey as the startup product                                                                                                                                                   |
 | /edh4                  | Select Elite Dangerous Horizons as the startup product                                                                                                                                                  |
 | /frontier profile-name | Use this argument to login with a Frontier Store account. `profile-name` can be any name you want. Keep it to letters, numbers, dashes and underscores. See more details in the [multi-account] section |
