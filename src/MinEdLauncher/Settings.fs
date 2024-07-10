@@ -12,7 +12,7 @@ let defaults =
     { Platform = Dev
       DisplayMode = Pancake
       AutoRun = false
-      AutoQuit = false
+      QuitMode = WaitForInput
       WatchForCrashes = true
       ProductWhitelist = OrdinalIgnoreCaseSet.empty
       ForceLocal = false
@@ -146,7 +146,9 @@ let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (arg
             | "/vr", _                        -> { s with DisplayMode = Vr }
             | "/novr", _                      -> { s with DisplayMode = Pancake }
             | "/autorun", _                   -> { s with AutoRun = true }
-            | "/autoquit", _                  -> { s with AutoQuit = true }
+            | "/autoquit", Some arg when arg.Equals("waitforexit", StringComparison.OrdinalIgnoreCase)
+                                              -> { s with QuitMode = WaitForExit }
+            | "/autoquit", _                  -> { s with QuitMode = Immediate }
             | "/forcelocal", _                -> { s with ForceLocal = true }
             | "/dryrun", _                    -> { s with DryRun = true }
             | arg, _ when arg.StartsWith('/')

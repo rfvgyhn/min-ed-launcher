@@ -1,5 +1,11 @@
 # Changelog
 
+## [unreleased]
+
+### Enhancements
+- Add `waitForQuit` arg to `/autoquit` (i.e. `/autoquit waitForQuit`). This will let users opt in to the old behavior
+  of `/autoquit` which is to wait for Elite to exit before closing the launcher.
+
 ## [0.11.0] - 2024-07-08
 
 ### New Features

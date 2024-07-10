@@ -63,7 +63,7 @@ let main argv =
                 |> TaskResult.bind (fun settings -> taskResult {
                     let! didLoop = App.run settings version cts.Token |> TaskResult.mapError App.AppError.toDisplayString
 
-                    if not settings.AutoQuit && not didLoop && not cts.Token.IsCancellationRequested then
+                    if settings.QuitMode = Types.WaitForInput && not didLoop && not cts.Token.IsCancellationRequested then
                         Console.waitForQuit()
                         
                     return 0

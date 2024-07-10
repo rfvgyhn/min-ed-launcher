@@ -89,7 +89,15 @@ let tests =
         }
         test "Matches /autoquit" {
             let settings = parse [| "/autoquit" |]
-            Expect.equal settings.AutoQuit true ""
+            Expect.equal settings.QuitMode Immediate ""
+        }
+        test "Matches /autoquit waitForExit" {
+            let settings = parse [| "/autoquit"; "waitForExit" |]
+            Expect.equal settings.QuitMode WaitForExit ""
+        }
+        test "Default quit mode should be WaitForInput" {
+            let settings = parse [| |]
+            Expect.equal settings.QuitMode WaitForInput ""
         }
         test "Matches /forcelocal" {
             let settings = parse [| "/forcelocal" |]

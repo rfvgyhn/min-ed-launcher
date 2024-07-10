@@ -72,7 +72,7 @@ type Platform =
 type CompatTool = { EntryPoint: string; Args: string array }
 type DisplayMode = Vr | Pancake
 type AutoRun = bool
-type AutoQuit = bool
+type QuitMode = Immediate | WaitForExit | WaitForInput
 type WatchForCrashes = bool
 type ForceLocal = bool
 type ServerStatus = Healthy
@@ -108,7 +108,7 @@ type LauncherSettings =
     { Platform: Platform
       DisplayMode: DisplayMode
       AutoRun: AutoRun
-      AutoQuit: AutoQuit
+      QuitMode: QuitMode
       WatchForCrashes: WatchForCrashes
       ProductWhitelist: OrdinalIgnoreCaseSet
       ForceLocal: ForceLocal

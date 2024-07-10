@@ -338,7 +338,12 @@ let rec private launchLoop initialLaunch settings playableProducts (session: EdS
             Log.info $"Delaying game launch for %.2f{settings.GameStartDelay.TotalSeconds} seconds"
             do! Task.Delay settings.GameStartDelay
         
-        let waitForEdExit = not settings.AutoQuit || settings.Restart.IsSome || not settings.Processes.IsEmpty || not settings.ShutdownProcesses.IsEmpty
+        let waitForEdExit =
+            settings.QuitMode = WaitForExit
+            || settings.QuitMode = WaitForInput
+            || settings.Restart.IsSome
+            || not settings.Processes.IsEmpty
+            || not settings.ShutdownProcesses.IsEmpty
         
         launchProduct settings.DryRun settings.CompatTool pArgs selectedProduct.Name waitForEdExit p
         
@@ -364,7 +369,7 @@ let rec private launchLoop initialLaunch settings playableProducts (session: EdS
                 
                 launchProduct settings.DryRun settings.CompatTool pArgs selectedProduct.Name true p
             
-            if not settings.AutoQuit then
+            if settings.QuitMode = WaitForInput then
                 return! launchLoop false settings playableProducts session (Some persistentProcesses) (Some relaunchProcesses) cancellationToken processArgs
             else
                 return persistentProcesses @ relaunchProcesses, didLoop
