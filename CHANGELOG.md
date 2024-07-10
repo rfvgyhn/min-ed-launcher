@@ -5,6 +5,7 @@
 ### Enhancements
 - Add `waitForQuit` arg to `/autoquit` (i.e. `/autoquit waitForQuit`). This will let users opt in to the old behavior
   of `/autoquit` which is to wait for Elite to exit before closing the launcher.
+- Make reading [log file] a bit easier by writing a separator between launcher runs.
 
 ## [0.11.0] - 2024-07-08
 
@@ -361,3 +362,4 @@ Initial release
 [legendary]: https://github.com/derrod/legendary
 [heroic]: https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher
 [settings file]: README.md#settings
+[log file]: README.md#troubleshooting

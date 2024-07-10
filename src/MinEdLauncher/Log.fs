@@ -8,6 +8,7 @@ open Serilog.Configuration
 open Serilog.Events
 open Serilog.Formatting
 open Serilog.Formatting.Display
+open Serilog.Sinks.File.Header
 open Serilog.Sinks.SystemConsole.Themes
 
 type TokenScrubber(mainFormatter: ITextFormatter) = // https://github.com/serilog/serilog/issues/938#issuecomment-383440607
@@ -51,7 +52,7 @@ type LoggerSinkConfiguration with
            | None -> raise <| exn $"HACK: No type found in '{typedefof<ConsoleLoggerConfigurationExtensions>.Assembly.FullName}' that implements {nameof(ITextFormatter)}." 
     member this.ScrubbedFile(path, restrictedToMinimumLevel) =
         let formatter = TokenScrubber(MessageTemplateTextFormatter("{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}", null))
-        this.File(formatter = formatter, path=path, restrictedToMinimumLevel=restrictedToMinimumLevel)
+        this.File(formatter = formatter, path=path, restrictedToMinimumLevel=restrictedToMinimumLevel, hooks=HeaderWriter((fun () -> $"{Environment.NewLine}----------"), true))
 
 let private logPath = Path.Combine(Environment.logDir, "min-ed-launcher.log")
 let logger =
