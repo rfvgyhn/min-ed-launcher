@@ -121,7 +121,7 @@ type LauncherSettings =
       CheckForLauncherUpdates: bool
       MaxConcurrentDownloads: int
       ForceUpdate: string Set
-      Processes: {| Info: ProcessStartInfo; RestartOnRelaunch: bool |} list
+      Processes: {| Info: ProcessStartInfo; RestartOnRelaunch: bool; KeepOpen: bool |} list
       ShutdownProcesses: ProcessStartInfo list
       FilterOverrides: OrdinalIgnoreCaseMap<string>
       AdditionalProducts: AuthorizedProduct list

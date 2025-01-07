@@ -546,7 +546,14 @@ let run settings launcherVersion cancellationToken = taskResult {
         Log.info $"Delaying shutdown for %.2f{settings.ShutdownDelay.TotalSeconds} seconds"
         do! Task.Delay settings.ShutdownDelay
         
-    Process.stopProcesses settings.ShutdownTimeout runningProcesses
+    let processesToStop =
+        runningProcesses
+        |> List.filter (fun p ->
+           settings.Processes
+           |> List.tryFind (fun s -> s.Info.FileName = p.StartInfo.FileName && s.KeepOpen = false)
+           |> Option.isSome) 
+        
+    Process.stopProcesses settings.ShutdownTimeout processesToStop
     settings.ShutdownProcesses |> List.iter (fun p -> Log.info $"Starting process %s{p.FileName}")
     Process.launchProcesses settings.ShutdownProcesses |> Process.writeOutput
     

@@ -159,8 +159,13 @@ let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (arg
     |> Option.map Ok |> Option.defaultWith (fun () -> findCbLaunchDir settings.Platform)
     |> Result.map (fun launchDir -> { settings with CompatTool = compatTool; CbLauncherDir = launchDir })
 
-[<CLIMutable>] type ProcessConfig = { FileName: string; Arguments: string option; RestartOnRelaunch: bool }
 [<CLIMutable>] type FilterConfig = { Sku: string; Filter: string }
+[<CLIMutable>]
+type ProcessConfig =
+    { FileName: string
+      Arguments: string option
+      RestartOnRelaunch: bool
+      KeepOpen: bool }
 [<CLIMutable>]
 type Config =
     { ApiUri: string
@@ -205,10 +210,11 @@ let parseConfig fileName =
                 let fileName = section.GetValue<string>("fileName")
                 let args = section.GetValue<string>("arguments")
                 let restart = section.GetValue<bool>("restartOnRelaunch")
+                let keepOpen = section.GetValue<bool>("keepOpen")
                 if String.IsNullOrWhiteSpace(fileName) then
                     None
                 else
-                    Some { FileName = fileName; Arguments = Option.ofObj args; RestartOnRelaunch = restart })
+                    Some { FileName = fileName; Arguments = Option.ofObj args; RestartOnRelaunch = restart; KeepOpen = keepOpen })
             |> Seq.toList
     let parseAdditionalProducts() =
         configRoot.GetSection("additionalProducts").GetChildren()
@@ -248,7 +254,7 @@ let getSettings args appDir fileConfig = task {
             | None -> Error "Failed to find Elite Dangerous install directory"
             | Some dir -> Ok dir
     let apiUri = Uri(fileConfig.ApiUri)
-    let processes = fileConfig.Processes |> List.map (fun p -> {| Info = mapProcessConfig p; RestartOnRelaunch = p.RestartOnRelaunch |}) 
+    let processes = fileConfig.Processes |> List.map (fun p -> {| Info = mapProcessConfig p; RestartOnRelaunch = p.RestartOnRelaunch; KeepOpen = p.KeepOpen |}) 
     let shutdownProcesses = fileConfig.ShutdownProcesses |> List.map mapProcessConfig
     let filterOverrides = fileConfig.FilterOverrides |> Seq.map (fun o -> o.Sku, o.Filter) |> OrdinalIgnoreCaseMap.ofSeq
     let fallbackDirs platform =

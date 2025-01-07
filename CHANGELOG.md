@@ -1,5 +1,19 @@
 # Changelog
 
+## [unreleased]
+
+### New Features
+- Add ability to keep applications open after launcher exits. Can be useful to review your recent activity in apps like 
+  [EDDiscovery].
+  
+  Set the new `keepOpen` property to true in your [settings file].
+  ```json
+  "processes": [{
+    "fileName": "path\\to\\exe",
+    "keepOpen": true  
+  }]
+  ```
+
 ## [0.11.1]
 
 ### Enhancements
@@ -369,3 +383,4 @@ Initial release
 [heroic]: https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher
 [settings file]: README.md#settings
 [log file]: README.md#troubleshooting
+[EDDiscovery]: https://github.com/EDDiscovery/EDDiscovery
