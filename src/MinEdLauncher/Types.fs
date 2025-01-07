@@ -111,6 +111,7 @@ type LauncherSettings =
       QuitMode: QuitMode
       WatchForCrashes: WatchForCrashes
       ProductWhitelist: OrdinalIgnoreCaseSet
+      SkipInstallPrompt: bool
       ForceLocal: ForceLocal
       CompatTool: CompatTool option
       CbLauncherDir: string

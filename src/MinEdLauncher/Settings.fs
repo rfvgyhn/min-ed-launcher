@@ -15,6 +15,7 @@ let defaults =
       QuitMode = WaitForInput
       WatchForCrashes = true
       ProductWhitelist = OrdinalIgnoreCaseSet.empty
+      SkipInstallPrompt = false
       ForceLocal = false
       CompatTool = None
       CbLauncherDir = "."
@@ -151,6 +152,7 @@ let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (arg
             | "/autoquit", _                  -> { s with QuitMode = Immediate }
             | "/forcelocal", _                -> { s with ForceLocal = true }
             | "/dryrun", _                    -> { s with DryRun = true }
+            | "/skipinstallprompt", _         -> { s with SkipInstallPrompt = true }
             | arg, _ when arg.StartsWith('/')
                           && arg.Length > 1   -> { s with ProductWhitelist = s.ProductWhitelist.Add (arg.TrimStart('/')) }
             | _ -> s) defaults

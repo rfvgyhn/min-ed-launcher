@@ -13,6 +13,7 @@
     "keepOpen": true  
   }]
   ```
+- Allow skipping the prompt to install a product when `/autorun` isn't specified with the new flag `/skipInstallPrompt`.
   
 ### Enhancements
 - Read additional processes' STDOUT/ERR asynchronously. This should allow [EDOMH] to launch without locking up.

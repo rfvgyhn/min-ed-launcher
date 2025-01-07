@@ -79,6 +79,10 @@ let tests =
             let settings = parse [| "/novr" |]
             Expect.equal settings.DisplayMode Pancake ""
         }
+        test "Matches /skipInstallPrompt" {
+            let settings = parse [| "/skipInstallPrompt" |]
+            Expect.equal settings.SkipInstallPrompt true ""
+        }
         test "Matches /dryrun" {
             let settings = parse [| "/dryrun" |]
             Expect.isTrue settings.DryRun ""

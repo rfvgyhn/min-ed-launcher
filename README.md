@@ -176,6 +176,7 @@ The following arguments are in addition to the above:
 | /frontier profile-name | Use this argument to login with a Frontier Store account. `profile-name` can be any name you want. Keep it to letters, numbers, dashes and underscores. See more details in the [multi-account] section |
 | /restart delay         | Restart the game after it has closed with _delay_ being the number of seconds given to cancel the restart (i.e `/restart 3`)                                                                            |
 | /dryrun                | Prints output without launching any processes                                                                                                                                                           |
+| /skipInstallPrompt     | Skips the prompt to install uninstalled products when `/autorun` is not specified                                                                                                                       |
 
 ##### Epic accounts and the /restart feature
 The restart feature requires either [Legendary] or [Heroic] to work with Epic accounts.
