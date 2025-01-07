@@ -13,7 +13,7 @@ open Serilog.Sinks.SystemConsole.Themes
 
 type TokenScrubber(mainFormatter: ITextFormatter) = // https://github.com/serilog/serilog/issues/938#issuecomment-383440607
     static let tokenRegex = 
-        Regex(@"\b[a-zA-Z0-9-_]{24,}\.[a-zA-Z0-9-_]{24,}\.[a-zA-Z0-9-_]{24,}|\b[a-z0-9]{32,}", RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
+        Regex(@"\b[a-zA-Z0-9-_]{24,}\.[a-zA-Z0-9-_]{24,}\.[a-zA-Z0-9-_]{24,}|\b[a-z0-9]{32,}|\b[a-zA-Z0-9/+=]{100,}", RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
         
     interface ITextFormatter with
         member this.Format(logEvent, output) =

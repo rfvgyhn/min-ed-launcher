@@ -15,7 +15,8 @@
   ```
   
 ### Enhancements
-- Read additional processes' STDOUT/ERR asynchronously. This should allow [EDOMH] to launch without locking up. 
+- Read additional processes' STDOUT/ERR asynchronously. This should allow [EDOMH] to launch without locking up.
+- Do a better job of scrubbing stored frontier passwords in log file
 
 ## [0.11.1]
 
