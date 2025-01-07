@@ -13,6 +13,9 @@
     "keepOpen": true  
   }]
   ```
+  
+### Enhancements
+- Read additional processes' STDOUT/ERR asynchronously. This should allow [EDOMH] to launch without locking up. 
 
 ## [0.11.1]
 
@@ -384,3 +387,4 @@ Initial release
 [settings file]: README.md#settings
 [log file]: README.md#troubleshooting
 [EDDiscovery]: https://github.com/EDDiscovery/EDDiscovery
+[EDOMH]: https://github.com/jixxed/ed-odyssey-materials-helper
