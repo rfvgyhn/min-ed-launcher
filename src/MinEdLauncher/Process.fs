@@ -7,7 +7,10 @@ let launchProcesses (processes:ProcessStartInfo list) =
     processes
     |> List.choose (fun p ->
         try
-            Process.Start(p) |> Some
+            let p = Process.Start(p)
+            p.BeginErrorReadLine()
+            p.BeginOutputReadLine()
+            p |> Some
         with
         | :? Win32Exception as e ->
             Log.exn e $"""Unable to start process %s{p.FileName}
@@ -29,8 +32,6 @@ let stopProcesses timeout (processes: Process list) =
             Log.debug $"Stopping process %s{p.ProcessName}"
             match Interop.termProcess timeout p with
             | Ok () ->
-                p.StandardOutput.ReadToEnd() |> ignore
-                p.StandardError.ReadToEnd() |> ignore
                 Log.info $"Stopped process %s{p.ProcessName}"
             | Error msg -> Log.warn msg)
     
