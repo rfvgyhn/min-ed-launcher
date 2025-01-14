@@ -210,6 +210,7 @@ Linux: `$XDG_CONFIG_HOME/min-ed-launcher/settings.json` (`~/.config` if `$XDG_CO
 | maxConcurrentDownloads      | Maximum number of simultaneous downloads when downloading updates                                                                                                                                                                                                                   |
 | forceUpdate                 | By default, Steam and Epic updates are handled by their respective platform. In cases like the Odyssey alpha, FDev doesn't provide updates through Steam or Epic. This allows the launcher to force updates to be done via FDev servers by providing a comma delimited list of SKUs |
 | processes                   | Additional applications to launch before launching the game                                                                                                                                                                                                                         |
+| processes.arguments         | Optional arguments for the process                                                                                                                                                                                                                                                  |
 | processes.restartOnRelaunch | Will shutdown and restart the application when the `/restart` flag is specified before restarting the game                                                                                                                                                                          |
 | processes.keepOpen          | Keep application open after launcher exits                                                                                                                                                                                                                                          |
 | shutdownProcesses           | Additional applications to launch after game has shutdown                                                                                                                                                                                                                           |
@@ -238,8 +239,7 @@ double backslash (`\\`) instead of a single backslash (`\`).
   "shutdownDelay": 0,
   "processes": [
     {
-      "fileName": "C:\\path\\to\\app.exe",
-      "arguments": "--arg1 --arg2"
+      "fileName": "C:\\path\\to\\app.exe"
     },
     {
       "fileName": "C:\\path\\to\\app2.exe",
