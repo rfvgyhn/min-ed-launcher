@@ -146,49 +146,28 @@ let tests =
         }
         
         yield! [
-            "non steam linux runtime",               [ Path.Combine("steamapps", "common", "Proton 5.0", "proton"); "protonAction" ]
-            "non steam linux runtime custom folder", [ Path.Combine("Steam", "compatibilitytools.d", "Proton 5.0", "proton"); "protonAction" ]
-            "non steam linux runtime custom folder case insensitive", [ Path.Combine("sTeAm", "compatibilitytools.d", "proton 5.0", "Proton"); "protonAction" ]
-        ] |> List.map (fun (name, protonArgs) ->
-            test $"Matches proton args {name}" {
+            "proton - no wrapper",                 [ Path.Combine("steamapps", "common", "Proton 5.0", "proton"); "protonAction" ]
+            "proton - no wrapper - custom folder", [ Path.Combine("sTeAm", "compatibilitytools.d", "compat-tool", "proton"); "protonAction" ]
+            "proton - reaper",                     [ Path.Combine("Steam", "ubuntu12_32", "reaper"); "SteamLaunch"; "AppId=359320"; "--"; Path.Combine("steamapps", "common", "SteamLinuxRuntime_soldier", "_v2-entry-point"); "--deploy=soldier"; "--suite=soldier"; "--verb=protonAction"; "--"; Path.Combine("steamapps", "common", "Proton 5.0", "proton"); "protonAction" ]
+            "proton - steam-launch-wrapper",       [ Path.Combine("Steam", "ubuntu12_32", "steam-launch-wrapper"); "--"; Path.Combine("steamapps", "common", "SteamLinuxRuntime_soldier", "_v2-entry-point"); "--deploy=soldier"; "--suite=soldier"; "--verb=protonAction"; "--"; Path.Combine("steamapps", "common", "Proton 5.0", "proton"); "protonAction" ]
+            "proton - extra args",                 [ Path.Combine("steamapps", "common", "SteamLinuxRuntime_soldier", "_v2-entry-point"); "--deploy=soldier"; "--suite=soldier"; "--verb=protonAction"; "--"; Path.Combine("steamapps", "common", "Proton 5.0", "proton"); "protonAction" ]
+            "proton - steam linux runtime",        [ Path.Combine("steamapps", "common", "SteamLinuxRuntime_soldier", "_v2-entry-point"); "--verb=protonAction"; "--"; Path.Combine("steamapps", "common", "Proton 5.0", "proton"); "protonAction" ]
+            "proton - cachyos",                    [ Path.Combine("Steam", "ubuntu12_32", "steam-launch-wrapper"); "--"; Path.Combine("Steam", "ubuntu12_32", "reaper"); "SteamLaunch"; "AppId=359320"; "--"; Path.Combine("steam", "compatibilitytools.d", "proton-cachyos", "proton"); "waitforexitandrun" ]
+            "wine",                                [ "wine" ]
+        ] |> List.map(fun (name, protonArgs) ->
+            test $"Matches compat tool args {name}" {
                 let launcherDir = "launchDir"
-                let launcherPath = Path.Combine(launcherDir, "EDLaunch.exe")
-                let args = protonArgs @ [launcherPath; "/other"; "/args"] |> List.toArray
+                let launcherArgs = [Path.Combine(launcherDir, "EDLaunch.exe"); "/other"; "/args"]
+                let args = protonArgs @ launcherArgs |> List.toArray
+                
                 let settings = parse args
                 
-                let expected = { EntryPoint = "python3"; Args = args.[..^3] }
-                Expect.equal settings.CompatTool (Some expected) ""
+                let expected = Some { EntryPoint = args[0]; Args = args[1..^launcherArgs.Length] }
+                Expect.equal settings.CompatTool expected ""
                 Expect.equal settings.CbLauncherDir launcherDir ""
             }
         )
         
-        yield! [
-            "steam linux runtime - reaper",               [ Path.Combine("Steam", "ubuntu12_32", "reaper"); "SteamLaunch"; "AppId=359320"; "--"; Path.Combine("steamapps", "common", "SteamLinuxRuntime_soldier", "_v2-entry-point"); "--deploy=soldier"; "--suite=soldier"; "--verb=protonAction"; "--"; Path.Combine("steamapps", "common", "Proton 5.0", "proton"); "protonAction" ]
-            "steam linux runtime - steam-launch-wrapper", [ Path.Combine("Steam", "ubuntu12_32", "steam-launch-wrapper"); "--"; Path.Combine("steamapps", "common", "SteamLinuxRuntime_soldier", "_v2-entry-point"); "--deploy=soldier"; "--suite=soldier"; "--verb=protonAction"; "--"; Path.Combine("steamapps", "common", "Proton 5.0", "proton"); "protonAction" ]
-            "steam linux runtime - extra args",           [ Path.Combine("steamapps", "common", "SteamLinuxRuntime_soldier", "_v2-entry-point"); "--deploy=soldier"; "--suite=soldier"; "--verb=protonAction"; "--"; Path.Combine("steamapps", "common", "Proton 5.0", "proton"); "protonAction" ]
-            "steam linux runtime",                        [ Path.Combine("steamapps", "common", "SteamLinuxRuntime_soldier", "_v2-entry-point"); "--verb=protonAction"; "--"; Path.Combine("steamapps", "common", "Proton 5.0", "proton"); "protonAction" ]
-        ] |> List.map (fun (name, protonArgs) ->
-            test $"Matches proton args {name}" {
-                let launcherDir = "launchDir"
-                let launcherPath = Path.Combine(launcherDir, "EDLaunch.exe")
-                let args = protonArgs @ [launcherPath; "/other"; "/args"] |> List.toArray
-                
-                let settings = parse args
-                
-                let expectedArgs = protonArgs.[1..^2] @ [ "python3" ] @ protonArgs.[^1..] |> List.toArray
-                let expected = { EntryPoint = args.[0]; Args = expectedArgs }
-                Expect.equal settings.CompatTool (Some expected) ""
-                Expect.equal settings.CbLauncherDir launcherDir ""
-            }
-        )
-        test "Matches wine args" {
-            let launcherDir = "launchDir"
-            let launcherPath = Path.Combine(launcherDir, "EDLaunch.exe")
-            let settings = parse [| "wine"; launcherPath |]
-            
-            let expected = { EntryPoint = "wine"; Args = [||] } |> Some
-            Expect.equal settings.CompatTool expected ""
-        }
         test "First arg doesn't contain steamapps/common/Proton or SteamRuntimeLinux means no Proton" {
             let settings = parse [| "asdf"; "fdsa"; "launchDir" |]
             Expect.equal settings.CompatTool None ""

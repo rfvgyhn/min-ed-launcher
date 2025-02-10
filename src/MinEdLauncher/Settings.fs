@@ -73,32 +73,23 @@ let applyDeviceAuth settings  =
 let private doesntEndWith (value: string) (str: string) = not (str.EndsWith(value))
 type private EpicArg = ExchangeCode of string | Type of string | AppId of string
 let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (argv: string[]) =
+    let launcherIndex =
+        argv
+        |> Array.tryFindIndex (fun s -> s <> null && s.EndsWith("EDLaunch.exe", StringComparison.OrdinalIgnoreCase))
+        |> Option.defaultValue -1
+    
     let compatTool, cbLaunchDir, args =
-        let isOldProton (args: string[]) = // Proton < 5.13 doesn't run via steam linux runtime
-            args.Length > 2 && args.[0] <> null
-            && [ Path.Combine("steamapps", "common", "Proton"); Path.Combine("Steam", "compatibilitytools.d", "Proton") ]
-               |> List.exists (fun p -> args.[0].Contains(p, StringComparison.OrdinalIgnoreCase))
-        let isNewProton (args: string[]) = // Proton >= 5.13 runs via steam linux runtime
-            args.Length > 2 && args |> Array.filter (fun a -> a <> null) |> Array.exists (fun a -> a.Contains("SteamLinuxRuntime"))
-        let isWine() = argv.Length > 0 && argv[0] <> null && argv[0].EndsWith("wine")
-
-        if isNewProton argv then
-            let runtimeArgs = argv.[1..] |> Array.takeWhile (doesntEndWith "proton")
-            let protonArgs = argv.[1..] |> Array.skipWhile (doesntEndWith "proton") |> Array.takeWhile (doesntEndWith "EDLaunch.exe")
-            let args = seq { runtimeArgs; [| "python3" |]; protonArgs } |> Array.concat
-            let launcherIndex = args.Length
-            Some { EntryPoint = argv.[0]; Args = args }, Path.GetDirectoryName(argv.[launcherIndex]) |> Some, argv.[launcherIndex + 1..]
-        else if isOldProton argv then 
-            Some { EntryPoint = "python3"; Args = argv.[..1] }, Path.GetDirectoryName(argv.[2]) |> Some, argv.[3..]
-        else if isWine() then
-            Some { EntryPoint = argv[0]; Args = [||] }, Path.GetDirectoryName(argv.[1]) |> Some, argv.[2..]
-        else if argv.Length > 0 && argv.[0] <> null && argv.[0].EndsWith("EDLaunch.exe", StringComparison.OrdinalIgnoreCase) then
-            None, Path.GetDirectoryName(argv.[0]) |> Some, argv.[1..]
-        else
+        if launcherIndex < 0 then
             None, None, argv
+        else if launcherIndex = 0 then
+            None, Path.GetDirectoryName(argv[launcherIndex]) |> Some, argv[1..]
+        else if argv.Length > 1 then
+            Some { EntryPoint = argv[0]; Args = argv[1..launcherIndex - 1] }, Path.GetDirectoryName(argv[launcherIndex]) |> Some, argv[launcherIndex + 1..]
+        else
+            Some { EntryPoint = argv[0]; Args = [||] }, Path.GetDirectoryName(argv[launcherIndex]) |> Some, [||]
             
     let getArg (arg:string) i =
-        if i + 1 < args.Length && not (String.IsNullOrEmpty args.[i + 1]) && (not (args.[i + 1].StartsWith '/') && not (args.[i].StartsWith '-')) then // /arg argValue
+        if i + 1 < args.Length && not (String.IsNullOrEmpty args[i + 1]) && (not (args[i + 1].StartsWith '/') && not (args[i].StartsWith '-')) then // /arg argValue
             arg.ToLowerInvariant(), Some args.[i + 1]
         else if arg.Contains("=") then // -arg=argvalue
             let parts = arg.Split("=")
