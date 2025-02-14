@@ -1,6 +1,11 @@
 # Changelog
 
-## [0.11.2]
+## [unreleased]
+
+### Enhancements
+- Make argument parsing more generic which will allow for more Linux compatibility tools to be supported
+
+## [0.11.2] - 2024-01-14
 
 ### New Features
 - Add ability to keep applications open after launcher exits. Can be useful to review your recent activity in apps like 
@@ -19,7 +24,7 @@
 - Read additional processes' STDOUT/ERR asynchronously. This should allow [EDOMH] to launch without locking up.
 - Do a better job of scrubbing stored frontier passwords in log file
 
-## [0.11.1]
+## [0.11.1] - 2024-07-10
 
 ### Enhancements
 - Add `waitForQuit` arg to `/autoquit` (i.e. `/autoquit waitForQuit`). This will let users opt in to the old behavior
