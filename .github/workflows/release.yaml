@@ -1,5 +1,10 @@
 name: Publish
 
+permissions:
+  id-token: write
+  contents: read
+  attestations: write
+
 on:
   push:
     tags:
@@ -55,7 +60,7 @@ jobs:
 
   release:
     name: Release
-    needs: Publish
+    needs: publish
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -72,6 +77,11 @@ jobs:
       
       - name: Create Checksums
         run: ci/checksums.sh
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-checksums: artifacts/shasum.txt
 
       - name: Create Release Notes
         run: ci/release-notes.sh

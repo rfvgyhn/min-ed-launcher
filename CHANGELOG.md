@@ -4,6 +4,10 @@
 
 ### Enhancements
 - Make argument parsing more generic which will allow for more Linux compatibility tools to be supported
+- Use GitHub Actions to generate [artifact attestations] that establish build provenance for release artifacts.
+  This adds another way to ensure the launcher is built from source without any modifications.
+
+  `gh attestation verify min-ed-launcher_v[VERSION]_win-x64.zip -R rfvgyhn/min-ed-launcher`
 
 ## [0.11.2] - 2024-01-14
 
@@ -396,3 +400,4 @@ Initial release
 [log file]: README.md#troubleshooting
 [EDDiscovery]: https://github.com/EDDiscovery/EDDiscovery
 [EDOMH]: https://github.com/jixxed/ed-odyssey-materials-helper
+[artifact attestations]: https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations/using-artifact-attestations-to-establish-provenance-for-builds
