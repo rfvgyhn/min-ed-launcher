@@ -331,8 +331,8 @@ let rec private launchLoop initialLaunch settings playableProducts (session: EdS
         if not initialLaunch then
             do! renewEpicTokenIfNeeded settings.Platform session.PlatformToken
         
-        let persistentProcesses = persistentRunning |> Option.defaultWith (fun () -> Process.launchProcesses persistentStartInfos)
-        let mutable relaunchProcesses = Process.launchProcesses relaunchStartInfos
+        let persistentProcesses = persistentRunning |> Option.defaultWith (fun () -> Process.launchProcesses false persistentStartInfos)
+        let mutable relaunchProcesses = Process.launchProcesses false relaunchStartInfos
         
         if initialLaunch && settings.GameStartDelay > TimeSpan.Zero then
             Log.info $"Delaying game launch for %.2f{settings.GameStartDelay.TotalSeconds} seconds"
@@ -363,7 +363,7 @@ let rec private launchLoop initialLaunch settings playableProducts (session: EdS
             while settings.Restart.IsSome && not (Console.cancelRestart timeout) do
                 Process.stopProcesses settings.ShutdownTimeout relaunchProcesses
                 logStart relaunchStartInfos
-                relaunchProcesses <- Process.launchProcesses relaunchStartInfos
+                relaunchProcesses <- Process.launchProcesses false relaunchStartInfos
                 
                 do! renewEpicTokenIfNeeded settings.Platform session.PlatformToken
                 
@@ -557,7 +557,7 @@ let run settings launcherVersion cancellationToken = taskResult {
         
     Process.stopProcesses settings.ShutdownTimeout processesToStop
     settings.ShutdownProcesses |> List.iter (fun p -> Log.info $"Starting process %s{p.FileName}")
-    Process.launchProcesses settings.ShutdownProcesses |> Process.writeOutput
+    Process.launchProcesses true settings.ShutdownProcesses |> Process.waitForExit
     
     return didLoop
 } 
