@@ -61,6 +61,14 @@ let tests =
             let settings = parse [| "-epicapp=asdf" |]
             Expect.equal settings.Platform (Epic { EpicDetails.Empty with AppId = "asdf" }) ""
         }
+        test "Matches epic sandbox id" {
+            let settings = parse [| "-epicsandboxid=asdf" |]
+            Expect.equal settings.Platform (Epic { EpicDetails.Empty with SandboxId = Some "asdf" }) ""
+        }
+        test "Matches epic deployment id" {
+            let settings = parse [| "-epicdeploymentid=asdf" |]
+            Expect.equal settings.Platform (Epic { EpicDetails.Empty with DeploymentId = Some "asdf" }) ""
+        }
         test "Matches /oculus nonce" {
             let settings = parse [| "/oculus"; "123" |]
             Expect.equal settings.Platform (Oculus "123") ""

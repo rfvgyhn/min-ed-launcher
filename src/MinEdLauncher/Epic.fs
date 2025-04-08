@@ -62,9 +62,10 @@ let private epicValues = lazy (
             let credIdProp = credType.GetProperty("ClientId")
             let credSecretProp = credType.GetProperty("ClientSecret")
             let depIdProp = optType.GetProperty("DeploymentId")
+            let sandboxIdProp = optType.GetProperty("SandboxId")
             let credsProp = optType.GetProperty("ClientCredentials")
             
-            if methodInfo <> null && credIdProp <> null && credSecretProp <> null && depIdProp <> null && credsProp <> null then
+            if methodInfo <> null && credIdProp <> null && credSecretProp <> null && depIdProp <> null && sandboxIdProp <> null && credsProp <> null then
                 let eosIf = Activator.CreateInstance(eosIfType, null)
                 let options = methodInfo.Invoke(eosIf, null)
                 
@@ -72,11 +73,12 @@ let private epicValues = lazy (
                     let credentials = credsProp.GetValue(options)
                     if credentials <> null then
                         let depId = depIdProp.GetValue(options) :?> string
+                        let sandboxId = sandboxIdProp.GetValue(options) :?> string
                         let cId = credIdProp.GetValue(credentials) :?> string
                         let cSecret = credSecretProp.GetValue(credentials) :?> string
                         
-                        if depId <> null && cId <> null && cSecret <> null then
-                            Ok (cId, cSecret, depId)
+                        if depId <> null && sandboxId <> null && cId <> null && cSecret <> null then
+                            Ok (cId, cSecret, depId, sandboxId)
                         else
                             err "Unable to get values of IDs"
                     else
@@ -104,9 +106,9 @@ let private requestToStr formValues contentHeaders (request: HttpRequestMessage)
 
 let private requestToken launcherVersion (formValues: string list) : Task<Result<RefreshableToken, string>> =
     match epicValues.Force() with
-    | Ok (clientId, clientSecret, dId) -> task {
+    | Ok (clientId, clientSecret, depId, _) -> task {
         let formValues =
-            [ $"deployment_id={dId}"
+            [ $"deployment_id={depId}"
               "scope=basic_profile friends_list presence" ]
             |> List.append formValues
         use content = new StringContent(String.Join("&", formValues), Encoding.UTF8, "application/x-www-form-urlencoded")
@@ -155,6 +157,14 @@ let private generateExchangeCode token = task {
         let! content = response.Content.ReadAsStringAsync()
         Log.debug $"Requesting epic exchange code failed: %s{content}"
         return $"%i{int response.StatusCode}: %s{response.ReasonPhrase}" |> Error }
+
+let getDeploymentId() =
+    epicValues.Force()
+    |> Result.map (fun (_, _, depId, _) -> depId)
+    
+let getSandboxId() =
+    epicValues.Force()
+    |> Result.map (fun (_, _, _, sandboxId) -> sandboxId)
 
 let loginWithCode launcherVersion exchangeCode =             
     requestToken launcherVersion [ "grant_type=exchange_code"; $"exchange_code=%s{exchangeCode}" ]

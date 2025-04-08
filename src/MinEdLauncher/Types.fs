@@ -54,10 +54,14 @@ type SampledProgress<'T>(interval: TimeSpan, handler: 'T -> unit, finishedHandle
 type EpicDetails =
     { ExchangeCode: string
       Type: string
-      AppId: string }
+      AppId: string
+      SandboxId: string option
+      DeploymentId: string option }
     with static member Empty = { ExchangeCode = ""
                                  Type = ""
-                                 AppId = "" }
+                                 AppId = ""
+                                 SandboxId = None
+                                 DeploymentId = None }
 type Credentials = { Username: string; Password: string }
 type FrontierDetails =
     { Profile: string; Credentials: Credentials option; AuthToken: string option }

@@ -63,19 +63,20 @@ open MinEdLauncher.Tests.Extensions
                     
                     Expect.notStringContains actual "/steam" ""
                 }
-                test "Epic platform contains refresh token" {
-                    let get = fun () -> { RefreshableToken.Empty with RefreshToken = "asdf" }
-                    let token = { EdSession.Empty with PlatformToken = Expires {| Get = get; Renew = fun () -> Task.fromResult (Result.Ok()) |} }
-                    let actual = createArgString Vr None token "" getTimestamp false (Epic EpicDetails.Empty) hashFile product
+                test "Epic platform contains refresh token, sandbox id and deployment id" {
+                    let getToken = fun () -> { RefreshableToken.Empty with RefreshToken = "asdf" }
+                    let epicDetails = { EpicDetails.Empty with SandboxId = Some "sId"; DeploymentId = Some "depId" }
+                    let token = { EdSession.Empty with PlatformToken = Expires {| Get = getToken; Renew = fun () -> Task.fromResult (Result.Ok()) |} }
+                    let actual = createArgString Vr None token "" getTimestamp false (Epic epicDetails) hashFile product
                     
-                    Expect.stringContains actual "\"EpicToken asdf\"" ""
+                    Expect.stringContains actual "\"ConfigureEpic asdf sId depId\"" ""
                 }
                 test "Non epic platform doesn't contain refresh token" {
-                    let get = fun () -> { RefreshableToken.Empty with RefreshToken = "asdf" }
-                    let token = { EdSession.Empty with PlatformToken = Expires {| Get = get; Renew = fun _ -> Task.fromResult (Result.Ok()) |} }
+                    let getToken = fun () -> { RefreshableToken.Empty with RefreshToken = "asdf" }
+                    let token = { EdSession.Empty with PlatformToken = Expires {| Get = getToken; Renew = fun _ -> Task.fromResult (Result.Ok()) |} }
                     let actual = createArgString Vr None token "" getTimestamp false Dev hashFile product
                     
-                    Expect.notStringContains actual "\"EpicToken" ""
+                    Expect.notStringContains actual "\"ConfigureEpic" ""
                 }
                 test "VR mode" {
                     let actual = createArgString Vr None token "" getTimestamp false Dev hashFile product

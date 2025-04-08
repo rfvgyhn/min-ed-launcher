@@ -70,8 +70,29 @@ let applyDeviceAuth settings  =
         | Cobra.CredResult.Failure msg -> return Error msg }
     | _ -> Ok settings |> Task.fromResult
     
+let applyFallbackEpidIds settings =
+    match settings.Platform with
+    | Epic details -> result {
+        let! depId =
+            details.DeploymentId
+            |> Option.map Ok
+            |> Option.defaultWith (fun () ->
+                Epic.getDeploymentId()
+                |> Result.mapError (fun e -> $"Failed to get Epic deployment id: {e}")
+            )
+        let! sandboxId =
+            details.SandboxId
+            |> Option.map Ok
+            |> Option.defaultWith (fun () ->
+                Epic.getDeploymentId()
+                |> Result.mapError (fun e -> $"Failed to get Epic sandbox id: {e}")
+            )
+        return { settings with Platform = Epic { details with DeploymentId = Some depId; SandboxId = Some sandboxId } }
+        }
+    | _ -> Ok settings
+    
 let private doesntEndWith (value: string) (str: string) = not (str.EndsWith(value))
-type private EpicArg = ExchangeCode of string | Type of string | AppId of string
+type private EpicArg = ExchangeCode of string | Type of string | AppId of string | SandboxId of string | DeploymentId of string
 let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (argv: string[]) =
     let launcherIndex =
         argv
@@ -102,9 +123,11 @@ let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (arg
             arg
             |> Option.map (fun arg ->
                 match arg with
-                | ExchangeCode p -> { details with ExchangeCode = p }
-                | Type t         -> { details with Type = t }
-                | AppId id       -> { details with AppId = id })
+                | ExchangeCode p  -> { details with ExchangeCode = p }
+                | Type t          -> { details with Type = t }
+                | AppId id        -> { details with AppId = id }
+                | SandboxId id    -> { details with SandboxId = Some id }
+                | DeploymentId id -> { details with DeploymentId = Some id })
             |> Option.defaultValue details
             |> Epic
             
@@ -133,6 +156,8 @@ let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (arg
             | "-auth_password", Some password -> { s with Platform = epicArg (ExchangeCode password) }
             | "-auth_type", Some t            -> { s with Platform = epicArg (Type t) }
             | "-epicapp", Some id             -> { s with Platform = epicArg (AppId id) }
+            | "-epicsandboxid", Some id       -> { s with Platform = epicArg (SandboxId id) }
+            | "-epicdeploymentid", Some id    -> { s with Platform = epicArg (DeploymentId id) }
             | "/oculus", Some nonce           -> { s with Platform = Oculus nonce; ForceLocal = true }
             | "/restart", PosDouble delay     -> { s with Restart = delay * 1000. |> int64 |> Some }
             | "/vr", _                        -> { s with DisplayMode = Vr }
@@ -261,6 +286,7 @@ let getSettings args appDir fileConfig = task {
     let! settings =
         parseArgs defaults fallbackDirs args
         |> Result.tee (fun s -> Directory.SetCurrentDirectory(s.CbLauncherDir))
+        |> Result.bind applyFallbackEpidIds
         |> Result.bindTask applyDeviceAuth
     
     return settings

@@ -144,9 +144,11 @@ let createArgString vr (lang: string option) edSession machineId timestamp watch
         if lang.IsSome then "/language " + lang.Value 
         match platform, product.VInfo.SteamAware with
             | Steam, true -> "/steam"
-            | Epic _, _ ->
-                let refresh = edSession.PlatformToken.GetRefreshToken() |> Option.defaultValue ""
-                $"\"EpicToken {refresh}\""
+            | Epic p, _ ->
+                let refresh = edSession.PlatformToken.GetRefreshToken() |> Option.defaultValue "[none]"
+                let sId = p.SandboxId |> Option.defaultValue "[none]"
+                let dId = p.DeploymentId |> Option.defaultValue "[none]"
+                $"\"ConfigureEpic %s{refresh} %s{sId} %s{dId}\""
             | _, _ -> ()
         match vr with
             | Vr -> "/vr"
