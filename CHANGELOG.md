@@ -9,6 +9,10 @@
 
   `gh attestation verify min-ed-launcher_v[VERSION]_win-x64.zip -R rfvgyhn/min-ed-launcher`
 
+### Bug Fixes
+- Fix exception being thrown when specifying shutdown processes ([#156])
+- Fix invalid Epic login details due to format change ([#157])
+
 ## [0.11.2] - 2024-01-14
 
 ### New Features
@@ -401,3 +405,5 @@ Initial release
 [EDDiscovery]: https://github.com/EDDiscovery/EDDiscovery
 [EDOMH]: https://github.com/jixxed/ed-odyssey-materials-helper
 [artifact attestations]: https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations/using-artifact-attestations-to-establish-provenance-for-builds
+[#156]: https://github.com/rfvgyhn/min-ed-launcher/issues/156
+[#157]: https://github.com/rfvgyhn/min-ed-launcher/issues/157
