@@ -3,7 +3,7 @@
 ## [unreleased]
 
 ### Enhancements
-- Make argument parsing more generic which will allow for more Linux compatibility tools to be supported
+- Make argument parsing more generic which will allow for more Linux compatibility tools to be supported ([#151])
 - Use GitHub Actions to generate [artifact attestations] that establish build provenance for release artifacts.
   This adds another way to ensure the launcher is built from source without any modifications.
 
@@ -13,7 +13,7 @@
 - Fix exception being thrown when specifying shutdown processes ([#156])
 - Fix invalid Epic login details due to format change ([#157])
 
-## [0.11.2] - 2024-01-14
+## [0.11.2] - 2025-01-14
 
 ### New Features
 - Add ability to keep applications open after launcher exits. Can be useful to review your recent activity in apps like 
@@ -405,5 +405,6 @@ Initial release
 [EDDiscovery]: https://github.com/EDDiscovery/EDDiscovery
 [EDOMH]: https://github.com/jixxed/ed-odyssey-materials-helper
 [artifact attestations]: https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations/using-artifact-attestations-to-establish-provenance-for-builds
+[#151]: https://github.com/rfvgyhn/min-ed-launcher/issues/151
 [#156]: https://github.com/rfvgyhn/min-ed-launcher/issues/156
 [#157]: https://github.com/rfvgyhn/min-ed-launcher/issues/157
