@@ -1,6 +1,6 @@
 # Changelog
 
-## [unreleased]
+## [0.11.3] - 2025-04-08
 
 ### Enhancements
 - Make argument parsing more generic which will allow for more Linux compatibility tools to be supported ([#151])
@@ -358,7 +358,8 @@ legendary launch --dry-run 9c203b6ed35846e8a4a9ff1e314f6593 2> >(grep "Launch pa
 
 Initial release
 
-[unreleased]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.11.2...HEAD
+[unreleased]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.11.3...HEAD
+[0.11.3]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.11.2...v0.11.3
 [0.11.2]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.11.1...v0.11.2
 [0.11.1]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.10.1...v0.11.0
