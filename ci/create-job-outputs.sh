@@ -1,16 +1,21 @@
 #!/bin/bash
+set -e
+
+function log() {
+    echo "$1" >&2
+}
 
 job_name=Publish
 step_name="Create Checksums"
-job=$(curl -Ls \
-    -H "Accept: application/vnd.github+json" \
-    -H "Authorization: Bearer $GITHUB_TOKEN"\
-    -H "X-GitHub-Api-Version: 2022-11-28" \
-    https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs \
-    | jq -r ".jobs[] | select(.name==\"$job_name\")"
-)
+api_url="/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs"
+log "$api_url"
+
+job=$(gh api "$api_url" --jq ".jobs[] | select(.name==\"$job_name\")")
+[[ -z "$job" ]] && { log "Job '$job_name' not found"; exit 1; }
+
 run_url=$(echo "$job" | jq -r .html_url)
 checksum_number=$(echo "$job" | jq ".steps[] | select(.name==\"$step_name\") | .number")
+[[ -z "$checksum_number" ]] && { log "Step '$step_name'.number not found"; exit 1; }
 
 echo "checksum_url=$run_url#step:$checksum_number:1"
 echo "job_id=$GITHUB_JOB"
