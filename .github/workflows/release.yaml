@@ -11,12 +11,9 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+"
   workflow_dispatch:
 
-env:
-  BUILD_URL: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-
 jobs:
-  publish:
-    name: Publish
+  build:
+    name: build
     strategy:
       matrix:
         kind: ['linux', 'windows']
@@ -58,14 +55,11 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
-  release:
-    name: Release
-    needs: publish
+  publish:
+    name: Publish
+    needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -79,12 +73,47 @@ jobs:
         run: ci/checksums.sh
 
       - name: Generate artifact attestation
+        id: attest
         uses: actions/attest-build-provenance@v2
         with:
           subject-checksums: artifacts/shasum.txt
 
+      - name: Create job outputs
+        id: job-info
+        run: ci/create-job-outputs.sh >> $GITHUB_OUTPUT
+    outputs:
+      attestation_url: ${{ steps.attest.outputs.attestation-url }}
+      checksum_url: ${{ steps.job-info.outputs.checksum_url }}
+      job_id: ${{ steps.job-info.outputs.job_id }}
+  
+  archive-job-log:
+    name: Archive Job Log
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Archive
+        run: ci/archive-job-log.sh ${{ needs.publish.outputs.job_id }} >> $GITHUB_OUTPUT
+    outputs:
+      archived_job_url: ${{ steps.archive.outputs.archived_url }}
+      
+  release:
+    name: Release
+    needs: [ publish, archive-job-log ]
+    if: needs.publish.result == 'success' && needs.archive-job-log.result != 'cancelled'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
       - name: Create Release Notes
-        run: ci/release-notes.sh
+        env:
+          ATTESTATION_URL: ${{ needs.publish.outputs.attestation_url }}
+          CHECKSUM_URL: ${{ needs.publish.outputs.checksum_url }}
+          ARCHIVED_JOB_URL: ${{ needs.archive-job-log.outputs.archived_job_url }}
+        run: ci/release-notes.sh > release-notes.md
 
       - name: Release
         uses: softprops/action-gh-release@v1
