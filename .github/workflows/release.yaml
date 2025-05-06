@@ -60,6 +60,9 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -91,6 +94,8 @@ jobs:
     needs: publish
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Archive
         run: ci/archive-job-log.sh ${{ needs.publish.outputs.job_id }} >> $GITHUB_OUTPUT
     outputs:
@@ -102,6 +107,8 @@ jobs:
     if: needs.publish.result == 'success' && needs.archive-job-log.result != 'cancelled'
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
