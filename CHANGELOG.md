@@ -2,6 +2,12 @@
 
 ## [unreleased]
 
+### Changes
+- Don't attempt to start external processes in a minimized state
+
+  Most 3rd party apps are meant to be viewed while playing. Should also fix 3rd party apps that don't render properly
+  when starting minimized ([#161]).
+
 ### Bug Fixes
 - Add support for downloading stealth updates ([#163])
 
@@ -417,4 +423,5 @@ Initial release
 [#151]: https://github.com/rfvgyhn/min-ed-launcher/issues/151
 [#156]: https://github.com/rfvgyhn/min-ed-launcher/issues/156
 [#157]: https://github.com/rfvgyhn/min-ed-launcher/issues/157
+[#161]: https://github.com/rfvgyhn/min-ed-launcher/issues/161
 [#163]: https://github.com/rfvgyhn/min-ed-launcher/issues/163

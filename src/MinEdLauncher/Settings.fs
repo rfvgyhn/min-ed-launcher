@@ -259,7 +259,6 @@ let private mapProcessConfig p =
     pInfo.UseShellExecute <- false
     pInfo.RedirectStandardOutput <- true
     pInfo.RedirectStandardError <- true
-    pInfo.WindowStyle <- ProcessWindowStyle.Minimized
     pInfo
 let getSettings args appDir fileConfig = task {
     let findCbLaunchDir paths =
