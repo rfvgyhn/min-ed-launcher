@@ -83,6 +83,8 @@ jobs:
 
       - name: Create job outputs
         id: job-info
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: ci/create-job-outputs.sh >> $GITHUB_OUTPUT
     outputs:
       attestation_url: ${{ steps.attest.outputs.attestation-url }}
