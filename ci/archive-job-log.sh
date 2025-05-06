@@ -1,5 +1,5 @@
 #!/bin/bash
-set -ex
+set -e
 
 function log() {
     echo "$1" >&2
@@ -12,7 +12,7 @@ log "$api_url"
 raw_log_url=$(curl -Ls --fail --show-error -o /dev/null \
     -w %{url_effective} \
     -H "Accept: application/vnd.github+json" \
-    -H "Authorization: Bearer $GITHUB_TOKEN" \
+    -H "Authorization: Bearer $GH_TOKEN" \
     -H "X-GitHub-Api-Version: 2022-11-28" \
     "$api_url"
 )
