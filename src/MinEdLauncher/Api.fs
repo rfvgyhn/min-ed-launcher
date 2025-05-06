@@ -352,29 +352,30 @@ let checkForStealthUpdate httpClient (products: Product list) = task {
             match p with
             | MaybeUpdateMetadata (details, metadata) ->
                 Log.debug $"Getting manifest for %s{details.Sku}"
-                match! getProductManifest httpClient metadata.RemotePath with
-                | Ok manifest ->
-                    let exeEntry =
-                        manifest.Files
-                        |> Array.filter (fun e -> e.Path = details.VInfo.Executable)
-                        |> Array.tryHead
-                        |> Option.teeNone (fun () -> Log.error $"Unable to find %s{details.VInfo.Executable}'s manifest entry")
-                    let latestExeHash = exeEntry |> Option.map _.Hash                        
-                    let exePath = Path.Combine(details.Directory, details.VInfo.Executable)
-                    let actualHash =
-                        Product.generateFileHashStr Product.hashFile exePath
-                        |> Result.teeError (fun e -> Log.warn $"Unable to get hash of file '%s{exePath}' - %s{e.ToString()}")
-                        |> Option.ofResult
-                    
-                    if latestExeHash = actualHash then
-                        return Playable details |> Some
-                    else
-                        let trimmedManifest = new ProductManifest.Manifest(manifest.Title, manifest.Version, [| exeEntry.Value |])
-                        return (details, Some trimmedManifest) |> RequiresStealthUpdate |> Some
-                | Error msg ->
-                    Log.error $"Failed to get product manifest for %s{details.Name}"
-                    Log.debug msg
-                    return None
+                let! manifest = getProductManifest httpClient metadata.RemotePath
+                return
+                    match manifest with
+                    | Ok manifest ->
+                        let exeEntry =
+                            manifest.Files
+                            |> Array.filter (fun e -> e.Path = details.VInfo.Executable)
+                            |> Array.tryHead
+                            |> Option.teeNone (fun () -> Log.error $"Unable to find %s{details.VInfo.Executable}'s manifest entry")
+                        let latestExeHash = exeEntry |> Option.map _.Hash                        
+                        let exePath = Path.Combine(details.Directory, details.VInfo.Executable)
+                        let actualHash =
+                            Product.generateFileHashStr Product.hashFile exePath
+                            |> Result.teeError (fun e -> Log.warn $"Unable to get hash of file '%s{exePath}' - %s{e.ToString()}")
+                            |> Option.ofResult
+                        if latestExeHash = actualHash then
+                            Playable details |> Some
+                        else
+                            let trimmedManifest = new ProductManifest.Manifest(manifest.Title, manifest.Version, [| exeEntry.Value |])
+                            (details, Some trimmedManifest) |> RequiresStealthUpdate |> Some
+                    | Error msg ->
+                        Log.error $"Failed to get product manifest for %s{details.Name}"
+                        Log.debug msg
+                        None
             | _ -> return Some p
         })
         |> Task.whenAll
