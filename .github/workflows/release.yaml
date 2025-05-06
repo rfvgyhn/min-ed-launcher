@@ -99,6 +99,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Archive
+        id: archive
         env:
           GH_TOKEN: ${{ github.token }}
         run: ci/archive-job-log.sh ${{ needs.publish.outputs.job_id }} >> $GITHUB_OUTPUT
