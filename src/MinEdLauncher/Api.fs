@@ -272,7 +272,7 @@ let getProductManifest (httpClient: HttpClient) (uri: Uri) = task {
     with e -> return e.ToString() |> Error
 }
 
-let checkForUpdate platform machineId (connection: Connection) (product: Product) = task {
+let checkForUpdate platform machineId (connection: Connection) cacheDir (product: Product) =
     let getData sku = task {
         let queryParams = [
             "machineToken", connection.Session.MachineToken
@@ -302,30 +302,90 @@ let checkForUpdate platform machineId (connection: Connection) (product: Product
                 Error msg
     }
     match product with
-    | Unknown name -> return Error $"{name}: Can't check updates for unknown product"
-    | Missing p ->
+    | Unknown name -> Error $"{name}: Can't check updates for unknown product" |> Task.fromResult
+    | Missing p -> taskResult {
         let! data = getData p.Sku
         
-        return data |> Result.map(fun metadata -> { p with Metadata = Some metadata } |> Missing)
+        return { p with Metadata = Some data } |> Missing }
     | RequiresUpdate product
-    | Playable product ->
+    | MaybeRequiresUpdate product
+    | RequiresStealthUpdate (product, _)
+    | Playable product -> taskResult {
         let! data = getData product.Sku
         
-        return data
-            |> Result.map(fun metadata ->
-                let product = { product with Metadata = Some metadata }
-                if metadata.Version = product.VInfo.Version then
-                    product |> Playable
-                else
-                    product |> RequiresUpdate
-            )
-    
-}
+        let! manifestChanged =
+            let hashPath = Product.manifestHashCachePath cacheDir product data
+            if File.Exists hashPath then
+                FileIO.readAllText hashPath
+                |> TaskResult.map (fun oldHash -> oldHash <> data.Hash |> Some)
+                |> TaskResult.defaultValue None
+            else
+                None |> Task.fromResult
+        let versionMatches = data.Version = product.VInfo.Version    
+        let product = { product with Metadata = Some data }
+        
+        return
+            match (versionMatches, manifestChanged) with
+            | false, _ -> RequiresUpdate product
+            | true, Some true -> RequiresStealthUpdate (product, None)
+            | true, None -> MaybeRequiresUpdate product
+            | true, Some false -> Playable product
+    }
 
-let checkForUpdates platform machineId connection (products: Product list) = task {
+/// <summary>
+/// Checks <see cref="T:MinEdLauncher.Types.Product.MaybeRequiresUpdate"/> products for game updates 
+/// </summary>
+/// <remarks>
+/// There are times when FDev updates a product's main exe without releasing a new version (as defined by VersionInfo.txt).
+/// This means they mutate the manifest file which would cause a version check against /3.0/user/installer to not
+/// notice there's an update. This downloads the latest manifest file and compares the main exe's hash
+/// </remarks>
+let checkForStealthUpdate httpClient (products: Product list) = task {
+    let (|MaybeUpdateMetadata|_|) p = 
+        match p with
+        | MaybeRequiresUpdate p when p.Metadata.IsSome -> Some (p, p.Metadata.Value)
+        | _ -> None
+        
     let! result =
         products
-        |> List.map (checkForUpdate platform machineId connection)
+        |> List.map(fun p -> task {
+            match p with
+            | MaybeUpdateMetadata (details, metadata) ->
+                Log.debug $"Getting manifest for %s{details.Sku}"
+                match! getProductManifest httpClient metadata.RemotePath with
+                | Ok manifest ->
+                    let exeEntry =
+                        manifest.Files
+                        |> Array.filter (fun e -> e.Path = details.VInfo.Executable)
+                        |> Array.tryHead
+                        |> Option.teeNone (fun () -> Log.error $"Unable to find %s{details.VInfo.Executable}'s manifest entry")
+                    let latestExeHash = exeEntry |> Option.map _.Hash                        
+                    let exePath = Path.Combine(details.Directory, details.VInfo.Executable)
+                    let actualHash =
+                        Product.generateFileHashStr Product.hashFile exePath
+                        |> Result.teeError (fun e -> Log.warn $"Unable to get hash of file '%s{exePath}' - %s{e.ToString()}")
+                        |> Option.ofResult
+                    
+                    if latestExeHash = actualHash then
+                        return Playable details |> Some
+                    else
+                        let trimmedManifest = new ProductManifest.Manifest(manifest.Title, manifest.Version, [| exeEntry.Value |])
+                        return (details, Some trimmedManifest) |> RequiresStealthUpdate |> Some
+                | Error msg ->
+                    Log.error $"Failed to get product manifest for %s{details.Name}"
+                    Log.debug msg
+                    return None
+            | _ -> return Some p
+        })
+        |> Task.whenAll
+    
+    return result |> Array.choose id |> List.ofArray
+}
+
+let checkForUpdates platform machineId connection cacheDir (products: Product list) = task {
+    let! result =
+        products
+        |> List.map (checkForUpdate platform machineId connection cacheDir)
         |> Task.whenAll
     
     return result

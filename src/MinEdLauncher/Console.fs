@@ -135,7 +135,9 @@ let availableProductsDisplay (products: Product list) =
             0
         else
             products
-            |> List.map (function | Playable p | RequiresUpdate p | Missing p -> f(p).Length | _ -> 0)
+            |> List.map (function | Playable p | RequiresUpdate p | MaybeRequiresUpdate p
+                                  | RequiresStealthUpdate (p, _) | Missing p -> f(p).Length
+                                  | Unknown _ -> 0)
             |> List.max
     let maxName = max _.Name
     let maxSku = max _.Sku
@@ -143,7 +145,9 @@ let availableProductsDisplay (products: Product list) =
     let availableProducts =
         products
         |> List.choose (function | Playable p -> map "Up to Date" p |> Some
-                                 | RequiresUpdate p -> map "Requires Update" p |> Some
+                                 | MaybeRequiresUpdate p -> map "Possibly requires update" p |> Some
+                                 | RequiresUpdate p
+                                 | RequiresStealthUpdate (p, _) -> map "Requires Update" p |> Some
                                  | Missing p -> map "Not Installed" p |> Some
                                  | Product.Unknown _ -> None)
     match availableProducts with

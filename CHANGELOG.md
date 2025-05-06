@@ -1,5 +1,13 @@
 # Changelog
 
+## [unreleased]
+
+### Bug Fixes
+- Add support for downloading stealth updates ([#163])
+
+  The default launcher has the ability to apply updates that aren't marked as a new version. These updates may also not 
+  be pushed to Steam and Epic which would prevent users of these stores from receiving the update.
+
 ## [0.11.3] - 2025-04-08
 
 ### Enhancements
@@ -409,3 +417,4 @@ Initial release
 [#151]: https://github.com/rfvgyhn/min-ed-launcher/issues/151
 [#156]: https://github.com/rfvgyhn/min-ed-launcher/issues/156
 [#157]: https://github.com/rfvgyhn/min-ed-launcher/issues/157
+[#163]: https://github.com/rfvgyhn/min-ed-launcher/issues/163

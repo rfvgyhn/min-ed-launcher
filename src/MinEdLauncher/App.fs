@@ -145,8 +145,8 @@ let updateProduct downloader (hashProgress: ISampledProgress<int>) (cacheProgres
         if Seq.isEmpty invalidFiles then Ok files.Length
         else invalidFiles |> String.join Environment.NewLine |> Error
 
-    let writeHashCache append path hashMap = task { 
-        match! Product.writeHashCache append path hashMap with
+    let writeHashCache path hashMap = task { 
+        match! Product.writeHashCache false path hashMap with
         | Ok () -> Log.debug $"Wrote hash cache to '%s{path}'"
         | Error e -> Log.warn $"Unable to write hash cache at '%s{path}' - %s{e}" }
     
@@ -217,9 +217,8 @@ let updateProduct downloader (hashProgress: ISampledProgress<int>) (cacheProgres
         |> Result.tee (fun _ -> Log.info "Checking existing files")
         |> Result.map (checkProductFiles getFileHashes hashProgress productHashes)
         |> Result.bindTask (fun (invalidFiles, productHashes, cacheHashes) -> task {
-            let write = writeHashCache false
-            do! write paths.ProductHashMap productHashes
-            do! write paths.CacheHashMap cacheHashes
+            do! writeHashCache paths.ProductHashMap productHashes
+            do! writeHashCache paths.CacheHashMap cacheHashes
             return Ok invalidFiles })
         |> TaskResult.bind (fun files -> ensureDiskSpace paths.ProductCacheDir files |> Task.fromResult)
         |> TaskResult.bind (downloadFiles downloader paths.ProductCacheDir)
@@ -230,7 +229,8 @@ let updateProduct downloader (hashProgress: ISampledProgress<int>) (cacheProgres
                         let trim = paths.ProductCacheDir |> String.ensureEndsWith Path.DirectorySeparatorChar
                         response.FilePath.Replace(trim, ""), response.Hash)
                     |> Map.ofSeq
-                    |> writeHashCache true paths.ProductHashMap
+                    |> Map.merge productHashes
+                    |> writeHashCache paths.ProductHashMap
                 return verifyFiles files
             else
                 return Ok 0 }) }
@@ -420,19 +420,26 @@ let run settings launcherVersion cancellationToken = taskResult {
     
     if settings.CheckForLauncherUpdates then
         do! checkForLauncherUpdates httpClient cancellationToken (Version.Parse(launcherVersion.Split([|'+'; '-'|])[0]))
-        
-    let checkForGameUpdates =
+    
+    let! cacheDir = settings.CacheDir |> FileIO.ensureDirExists |> Result.mapError CacheDirectory    
+    let! products =
         let getProductDir = Cobra.getProductDir productsDir File.Exists File.ReadAllLines Directory.Exists
         authorizedProducts
         |> List.map (fun p -> Product.mapProduct (getProductDir p.DirectoryName) p)
-        |> List.filter (function | Playable _ | Missing _ -> true | _ -> false)
-        |> Api.checkForUpdates settings.Platform machineId connection
-    let! products = task {
-        match! checkForGameUpdates with
-        | Ok p -> return p
-        | Error e -> Log.warn $"{e}"; return [] }
+        |> List.filter (fun p -> p.IsPlayable || p.IsMissing)
+        |> Api.checkForUpdates settings.Platform machineId connection cacheDir
+        |> TaskResult.bind (Product.cacheManifestHash cacheDir)
+        |> TaskResult.teeError Log.warn
+        |> TaskResult.defaultValue List.empty
+        |> Task.bind (Api.checkForStealthUpdate connection.HttpClient)
 
     Log.info $"Available Products:{Environment.NewLine}\t%s{Console.availableProductsDisplay products}"
+
+    let manifestMap =
+        products
+        |> List.choose (function RequiresStealthUpdate (d, m) -> Some (d.Sku, m) | _ -> None)
+        |> List.tee (fun (sku, _) -> Log.debug $"{sku} has a stealth update")
+        |> Map.ofList
 
     let missingToInstall =
         let missing =
@@ -470,9 +477,16 @@ let run settings launcherVersion cancellationToken = taskResult {
         
         productsToUpdate
         |> Array.map (fun p ->
-            p.Metadata
-            |> Option.map (fun m -> Api.getProductManifest httpClient m.RemotePath)
-            |> Option.defaultValue (Task.FromResult(Error $"No metadata for %s{p.Name}")))
+            manifestMap
+            |> Map.tryFind p.Sku
+            |> Option.flatten
+            |> Option.map (Result.Ok >> Task.fromResult)
+            |> Option.defaultWith (fun () ->
+                p.Metadata
+                |> Option.map (fun m -> Api.getProductManifest httpClient m.RemotePath)
+                |> Option.defaultValue (Task.FromResult(Error $"No metadata for %s{p.Name}"))
+            )
+        )
         |> Task.whenAll
     let productsToUpdate, failedManifests =
         productManifests
@@ -487,7 +501,6 @@ let run settings launcherVersion cancellationToken = taskResult {
         let messages = failedManifests |> List.map (fun (name, error) -> $"%s{name} - %s{error}") |> String.join separator
         Log.error $"Unable to update the following products. Failed to get their manifests:%s{separator}%s{messages}"
     
-    let! cacheDir = settings.CacheDir |> FileIO.ensureDirExists |> Result.mapError CacheDirectory    
     let! updated =
         let productsDir = Path.Combine(settings.CbLauncherDir, "Products")
         

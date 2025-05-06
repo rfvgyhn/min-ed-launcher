@@ -39,6 +39,10 @@ module List =
     open System.Threading.Tasks
     open System.Text
     
+    let inline tee ([<InlineIfLambda>] sideEffect: 'T -> unit) (list: 'T list) =
+        list |> List.iter sideEffect
+        list
+    
     let mapTasksSequential (mapping: 'T -> Task<'U>) list = task {
         let! result =
             match list with

@@ -117,19 +117,69 @@ let downloadFiles downloader destDir (files: Types.ProductManifest.File[]) : Tas
         return Ok result
     with e -> return e.ToString() |> Error }
 
+let manifestHashCachePath cacheDir details metadata =
+    Path.Combine(cacheDir, $"manifest-hash_{Path.GetFileName(details.Directory)}_{metadata.LocalFile}.txt")
+
+let cacheManifestHash dir (products: Product list) = task {
+    let getMetadata p =
+            match p with
+            | Playable details
+            | RequiresUpdate details
+            | MaybeRequiresUpdate details
+            | RequiresStealthUpdate (details, _)
+            | Missing details when details.Metadata.IsSome -> Some (details, details.Metadata.Value)
+            | Playable _
+            | RequiresUpdate _
+            | MaybeRequiresUpdate _
+            | RequiresStealthUpdate _
+            | Missing _
+            | Unknown _ -> None
+    let! _ =
+        products
+        |> List.choose getMetadata
+        |> List.map(fun (details, metadata) -> task {
+            let path = manifestHashCachePath dir details metadata
+            match! FileIO.writeAllText path metadata.Hash with
+            | Ok () -> Log.debug $"Wrote manifest hash to %s{path}"
+            | Error e -> Log.debug $"Failed to write manifest hash to %s{path} - %s{e.ToString()}"
+        })
+        |> Task.whenAll
+    
+    return Ok products
+}
+
 // Steam and Epic updates should be handled by their CDNs.
 // Sometimes FDev doesn't release updates through them though (e.g. Odyssey alpha)
 // so allow users to specify if they want to override that behavior
-let filterByUpdateable platform updateOverride (details: ProductDetails list) =
+let filterByUpdateable platform updateOverride (products: Product list) =
+        let getDetails p =
+            match p with
+            | Playable details
+            | RequiresUpdate details
+            | MaybeRequiresUpdate details
+            | RequiresStealthUpdate (details, _)
+            | Missing details -> Some details
+            | Unknown _ -> None
         match platform with
-        | Steam | Epic _ -> details |> List.filter (fun p -> updateOverride |> Set.contains p.Sku)
-        | Frontier _ | Oculus _ | Dev -> details
+        | Steam | Epic _ ->
+            let skuOverriden d = updateOverride |> Set.contains d.Sku
+            let shouldOverride p =
+                getDetails p
+                |> Option.bind (fun details ->
+                    if p.IsRequiresStealthUpdate || (skuOverriden details) then
+                        Some details
+                    else
+                        None
+                )
+                    
+            products |> List.choose shouldOverride
+        | Frontier _ | Oculus _ | Dev -> products |> List.choose getDetails
 
 let filterByMissing (products: Product list) =
-    products |> List.choose (function | Missing p -> Some p | _ -> None)
+    products |> List.filter _.IsMissing
 
 let filterByUpdateRequired (products: Product list) =
-    products |> List.choose (function | RequiresUpdate p -> Some p | _ -> None)
+    products |> List.filter (fun p -> p.IsRequiresStealthUpdate || p.IsRequiresUpdate)
 
 let selectProduct (whitelist: OrdinalIgnoreCaseSet) (products: ProductDetails[]) =
     if whitelist.IsEmpty then

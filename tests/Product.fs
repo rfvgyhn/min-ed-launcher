@@ -351,19 +351,25 @@ open MinEdLauncher.Tests.Extensions
                 } ]
             testList "filterByUpdateRequired" [
                 test "only returns products that require update" {
-                    let playable = { product with Sku = "Playable" }
+                    let generic = { product with Sku = "generic" }
                     let needsUpdate = { product with Sku = "NeedsUpdate" }
-                    let missing = { product with Sku = "Missing" }
-                    let products = [ Playable playable ; RequiresUpdate needsUpdate ; Missing missing ]
+                    let needsUpdate2 = { product with Sku = "NeedsUpdate2" }
+                    let products = [
+                        Playable generic
+                        RequiresUpdate needsUpdate
+                        RequiresStealthUpdate (needsUpdate2, None)
+                        Missing generic
+                    ]
                     
                     let result = filterByUpdateRequired products
                     
-                    Expect.hasLength result 1 ""
-                    Expect.equal result[0] needsUpdate ""
+                    Expect.hasLength result 2 ""
+                    Expect.equal result[0] products[1] ""
+                    Expect.equal result[1] products[2] ""
                 } ]
             testList "filterByUpdateable" [
                 test "epic excludes all if no override specified" {
-                    let products = [ product; product ]
+                    let products = [ Playable product; Playable product ]
                     
                     let result = filterByUpdateable (Epic EpicDetails.Empty) Set.empty products
                     
@@ -372,17 +378,18 @@ open MinEdLauncher.Tests.Extensions
                 test "epic excludes all except override" {
                     let override1 = { product with Sku = "1" }
                     let override2 = { product with Sku = "2" }
-                    let notOverride = { product with Sku = "3" }
-                    let products = [ override1; override2; notOverride ]
+                    let override3 = { product with Sku = "3" }
+                    let notOverride = { product with Sku = "4" }
+                    let products = [ Playable override1; Playable override2; RequiresStealthUpdate (override3, None); Playable notOverride ]
                     let force = [ override1; override2 ] |> List.map _.Sku |> Set.ofList 
                     
                     let result = filterByUpdateable (Epic EpicDetails.Empty) force products
                     
-                    Expect.hasLength result 2 ""
+                    Expect.hasLength result 3 ""
                     Expect.all result (fun p -> p.Sku <> notOverride.Sku) ""
                 }
                 test "steam excludes all if no override specified" {
-                    let products = [ product; product ]
+                    let products = [ Playable product; Playable product ]
                     
                     let result = filterByUpdateable Steam Set.empty products
                     
@@ -391,24 +398,27 @@ open MinEdLauncher.Tests.Extensions
                 test "steam excludes all except override" {
                     let override1 = { product with Sku = "1" }
                     let override2 = { product with Sku = "2" }
-                    let notOverride = { product with Sku = "3" }
-                    let products = [ override1; override2; notOverride ]
+                    let override3 = { product with Sku = "3" }
+                    let notOverride = { product with Sku = "4" }
+                    let products = [ Playable override1; Playable override2; RequiresStealthUpdate (override3, None); Playable notOverride ]
                     let force = [ override1; override2 ] |> List.map _.Sku |> Set.ofList 
                     
                     let result = filterByUpdateable Steam force products
                     
-                    Expect.hasLength result 2 ""
+                    Expect.hasLength result 3 ""
                     Expect.all result (fun p -> p.Sku <> notOverride.Sku) ""
                 }
                 test "frontier includes all" {
                     let p1 = { product with Sku = "1" }
                     let p2 = { product with Sku = "2" }
-                    let products = [ p1; p2 ]
+                    let products = [ Playable p1; Playable p2 ]
                     let platform = Frontier FrontierDetails.Empty
                     
                     let result = filterByUpdateable platform Set.empty products
                     
-                    Expect.sequenceEqual result products ""
+                    Expect.hasLength result 2 ""
+                    Expect.equal result[0] p1 ""
+                    Expect.equal result[1] p2 ""
                 } ]
             testList "selectProduct" [
                 testTask "Selects none when whitelist is empty" {

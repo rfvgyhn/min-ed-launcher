@@ -164,5 +164,7 @@ type ProductManifest = XmlProvider<"""<Manifest title="Win64_4_0_0_10_Alpha" ver
 type Product =
     | Playable of ProductDetails
     | RequiresUpdate of ProductDetails
+    | MaybeRequiresUpdate of ProductDetails
+    | RequiresStealthUpdate of ProductDetails * ProductManifest.Manifest option
     | Missing of ProductDetails
     | Unknown of name:string
