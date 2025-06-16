@@ -1,5 +1,10 @@
 # Changelog
 
+## [unreleased]
+
+### Security
+- Address [CVE-2025-30399] by building with latest version of the .Net SDK (>= 8.0.314)
+
 ## [0.12.0] - 2025-05-06
 
 ### Changes
@@ -414,6 +419,7 @@ Initial release
 [CVE-2023-36799]: https://github.com/dotnet/announcements/issues/275
 [CVE-2024-30105]: https://github.com/dotnet/announcements/issues/315
 [CVE-2024-38095]: https://github.com/dotnet/announcements/issues/312
+[CVE-2025-30399]: https://github.com/dotnet/announcements/issues/362
 [legendary]: https://github.com/derrod/legendary
 [heroic]: https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher
 [settings file]: README.md#settings
