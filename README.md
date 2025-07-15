@@ -84,16 +84,16 @@ Frontier's website. Linking is only required if you purchased the game via Steam
     1. Right click _Elite Dangerous_ in your Steam library
     2. Select _properties_
     3. In the _general_ tab, click _Set Launch Options_
-    4. Windows users - Set the value to `cmd /c "MinEdLauncher.exe %command% /autorun /autoquit /edo"`
+    4. **Windows users** - Set the value to `cmd /c "MinEdLauncher.exe %command% /autorun /autoquit /edo"`
         
-       Linux users - The command will depend on which terminal emulator you use. Examples for
+       **Linux users** - The command will depend on which terminal emulator you use. Examples for
        [alacritty], [gnome-terminal] and [konsole] are below.
           
-       `alacritty -e ./MinEdLauncher %command% /autorun /autoquit /edo`
-       
-       `gnome-terminal -- ./MinEdLauncher %command% /autorun /autoquit /edo`
-    
+       `alacritty -e ./MinEdLauncher %command% /autorun /autoquit /edo`  
+       `gnome-terminal -- ./MinEdLauncher %command% /autorun /autoquit /edo`  
        `konsole -e ./MinEdLauncher %command% /autorun /autoquit /edo`
+   
+       **Steam Deck users** - See [wiki](https://github.com/rfvgyhn/min-ed-launcher/wiki/Steam-Deck-Usage) for special instructions
 5. Launch your game as you normally would in Steam
 #### Epic
 1. Download the [latest release] for your operating system
