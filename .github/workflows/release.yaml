@@ -81,6 +81,14 @@ jobs:
         with:
           subject-checksums: artifacts/shasum.txt
 
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts-shasum
+          path: artifacts/shasum.txt
+          retention-days: 1
+          if-no-files-found: error
+
       - name: Create job outputs
         id: job-info
         env:
