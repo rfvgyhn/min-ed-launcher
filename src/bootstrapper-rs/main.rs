@@ -57,8 +57,8 @@ fn write_error(msg: &str) -> Result<(), Box<dyn std::error::Error>> {
             .create(true)
             .open(&file_path)?;
 
-        eprintln!("Bootstrapper Error MinEdLauncher.exe: {}", msg);
-        writeln!(&mut file, "Bootstrapper Error MinEdLauncher.exe: {}", msg)
+        eprintln!("Bootstrapper Error MinEdLauncher.exe: {msg}");
+        writeln!(&mut file, "Bootstrapper Error MinEdLauncher.exe: {msg}")
     });
 
     if let Err(e) = write {
