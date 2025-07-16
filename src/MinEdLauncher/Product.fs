@@ -183,7 +183,7 @@ let filterByUpdateRequired (products: Product list) =
 
 let selectProduct (whitelist: OrdinalIgnoreCaseSet) (products: ProductDetails[]) =
     if whitelist.IsEmpty then
-        None
+        products |> Array.tryHead
     else
         products
         |> Array.filter (fun p -> p.Filters |> OrdinalIgnoreCaseSet.intersect whitelist |> OrdinalIgnoreCaseSet.any)

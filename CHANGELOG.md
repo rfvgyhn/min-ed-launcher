@@ -1,5 +1,11 @@
 # Changelog
 
+## [unreleased]
+
+### Bug Fixes
+- Fix `/autorun` requiring a filter (`/edo`, `/edh`, etc...). `/autorun` without a filter will launch the first
+  product in your _Available Products_ list. ([#173])
+
 ## [0.12.1] - 2025-06-16
 
 ### Security
@@ -433,3 +439,4 @@ Initial release
 [#157]: https://github.com/rfvgyhn/min-ed-launcher/issues/157
 [#161]: https://github.com/rfvgyhn/min-ed-launcher/issues/161
 [#163]: https://github.com/rfvgyhn/min-ed-launcher/issues/163
+[#173]: https://github.com/rfvgyhn/min-ed-launcher/issues/173

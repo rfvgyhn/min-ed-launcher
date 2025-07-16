@@ -421,11 +421,16 @@ open MinEdLauncher.Tests.Extensions
                     Expect.equal result[1] p2 ""
                 } ]
             testList "selectProduct" [
-                testTask "Selects none when whitelist is empty" {
-                    let products = [| product |]
+                testTask "Selects head when whitelist is empty" {
+                    let products = [|
+                        { product with Filters = [| "filter" |] |> OrdinalIgnoreCaseSet.ofSeq; Sku = "p1" }
+                        { product with Filters = [| "filter" |] |> OrdinalIgnoreCaseSet.ofSeq; Sku = "p2" }
+                    |]
+                    let expected = products |> Array.head |> Some
+                    
                     let actual = Product.selectProduct OrdinalIgnoreCaseSet.empty products
                     
-                    Expect.isNone actual ""
+                    Expect.equal actual expected ""
                 }
                 testTask "Selects none when filters is empty" {
                     let products = [|

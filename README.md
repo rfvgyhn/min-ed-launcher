@@ -84,14 +84,14 @@ Frontier's website. Linking is only required if you purchased the game via Steam
     1. Right click _Elite Dangerous_ in your Steam library
     2. Select _properties_
     3. In the _general_ tab, click _Set Launch Options_
-    4. **Windows users** - Set the value to `cmd /c "MinEdLauncher.exe %command% /autorun /autoquit /edo"`
+    4. **Windows users** - Set the value to `cmd /c "MinEdLauncher.exe %command% /autorun /autoquit"`
         
        **Linux users** - The command will depend on which terminal emulator you use. Examples for
        [alacritty], [gnome-terminal] and [konsole] are below.
           
-       `alacritty -e ./MinEdLauncher %command% /autorun /autoquit /edo`  
-       `gnome-terminal -- ./MinEdLauncher %command% /autorun /autoquit /edo`  
-       `konsole -e ./MinEdLauncher %command% /autorun /autoquit /edo`
+       `alacritty -e ./MinEdLauncher %command% /autorun /autoquit`  
+       `gnome-terminal -- ./MinEdLauncher %command% /autorun /autoquit`  
+       `konsole -e ./MinEdLauncher %command% /autorun /autoquit`
    
        **Steam Deck users** - See [wiki](https://github.com/rfvgyhn/min-ed-launcher/wiki/Steam-Deck-Usage) for special instructions
 5. Launch your game as you normally would in Steam
@@ -115,13 +115,13 @@ Either configure the Epic client and use the provided Bootstrap exe or use [lege
       1. Click _Settings_ in the Epic Games Launcher
       2. Scroll down to the _Manage Games_ section and click _Elite Dangerous_
       3. Check _Additional Command Line Arguments_
-      4. Set the value to `/autorun /autoquit /edo`
+      4. Set the value to `/autorun /autoquit`
   4. Launch your game as you normally would in Epic
 * Legendary
 
     Use legendary's `override-exe` argument via windows terminal
 
-    `legendary.exe launch 9c203b6ed35846e8a4a9ff1e314f6593 --override-exe MinEdLauncher.exe /autorun /edo /autoquit`
+    `legendary.exe launch 9c203b6ed35846e8a4a9ff1e314f6593 --override-exe MinEdLauncher.exe /autorun /autoquit`
 
 ##### Linux
 This method utilizes [Legendary].
@@ -130,7 +130,7 @@ This method utilizes [Legendary].
 2. Pass an exchange code to the launcher by either
    1. Using the `--dry-run` flag and passing the arguments directly to `MinEdLauncher` via command substitution
        ```sh
-       WINEPREFIX=/your/wine/prefix /path/to/MinEdLauncher $(legendary launch --dry-run 9c203b6ed35846e8a4a9ff1e314f6593 2>&1 | grep "Launch parameters" | cut -d':' -f 3-) /autorun /edo /autoquit
+       WINEPREFIX=/your/wine/prefix /path/to/MinEdLauncher $(legendary launch --dry-run 9c203b6ed35846e8a4a9ff1e314f6593 2>&1 | grep "Launch parameters" | cut -d':' -f 3-) /autorun /autoquit
        ```
    2. Using the `get-token` command and passing it to `MinEdLauncher` via Steam and command substitution
        ```shell
@@ -144,7 +144,7 @@ This method utilizes [Legendary].
    `MinEdLauncher.Bootstrap` is for Epic only and may be ignored.
 4. Create a shortcut to `MinEdLauncher.exe` by right-clicking it and selecting _create shortcut_
 5. Right-click the newly made shortcut and select _properties_
-6. Add the `/frontier profile-name` argument + your other desired arguments to the end of the _Target_ textbox (e.g. `C:\path\to\MinEdLauncher.exe /frontier profile-name /autorun /autoquit /edo`)
+6. Add the `/frontier profile-name` argument + your other desired arguments to the end of the _Target_ textbox (e.g. `C:\path\to\MinEdLauncher.exe /frontier profile-name /autorun /autoquit`)
 7. Click _Ok_
 
 You can place this shortcut anywhere. It doesn't have to live in the Elite Dangerous install folder.
@@ -276,9 +276,9 @@ double backslash (`\\`) instead of a single backslash (`\`).
 By using the `/frontier profile-name` argument, you can login with any number of Frontier accounts with a
 single game installation. Your launch command might look like the following
 
-Windows: `cmd /c "MinEdLauncher.exe %command% /frontier profile-name /autorun /autoquit /edo"`
+Windows: `cmd /c "MinEdLauncher.exe %command% /frontier profile-name /autorun /autoquit"`
 
-Linux: `alacritty -e ./MinEdLauncher %command% /frontier profile-name /autorun /autoquit /edo`
+Linux: `alacritty -e ./MinEdLauncher %command% /frontier profile-name /autorun /autoquit`
 
 See the [setup] section above for how you might run this on your platform.
 
@@ -301,7 +301,7 @@ In order to authenticate with an Epic account:
         ```
     * **Manually** - Within the Epic launcher, click your username and select manage account. This will open a browser. The URL will contain an `exchangeCode=code`
     parameter. Copy the code before the page is redirected (can just hit the stop button in your browser).
-2. Add the `-auth_password=code` argument to your launch options. `cmd /c "MinEdLauncher.exe %command% /autoquit /edo -auth_password=code"`
+2. Add the `-auth_password=code` argument to your launch options. `cmd /c "MinEdLauncher.exe %command% /autoquit -auth_password=code"`
 
    You can also create a separate shortcut. Right click game in your Steam library and create desktop shortcut. Edit the properties of the shortcut
    to include the `-auth_password=code` argument. `"C:\Program Files (x86)\Steam\Steam.exe" -gameidlaunch 359320 -auth_password=code`. Then just
@@ -327,8 +327,8 @@ Example _Target_ field for a shortcut that launches Odyssey:
    desktop file. e.g. `update-desktop-database ~/.local/share/applications/`
 3. Set the WM_CLASS/Application Id property in your launch options. How you do this will depend on your terminal 
    emulator. Examples are below:
-   * Alacritty - `alacritty --class min-ed-launcher -e ./MinEdLauncher %command% /autorun /autoquit /edo`
-   * kitty - `kitty --class min-ed-launcher ./MinEdLauncher %command% /autorun /autoquit /edo`
+   * Alacritty - `alacritty --class min-ed-launcher -e ./MinEdLauncher %command% /autorun /autoquit`
+   * kitty - `kitty --class min-ed-launcher ./MinEdLauncher %command% /autorun /autoquit`
 
 ### Troubleshooting
 Debug logging is placed in the standard log location for your operating system:
