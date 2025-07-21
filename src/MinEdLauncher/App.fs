@@ -448,7 +448,15 @@ let run settings launcherVersion cancellationToken = taskResult {
             |> Product.filterByUpdateable settings.Platform settings.ForceUpdate
             |> List.toArray
         if settings.AutoRun then
-            Product.selectProduct settings.ProductWhitelist missing |> Option.map(fun p -> [| p |]) |> Option.defaultWith(fun () -> [||])
+            let preferredProduct =
+                products
+                |> Product.filterByUpdateable settings.Platform settings.ForceUpdate
+                |> List.toArray
+                |> Product.selectProduct settings.ProductWhitelist
+            Product.selectProduct settings.ProductWhitelist missing
+            |> Option.filter(fun missing -> preferredProduct |> Option.exists(fun preferred -> missing = preferred))
+            |> Option.map(fun p -> [| p |])
+            |> Option.defaultWith(fun () -> [||])
         else if not settings.SkipInstallPrompt then
             missing |> Console.promptForProductsToUpdate "install"
         else
