@@ -91,7 +91,7 @@ Frontier's website. Linking is only required if you purchased the game via Steam
           
        `alacritty -e ./MinEdLauncher %command% /autorun /autoquit`  
        `gnome-terminal -- ./MinEdLauncher %command% /autorun /autoquit`  
-       `konsole -e ./MinEdLauncher %command% /autorun /autoquit`
+       `LD_LIBRARY_PATH="" konsole -e env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./MinEdLauncher %command% /autorun /autoquit`
    
        **Steam Deck users** - See [wiki](https://github.com/rfvgyhn/min-ed-launcher/wiki/Steam-Deck-Usage) for special instructions
 5. Launch your game as you normally would in Steam
