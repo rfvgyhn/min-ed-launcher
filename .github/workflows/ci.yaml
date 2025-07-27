@@ -5,8 +5,8 @@ on:
     branches: 
       - '**'
     paths-ignore:
-      - README.md
-      - CHANGELOG.md
+      - 'README.md'
+      - 'CHANGELOG.md'
 env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
