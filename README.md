@@ -101,7 +101,7 @@ Frontier's website. Linking is only required if you purchased the game via Steam
        ```sh ptyxis
        LD_LIBRARY_PATH="" ptyxis -- env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./MinEdLauncher %command% /autorun /autoquit
        ```
-       > [!NOTE]
+       > [!NOTE]  
        > Konsole and Ptyxis don't launch when started from the Steam runtime environment. Unsetting LD_LIBRARY_PATH allows them to launch but also causes Proton to run using system libraries causing undefined behavior. Resetting LD_LIBRARY_PATH inside the terminal emulator window solves this.
 5. Launch your game as you normally would in Steam
 #### Epic
