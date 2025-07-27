@@ -85,13 +85,24 @@ Frontier's website. Linking is only required if you purchased the game via Steam
     2. Select _properties_
     3. In the _general_ tab, click _Set Launch Options_
     4. **Windows users** - Set the value to `cmd /c "MinEdLauncher.exe %command% /autorun /autoquit"`
-        
+
        **Linux users** - The command will depend on which terminal emulator you use. Examples for
-       [alacritty], [gnome-terminal] and [konsole] are below.
-          
-       `alacritty -e ./MinEdLauncher %command% /autorun /autoquit`  
-       `gnome-terminal -- ./MinEdLauncher %command% /autorun /autoquit`  
-       `LD_LIBRARY_PATH="" konsole -e env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./MinEdLauncher %command% /autorun /autoquit`
+       [alacritty], [gnome-terminal] (Gnome), [konsole] (KDE/Steam Deck) and [Ptyxis] (Bazzite) are below.
+
+       ```sh alacritty
+       alacritty -e ./MinEdLauncher %command% /autorun /autoquit`
+       ```  
+       ```sh gnome-terminal
+       gnome-terminal -- ./MinEdLauncher %command% /autorun /autoquit
+       ```
+       ```sh konsole
+       LD_LIBRARY_PATH="" konsole -e env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./MinEdLauncher %command% /autorun /autoquit
+       ```
+       ```sh ptyxis
+       LD_LIBRARY_PATH="" ptyxis -- env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./MinEdLauncher %command% /autorun /autoquit
+       ```
+       > [!NOTE]
+       > Konsole and Ptyxis don't launch when started from the Steam runtime environment. Unsetting LD_LIBRARY_PATH allows them to launch but also causes Proton to run using system libraries causing undefined behavior. Resetting LD_LIBRARY_PATH inside the terminal emulator window solves this.
 5. Launch your game as you normally would in Steam
 #### Epic
 1. Download the [latest release] for your operating system
@@ -389,6 +400,7 @@ Note that the bootstrap project specifically targets Windows and won't publish o
 [alacritty]: https://github.com/alacritty/alacritty
 [gnome-terminal]: https://wiki.gnome.org/Apps/Terminal
 [konsole]: https://konsole.kde.org/
+[Ptyxis]: https://gitlab.gnome.org/chergert/ptyxis
 [.Net SDK]: https://dotnet.microsoft.com/download/dotnet
 [install rust]: https://www.rust-lang.org/tools/install
 [Features]: #features
