@@ -11,16 +11,17 @@ open System.Security.Cryptography
 open System.Text
 open FsToolkit.ErrorHandling
 open MinEdLauncher
-open Steam
 open Types
-        
-let getDefaultProductsDir fallbackPath hasWriteAccess (forceLocal:ForceLocal) launcherDir =
+
+type ProductsDir = Local of string | PermissionsIgnored of string | NoWriteAccess of fallback: string * deniedPath: string
+let getDefaultProductsDir fallbackPath hasWriteAccess dirExists (forceLocal:ForceLocal) launcherDir =
     let productsPath = "Products"
     let localPath = Path.Combine(launcherDir, productsPath)
-    if forceLocal then localPath
-    elif hasWriteAccess launcherDir then localPath
-    else Path.Combine(fallbackPath, productsPath)
-    
+    if forceLocal then PermissionsIgnored localPath
+    elif (dirExists localPath && hasWriteAccess localPath) then Local localPath
+    elif not (dirExists localPath) && hasWriteAccess launcherDir then Local localPath
+    else (Path.Combine(fallbackPath, productsPath), localPath) |> NoWriteAccess
+
 let getProductDir defaultProductsDir fileExists (readAllLines: string -> string[]) dirExists directoryName =
     let rdrPath = Path.Combine(defaultProductsDir, directoryName) + ".rdr"
     

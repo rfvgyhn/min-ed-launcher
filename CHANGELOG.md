@@ -1,5 +1,11 @@
 # Changelog
 
+## [unreleased]
+
+### Enhancements
+- Log when using the fallback products directory in cases when user doesn't have permissions to write to default 
+  products directory ([#177]) 
+
 ## [0.12.2] - 2025-07-25
 
 ### Bug Fixes
@@ -441,3 +447,4 @@ Initial release
 [#161]: https://github.com/rfvgyhn/min-ed-launcher/issues/161
 [#163]: https://github.com/rfvgyhn/min-ed-launcher/issues/163
 [#173]: https://github.com/rfvgyhn/min-ed-launcher/issues/173
+[#177]: https://github.com/rfvgyhn/min-ed-launcher/issues/177

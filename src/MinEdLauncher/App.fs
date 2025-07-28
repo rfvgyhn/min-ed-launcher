@@ -381,7 +381,16 @@ let run settings launcherVersion cancellationToken = taskResult {
     
     let appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Frontier_Developments")
     let! productsDir =
-        Cobra.getDefaultProductsDir appDataDir FileIO.hasWriteAccess settings.ForceLocal settings.CbLauncherDir
+        Cobra.getDefaultProductsDir appDataDir FileIO.hasWriteAccess Directory.Exists settings.ForceLocal settings.CbLauncherDir
+        |> (function
+            | Cobra.ProductsDir.Local dir -> dir
+            | Cobra.ProductsDir.PermissionsIgnored dir ->
+                Log.debug $"Skipping permissions check of products directory at '{dir}'"
+                dir
+            | Cobra.ProductsDir.NoWriteAccess (fallback, denied) ->
+                Log.debug $"Missing write permissions to products directory at '{denied}'. Using fallback '{fallback}' instead"
+                fallback
+        )
         |> FileIO.ensureDirExists
         |> Result.mapError ProductsDirectory
     let! cbVersion = Cobra.getVersion settings.CbLauncherDir |> Result.mapError Version
