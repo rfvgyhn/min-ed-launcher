@@ -1,5 +1,17 @@
 # Changelog
 
+## [unreleased]
+
+### Enhancements
+- Add a workaround to get Flatpaks to be launched.  
+  You can now clear and override `$LD_LIBRARY_PATH` to allow processes defined in `processes` in your settings file to 
+  be launched using the host's libraries by setting `$MEL_LD_LIBRARY_PATH`. Mainly useful for Steam Deck users.
+
+  `konsole` Steam launch options example: 
+  ```sh
+  LD_LIBRARY_PATH="" konsole -e env MEL_LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./MinEdLauncher %command% /autorun /autoquit
+  ```
+
 ## [0.12.2] - 2025-07-25
 
 ### Bug Fixes

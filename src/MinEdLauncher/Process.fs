@@ -46,3 +46,20 @@ let waitForExit (processes: Process list) =
         use p = p
         p.WaitForExit()
     )
+    
+/// <summary>
+/// Override $LD_LIBRARY_PATH with $MEL_LIBRARY_PATH if it's set
+/// </summary>
+/// <remarks>
+/// This allows things like flatpaks to run properly within Steam's runtime environment. Users can set
+/// $MEL_LD_LIBRARY_PATH to $LD_LIBRARY_PATH and then clear $LD_LIBRARY_PATH when launching so that only the game
+/// process get Steam's runtime environment's $LD_LIBRARY_PATH. Mostly useful for Steam Deck users
+/// </remarks>
+let overrideLdLibraryPath (startInfo: ProcessStartInfo) =
+    System.Environment.GetEnvironmentVariable("MEL_LD_LIBRARY_PATH")
+    |> Option.ofObj
+    |> Option.iter(fun path ->
+        Log.debug $"Setting $LD_LIBRARY_PATH to $MEL_LD_LIBRARY_PATH: {path}"
+        startInfo.EnvironmentVariables["LD_LIBRARY_PATH"] <- path
+    )
+    startInfo

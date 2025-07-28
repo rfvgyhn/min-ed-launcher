@@ -21,6 +21,7 @@
     <Compile Include="Extensions.fs" />
     <Compile Include="Settings.fs" />
     <Compile Include="Product.fs" />
+    <Compile Include="Process.fs" />
     <Compile Include="EdLauncher.fs" />
     <Compile Include="Github.fs" />
     <Compile Include="MachineId.fs" />

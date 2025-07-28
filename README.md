@@ -230,8 +230,16 @@ Linux: `$XDG_CONFIG_HOME/min-ed-launcher/settings.json` (`~/.config` if `$XDG_CO
 | gameStartDelay              | Time to delay after starting processes but before starting ED. Defaults to zero                                                                                                                                                                                                     |
 | shutdownDelay               | Time to delay before closing processes. Defaults to zero                                                                                                                                                                                                                            |
 
-When specifying a path for `gameLocation`, `cacheDir` or `processes.fileName` on Windows, it's required to escape backslashes. Make sure to use a
+> [!NOTE]
+> When specifying a path for `gameLocation`, `cacheDir` or `processes.fileName` on Windows, it's required to escape backslashes. Make sure to use a
 double backslash (`\\`) instead of a single backslash (`\`).
+
+> [!NOTE]
+> Launching Flatpaks via `processes` through Steam requires resetting the LD_LIBRARY_PATH env var and setting 
+> MEL_LD_LIBRARY_PATH to the host's LD_LIBRARY_PATH.
+> ```sh
+> LD_LIBRARY_PATH="" konsole -e env MEL_LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./MinEdLauncher %command% /autorun /autoquit
+> ```
 
 ```json
 {
