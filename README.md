@@ -316,6 +316,18 @@ In order to authenticate with an Epic account:
    to include the `-auth_password=code` argument. `"C:\Program Files (x86)\Steam\Steam.exe" -gameidlaunch 359320 -auth_password=code`. Then just
    edit this shortcut with the new exchange code each time instead of changing your Steam launch options.
 
+> [!NOTE] If you want to use Steam's installation, you'll need to set `gameLocation` in your [settings] file. For example
+> ```sh
+> "gameLocation": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Elite Dangerous",
+> ```
+
+> [!TIP] If you're just looking to run an Epic account with Steam's game files, you can set the `gameLocation` as noted
+> above, use legendary as outlined in the _legendary_ section of the [Epic setup](#Epic) and include the 
+> `--skip-version-check` argument.
+> ```sh
+> legendary.exe launch 9c203b6ed35846e8a4a9ff1e314f6593 --skip-version-check --override-exe MinEdLauncher.exe /autorun /autoquit
+> ```
+
 ### Steam Shortcuts
 You can create multiple shortcuts with different launch parameters. Prefer avoiding the steam protocol handler
 as it has some [quirks] that make it more of a pain to use.
@@ -429,3 +441,4 @@ Note that the bootstrap project specifically targets Windows and won't publish o
 [Linked Thirdparty Accounts]: https://user.frontierstore.net/user/info
 [GitHub Downloads (all assets, all releases)]: https://img.shields.io/github/downloads/rfvgyhn/min-ed-launcher/total
 [GitHub Downloads (all assets, latest release)]: https://img.shields.io/github/downloads/rfvgyhn/min-ed-launcher/latest/total
+[Epic-PS-Shortcut]: https://private-user-images.githubusercontent.com/731861/451544289-7ede1c3d-90f0-4fd7-b12f-221771a626d4.png?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3NTM3NDUyMzMsIm5iZiI6MTc1Mzc0NDkzMywicGF0aCI6Ii83MzE4NjEvNDUxNTQ0Mjg5LTdlZGUxYzNkLTkwZjAtNGZkNy1iMTJmLTIyMTc3MWE2MjZkNC5wbmc_WC1BbXotQWxnb3JpdGhtPUFXUzQtSE1BQy1TSEEyNTYmWC1BbXotQ3JlZGVudGlhbD1BS0lBVkNPRFlMU0E1M1BRSzRaQSUyRjIwMjUwNzI4JTJGdXMtZWFzdC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmWC1BbXotRGF0ZT0yMDI1MDcyOFQyMzIyMTNaJlgtQW16LUV4cGlyZXM9MzAwJlgtQW16LVNpZ25hdHVyZT0zMjQ4MDE4MzFiMTRjYzYzYjRiMmE5OTNmZjI0YjI1NDZjYzliMDBmMGQzYmE0MDVjODBhNDRhYzg2YjlkZDNkJlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCJ9.4GWg6I-VBf_ChkifnZN4TGUyp7EE36GQjmS1QGrocB4
