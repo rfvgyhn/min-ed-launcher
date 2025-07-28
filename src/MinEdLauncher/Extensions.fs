@@ -339,9 +339,10 @@ module FileIO =
     
     let hasWriteAccess directory =
         try
-            let temp = Path.Combine(directory, "deleteme.txt")
-            File.WriteAllText(temp, "")
-            File.Delete(temp)
+            let originalWriteTime = Directory.GetLastWriteTimeUtc(directory);
+            use _ = File.Create(Path.Combine(directory, Path.GetRandomFileName()), 1, FileOptions.DeleteOnClose)
+            // Restore original write time
+            Directory.SetLastWriteTimeUtc(directory, originalWriteTime)
             true
         with
         | :? UnauthorizedAccessException -> false
