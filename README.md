@@ -316,12 +316,14 @@ In order to authenticate with an Epic account:
    to include the `-auth_password=code` argument. `"C:\Program Files (x86)\Steam\Steam.exe" -gameidlaunch 359320 -auth_password=code`. Then just
    edit this shortcut with the new exchange code each time instead of changing your Steam launch options.
 
-> [!NOTE] If you want to use Steam's installation, you'll need to set `gameLocation` in your [settings] file. For example
+> [!NOTE]
+> If you want to use Steam's installation, you'll need to set `gameLocation` in your [settings] file. For example
 > ```sh
 > "gameLocation": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Elite Dangerous",
 > ```
 
-> [!TIP] If you're just looking to run an Epic account with Steam's game files, you can set the `gameLocation` as noted
+> [!TIP]
+> If you're just looking to run an Epic account with Steam's game files, you can set the `gameLocation` as noted
 > above, use legendary as outlined in the _legendary_ section of the [Epic setup](#Epic) and include the 
 > `--skip-version-check` argument.
 > ```sh
