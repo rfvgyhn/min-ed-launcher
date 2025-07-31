@@ -329,7 +329,7 @@ let createProcessInfo proton args product =
 
 type RunResult = Ok of Process | AlreadyRunning | DryRun of ProcessStartInfo | Error of exn
 let run dryRun proton args (product:RunnableProduct)  =
-    let startInfo = createProcessInfo proton args product
+    let startInfo = createProcessInfo proton args product |> Process.overrideLdLibraryPath
     
     Log.debug $"Process: %s{startInfo.FileName} %s{startInfo.Arguments}"
     

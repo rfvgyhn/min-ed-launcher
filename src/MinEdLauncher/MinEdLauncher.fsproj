@@ -53,9 +53,9 @@
     <Compile Include="Types.fs" />
     <Compile Include="Http.fs" />
     <Compile Include="Github.fs" />
+    <Compile Include="Process.fs" />
     <Compile Include="Product.fs" />
     <Compile Include="AuthorizedProduct.fs" />
-    <Compile Include="Process.fs" />
     <Compile Include="Steam.fs" />
     <Compile Include="Cobra.fs" />
     <Compile Include="Api.fs" />
