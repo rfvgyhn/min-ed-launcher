@@ -32,13 +32,33 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     if result.0 < 33 {
         // https://learn.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-shellexecutew#return-value
-        let error_msg = unsafe { GetLastError().to_hresult().message().to_string_lossy() };
-        write_error(&error_msg)?;
+        // https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes
+        // ERROR_FILE_NOT_FOUND	    2
+        // ERROR_PATH_NOT_FOUND	    3
+        // ERROR_BAD_FORMAT	        11
+        // SE_ERR_ACCESSDENIED	    5
+        // SE_ERR_ASSOCINCOMPLETE   27
+        // SE_ERR_DDEBUSY	        30
+        // SE_ERR_DDEFAIL	        29
+        // SE_ERR_DDETIMEOUT	    28
+        // SE_ERR_DLLNOTFOUND	    32
+        // SE_ERR_FNF	            2
+        // SE_ERR_NOASSOC	        31
+        // SE_ERR_OOM	            8
+        // SE_ERR_PNF	            3
+        // SE_ERR_SHARE	            26
+        let (error_code, error_msg) = unsafe {
+            let error = GetLastError();
+            (error.0, error.to_hresult().message().to_string_lossy())
+        };
+        write_error(result.0, error_code, &error_msg)?;
     }
     Ok(())
 }
 
-fn write_error(msg: &str) -> Result<(), Box<dyn std::error::Error>> {
+fn write_error(result_code: isize, error_code: u32, msg: &str) -> Result<(), Box<dyn std::error::Error>> {
+    eprintln!("Bootstrapper Error MinEdLauncher.exe: {msg} result: {result_code} error: {error_code}");
+    
     let local_app_data_path = unsafe {
         SHGetKnownFolderPath(&FOLDERID_LocalAppData, KNOWN_FOLDER_FLAG(0), None)?.to_string()?
     };
@@ -57,8 +77,7 @@ fn write_error(msg: &str) -> Result<(), Box<dyn std::error::Error>> {
             .create(true)
             .open(&file_path)?;
 
-        eprintln!("Bootstrapper Error MinEdLauncher.exe: {msg}");
-        writeln!(&mut file, "Bootstrapper Error MinEdLauncher.exe: {msg}")
+        writeln!(&mut file, "Bootstrapper Error MinEdLauncher.exe: {msg} result: {result_code} error: {error_code}")
     });
 
     if let Err(e) = write {
