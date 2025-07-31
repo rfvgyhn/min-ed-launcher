@@ -56,9 +56,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn write_error(result_code: isize, error_code: u32, msg: &str) -> Result<(), Box<dyn std::error::Error>> {
-    eprintln!("Bootstrapper Error MinEdLauncher.exe: {msg} result: {result_code} error: {error_code}");
-    
+fn write_error(
+    result_code: isize,
+    error_code: u32,
+    msg: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    eprintln!(
+        "Bootstrapper Error MinEdLauncher.exe: {msg} result: {result_code} error: {error_code}"
+    );
+
     let local_app_data_path = unsafe {
         SHGetKnownFolderPath(&FOLDERID_LocalAppData, KNOWN_FOLDER_FLAG(0), None)?.to_string()?
     };
@@ -77,7 +83,10 @@ fn write_error(result_code: isize, error_code: u32, msg: &str) -> Result<(), Box
             .create(true)
             .open(&file_path)?;
 
-        writeln!(&mut file, "Bootstrapper Error MinEdLauncher.exe: {msg} result: {result_code} error: {error_code}")
+        writeln!(
+            &mut file,
+            "Bootstrapper Error MinEdLauncher.exe: {msg} result: {result_code} error: {error_code}"
+        )
     });
 
     if let Err(e) = write {
