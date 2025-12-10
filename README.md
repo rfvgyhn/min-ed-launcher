@@ -90,7 +90,7 @@ Frontier's website. Linking is only required if you purchased the game via Steam
        [alacritty], [gnome-terminal] (Gnome), [konsole] (KDE/Steam Deck) and [Ptyxis] (Bazzite) are below.
 
        ```sh alacritty
-       alacritty -e ./MinEdLauncher %command% /autorun /autoquit`
+       alacritty -e ./MinEdLauncher %command% /autorun /autoquit
        ```  
        ```sh gnome-terminal
        gnome-terminal -- ./MinEdLauncher %command% /autorun /autoquit
