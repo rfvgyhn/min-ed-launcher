@@ -16,6 +16,9 @@
   LD_LIBRARY_PATH="" konsole -e env MEL_LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./MinEdLauncher %command% /autorun /autoquit
   ```
 
+### Bug Fixes
+- Fix flatpaks not being shutdown properly ([#196])
+
 ## [0.12.2] - 2025-07-25
 
 ### Bug Fixes
@@ -458,3 +461,4 @@ Initial release
 [#163]: https://github.com/rfvgyhn/min-ed-launcher/issues/163
 [#173]: https://github.com/rfvgyhn/min-ed-launcher/issues/173
 [#177]: https://github.com/rfvgyhn/min-ed-launcher/issues/177
+[#196]: https://github.com/rfvgyhn/min-ed-launcher/issues/196
