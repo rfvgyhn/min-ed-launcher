@@ -18,6 +18,7 @@
 
 ### Bug Fixes
 - Fix flatpaks not being shutdown properly ([#196])
+- Fix not ignoring pre-releases when checking for launcher updates
 
 ## [0.12.2] - 2025-07-25
 

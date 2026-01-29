@@ -12,6 +12,7 @@ type ReleaseJson = {
     [<JsonPropertyName("tag_name")>]
     TagName: string
     Draft: bool
+    Prerelease: bool
     Body: string
 }
 type ReleaseDetails = {
@@ -40,7 +41,7 @@ let mergeReleases releases =
 
 let releasesSince version (releases: ReleaseJson list) =
     releases
-    |> List.filter (fun r -> not r.Draft)
+    |> List.filter (fun r -> not r.Draft && not r.Prerelease)
     |> List.choose (fun r ->
         if r.TagName = null || r.TagName.Length = 0 then
             None
