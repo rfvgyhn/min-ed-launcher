@@ -307,7 +307,7 @@ On Linux, no encryption happens but the file permissions are set to 600. If you 
 you want to login again (refresh machine token), you can delete the appropriate `.cred` file.
 
 #### Epic account via Steam
-There is rudimentary support for running your Epic account via Steam. Running a Steam account without Steam installed and running is not supported.
+There is rudimentary support for running your Epic account via Steam.
 
 In order to authenticate with an Epic account:
 1. Get an Epic exchange code. This part is really clunky and will need to be done for every launch as the exchange code expires after one use.
