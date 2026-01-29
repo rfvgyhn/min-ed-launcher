@@ -311,13 +311,10 @@ There is rudimentary support for running your Epic account via Steam. Running a 
 
 In order to authenticate with an Epic account:
 1. Get an Epic exchange code. This part is really clunky and will need to be done for every launch as the exchange code expires after one use.
-   
-    * **Legendary** - Get a code via [Legendary].
-        ```sh
-        legendary get-token
-        ```
-    * **Manually** - Within the Epic launcher, click your username and select manage account. This will open a browser. The URL will contain an `exchangeCode=code`
-    parameter. Copy the code before the page is redirected (can just hit the stop button in your browser).
+   Get a code via [Legendary].
+    ```sh
+    legendary get-token
+    ```
 2. Add the `-auth_password=code` argument to your launch options. `cmd /c "MinEdLauncher.exe %command% /autoquit -auth_password=code"`
 
    You can also create a separate shortcut. Right click game in your Steam library and create desktop shortcut. Edit the properties of the shortcut
