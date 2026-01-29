@@ -108,6 +108,13 @@ type AuthorizedProduct =
       SortKey: int
       Sku: string
       TestApi: bool }
+type LauncherProcess = Host of ProcessStartInfo | Flatpak of appId: string * startInfo: ProcessStartInfo with
+    member this.Name = match this with Host startInfo -> startInfo.FileName | Flatpak (appId, _) -> appId
+    member this.StartInfo = match this with Host startInfo -> startInfo | Flatpak (_, startInfo) -> startInfo
+    member this.ShutdownCommand =
+        match this with
+        | Host _ -> None
+        | Flatpak (appId, startInfo) -> Some(ProcessStartInfo(startInfo.FileName, $"kill %s{appId}"))
 type LauncherSettings =
     { Platform: Platform
       DisplayMode: DisplayMode
@@ -126,8 +133,8 @@ type LauncherSettings =
       CheckForLauncherUpdates: bool
       MaxConcurrentDownloads: int
       ForceUpdate: string Set
-      Processes: {| Info: ProcessStartInfo; RestartOnRelaunch: bool; KeepOpen: bool |} list
-      ShutdownProcesses: ProcessStartInfo list
+      Processes: {| Info: LauncherProcess; RestartOnRelaunch: bool; KeepOpen: bool |} list
+      ShutdownProcesses: LauncherProcess list
       FilterOverrides: OrdinalIgnoreCaseMap<string>
       AdditionalProducts: AuthorizedProduct list
       DryRun: bool

@@ -1,13 +1,15 @@
 module MinEdLauncher.Process
 
+open System
 open System.ComponentModel
 open System.Diagnostics
+open MinEdLauncher.Types
 
-let launchProcesses printOutput (processes:ProcessStartInfo list) =
+let launchProcesses printOutput (processes:LauncherProcess list) =
     processes
-    |> List.choose (fun p ->
+    |> List.choose (fun l ->
         try
-            let p = Process.Start(p)
+            let p = Process.Start(l.StartInfo)
             p.BeginErrorReadLine()
             p.BeginOutputReadLine()
             
@@ -15,30 +17,40 @@ let launchProcesses printOutput (processes:ProcessStartInfo list) =
                 p.OutputDataReceived.Add(fun a -> if a.Data <> null then printfn $"  %s{a.Data}")
                 p.ErrorDataReceived.Add(fun a -> if a.Data <> null then printfn $"  %s{a.Data}")
                 
-            p |> Some
+            (p, l) |> Some
         with
         | :? Win32Exception as e ->
-            Log.exn e $"""Unable to start process %s{p.FileName}
+            Log.exn e $"""Unable to start process %s{l.Name}
     HRESULT: 0x{e.ErrorCode:X}
     Win32 Error Code: {e.NativeErrorCode}
     """
             None
         | e ->
-            Log.exn e $"Unable to start process %s{p.FileName}"
+            Log.exn e $"Unable to start process %s{l.Name}"
             None)
 
-let stopProcesses timeout (processes: Process list) =
+let stopProcesses (timeout: TimeSpan) (processes: (Process * LauncherProcess) list) =
     processes
-    |> List.iter (fun p ->
+    |> List.iter (fun (p, l) ->
         use p = p
         if p.HasExited then
             Log.debug $"Process %i{p.Id} already exited"            
         else
-            Log.debug $"Stopping process %s{p.ProcessName}"
-            match Interop.termProcess timeout p with
-            | Ok () ->
-                Log.info $"Stopped process %s{p.ProcessName}"
-            | Error msg -> Log.warn msg)
+            let name = match l with Host _ -> p.ProcessName | Flatpak _ -> l.Name
+            Log.debug $"Stopping process %s{name}"
+            match l.ShutdownCommand with
+            | Some startInfo ->
+                try
+                    use p = Process.Start(startInfo)
+                    if not (p.WaitForExit(timeout)) then
+                        Log.warn $"Process did not exit within %i{int timeout.TotalSeconds} seconds"
+                    else
+                        Log.info $"Stopped process %s{name}"
+                with e -> Log.exn e $"Failed to stop process %s{name}"
+            | None ->
+                match Interop.termProcess timeout p with
+                | Ok () -> Log.info $"Stopped process %s{name}"
+                | Error msg -> Log.warn msg)
     
 let waitForExit (processes: Process list) =
     processes

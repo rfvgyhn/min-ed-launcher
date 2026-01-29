@@ -313,7 +313,7 @@ let rec private launchLoop initialLaunch settings playableProducts (session: EdS
     | Console.ProductSelection.Product selectedProduct ->
         let! p = Product.validateForRun settings.CbLauncherDir settings.WatchForCrashes selectedProduct |> Result.mapError InvalidProductState
         let pArgs() = processArgs selectedProduct
-        let logStart (ps: ProcessStartInfo list) = ps |> List.iter (fun p -> Log.info $"Starting process %s{p.FileName}")        
+        let logStart (ps: LauncherProcess list) = ps |> List.iter (fun p -> Log.info $"Starting process %s{p.Name}")        
         let persistentStartInfos, relaunchStartInfos =
             let relaunchProcesses = settings.Processes |> List.filter _.RestartOnRelaunch |> List.map _.Info
             match persistentRunning with
@@ -580,14 +580,14 @@ let run settings launcherVersion cancellationToken = taskResult {
         
     let processesToStop =
         runningProcesses
-        |> List.filter (fun p ->
+        |> List.choose (fun (p, l) ->
            settings.Processes
-           |> List.tryFind (fun s -> s.Info.FileName = p.StartInfo.FileName && s.KeepOpen = false)
-           |> Option.isSome) 
+           |> List.tryFind (fun s -> s.Info.StartInfo.FileName = p.StartInfo.FileName && s.KeepOpen = false)
+           |> Option.map (fun _ -> p, l)) 
         
     Process.stopProcesses settings.ShutdownTimeout processesToStop
-    settings.ShutdownProcesses |> List.iter (fun p -> Log.info $"Starting process %s{p.FileName}")
-    Process.launchProcesses true settings.ShutdownProcesses |> Process.waitForExit
+    settings.ShutdownProcesses |> List.iter (fun p -> Log.info $"Starting process %s{p.Name}")
+    Process.launchProcesses true settings.ShutdownProcesses |> List.map fst |> Process.waitForExit
     
     return didLoop
 } 

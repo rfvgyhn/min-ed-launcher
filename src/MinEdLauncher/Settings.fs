@@ -259,7 +259,17 @@ let private mapProcessConfig p =
     pInfo.UseShellExecute <- false
     pInfo.RedirectStandardOutput <- true
     pInfo.RedirectStandardError <- true
-    pInfo
+    if p.FileName.EndsWith("flatpak") then
+        match pInfo.Arguments.Split(' ', StringSplitOptions.RemoveEmptyEntries ||| StringSplitOptions.TrimEntries) |> Array.toList with
+        | "run" :: args -> 
+            args
+            |> Seq.skipWhile _.StartsWith('-')
+            |> Seq.tryHead
+            |> Option.map (fun appId -> Flatpak (appId, pInfo))
+            |> Option.defaultWith (fun () -> (Host pInfo))
+        | _ -> (Host pInfo)
+    else
+        Host pInfo
 let getSettings args appDir fileConfig = task {
     let findCbLaunchDir paths =
         appDir :: paths
