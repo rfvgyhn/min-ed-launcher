@@ -208,10 +208,64 @@ type Config =
       GameStartDelay: int
       [<DefaultValue("0")>]
       ShutdownDelay: int }
+let private levenshteinDistance (a: string) (b: string) =
+    let a = a.ToLowerInvariant()
+    let b = b.ToLowerInvariant()
+    let m, n = a.Length, b.Length
+    let d = Array2D.zeroCreate (m + 1) (n + 1)
+    for i in 0..m do d.[i, 0] <- i
+    for j in 0..n do d.[0, j] <- j
+    for i in 1..m do
+        for j in 1..n do
+            let cost = if a.[i - 1] = b.[j - 1] then 0 else 1
+            d.[i, j] <- min (min (d.[i - 1, j] + 1) (d.[i, j - 1] + 1)) (d.[i - 1, j - 1] + cost)
+    d.[m, n]
+
+let private knownConfigKeys =
+    set [ "apiUri"; "watchForCrashes"; "gameLocation"; "language"; "autoUpdate"
+          "checkForLauncherUpdates"; "maxConcurrentDownloads"; "forceUpdate"
+          "processes"; "shutdownProcesses"; "filterOverrides"; "additionalProducts"
+          "shutdownTimeout"; "cacheDir"; "gameStartDelay"; "shutdownDelay" ]
+
+let private warnUnknownKeys (configRoot: IConfigurationRoot) =
+    configRoot.GetChildren()
+    |> Seq.iter (fun section ->
+        let key = section.Key
+        if not (knownConfigKeys |> Set.contains key) then
+            let closest =
+                knownConfigKeys
+                |> Set.toSeq
+                |> Seq.map (fun known -> known, levenshteinDistance key known)
+                |> Seq.minBy snd
+            let known, dist = closest
+            if dist <= 3 then
+                Log.warn $"Unknown settings key '%s{key}'. Did you mean '%s{known}'?"
+            else
+                Log.warn $"Unknown settings key '%s{key}'")
+
+let private parseForceUpdate (configRoot: IConfigurationRoot) (config: Config) =
+    let section = configRoot.["forceUpdate"]
+    let children = configRoot.GetSection("forceUpdate").GetChildren() |> Seq.toList
+    if not (isNull section) && children.IsEmpty then
+        let values =
+            section.Split(',', StringSplitOptions.RemoveEmptyEntries ||| StringSplitOptions.TrimEntries)
+            |> Array.toList
+        { config with ForceUpdate = values }
+    elif not children.IsEmpty then
+        let values =
+            children
+            |> List.choose (fun child ->
+                let v = child.Value
+                if String.IsNullOrWhiteSpace(v) then None else Some v)
+        { config with ForceUpdate = values }
+    else
+        config
+
 let parseConfig fileName =
     let configRoot = ConfigurationBuilder()
                         .AddJsonFile(fileName, false)
                         .Build()
+    warnUnknownKeys configRoot
     let parseKvps section keyName valueName map =
         configRoot.GetSection(section).GetChildren()
             |> Seq.choose (fun section ->
@@ -239,7 +293,7 @@ let parseConfig fileName =
         |> Seq.mapOrFail AuthorizedProduct.fromConfig
     match AppConfig(configRoot).Get<Config>() with
     | Ok config ->
-        // FsConfig doesn't support list of records so handle it manually
+        let config = parseForceUpdate configRoot config
         let processes = parseProcesses "processes"
         let shutdownProcesses = parseProcesses "shutdownProcesses"
         let filterOverrides =

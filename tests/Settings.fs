@@ -8,6 +8,81 @@ open MinEdLauncher.Settings
 open MinEdLauncher.Types
 open MinEdLauncher.Tests.Extensions
 
+let private writeJsonToTempFile (json: string) =
+    let path = Path.Combine(Path.GetTempPath(), $"test-settings-{Guid.NewGuid()}.json")
+    File.WriteAllText(path, json)
+    path
+
+let private minimalJson = """{
+    "apiUri": "https://api.zaonce.net",
+    "watchForCrashes": false,
+    "autoUpdate": true,
+    "checkForLauncherUpdates": true,
+    "maxConcurrentDownloads": 4,
+    "forceUpdate": "",
+    "processes": [],
+    "shutdownProcesses": [],
+    "filterOverrides": [],
+    "additionalProducts": []
+}"""
+
+[<Tests>]
+let parseConfigTests =
+    testList "Parsing config file" [
+        test "Unknown key with close match suggests correction" {
+            let json = minimalJson.Replace("\"forceUpdate\"", "\"forceUdate\"")
+            let path = writeJsonToTempFile json
+            try
+                let result = parseConfig path
+                Expect.isOk result "Config should still parse with unknown keys"
+            finally
+                File.Delete(path)
+        }
+        test "forceUpdate as comma-separated string" {
+            let json = minimalJson.Replace("\"forceUpdate\": \"\"", "\"forceUpdate\": \"a, b , c\"")
+            let path = writeJsonToTempFile json
+            try
+                match parseConfig path with
+                | Ok config ->
+                    Expect.equal config.ForceUpdate ["a"; "b"; "c"] ""
+                | Error e -> failtest $"Parse failed: %A{e}"
+            finally
+                File.Delete(path)
+        }
+        test "forceUpdate as JSON array" {
+            let json = minimalJson.Replace("\"forceUpdate\": \"\"", "\"forceUpdate\": [\"x\", \"y\"]")
+            let path = writeJsonToTempFile json
+            try
+                match parseConfig path with
+                | Ok config ->
+                    Expect.equal config.ForceUpdate ["x"; "y"] ""
+                | Error e -> failtest $"Parse failed: %A{e}"
+            finally
+                File.Delete(path)
+        }
+        test "forceUpdate as empty string yields empty list" {
+            let path = writeJsonToTempFile minimalJson
+            try
+                match parseConfig path with
+                | Ok config ->
+                    Expect.isEmpty config.ForceUpdate ""
+                | Error e -> failtest $"Parse failed: %A{e}"
+            finally
+                File.Delete(path)
+        }
+        test "forceUpdate as empty array yields empty list" {
+            let json = minimalJson.Replace("\"forceUpdate\": \"\"", "\"forceUpdate\": []")
+            let path = writeJsonToTempFile json
+            try
+                match parseConfig path with
+                | Ok config ->
+                    Expect.isEmpty config.ForceUpdate ""
+                | Error e -> failtest $"Parse failed: %A{e}"
+            finally
+                File.Delete(path)
+        }
+    ]
+
 [<Tests>]
 let tests =
     let parseWithFallback fallback args =
