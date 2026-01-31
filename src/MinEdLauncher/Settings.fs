@@ -142,10 +142,17 @@ let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (arg
             | true, v when v >= 0. -> Some v
             | _ -> None)
     
+    let settingsArgIndex =
+        args |> Array.tryFindIndex (fun a -> a <> null && a.Equals("/settings", StringComparison.OrdinalIgnoreCase))
+    let skipIndices =
+        match settingsArgIndex with
+        | Some i -> Set.ofList [ i; i + 1 ]
+        | None -> Set.empty
+
     let settings =
         args
         |> Array.mapi (fun index value -> index, value)
-        |> Array.filter (fun (_, arg) -> not (String.IsNullOrEmpty(arg)))
+        |> Array.filter (fun (i, arg) -> not (String.IsNullOrEmpty(arg)) && not (skipIndices.Contains i))
         |> Array.fold (fun s (i, arg) ->
             let epicArg arg = applyEpicArg s.Platform (Some arg)
             match getArg arg i with
@@ -186,7 +193,9 @@ type ProcessConfig =
       KeepOpen: bool }
 [<CLIMutable>]
 type Config =
-    { ApiUri: string
+    { [<DefaultValue("https://api.zaonce.net")>]
+      ApiUri: string
+      [<DefaultValue("true")>]
       WatchForCrashes: bool
       GameLocation: string option
       Language: string option
@@ -208,10 +217,23 @@ type Config =
       GameStartDelay: int
       [<DefaultValue("0")>]
       ShutdownDelay: int }
-let parseConfig fileName =
-    let configRoot = ConfigurationBuilder()
-                        .AddJsonFile(fileName, false)
-                        .Build()
+let private presentKeys (configRoot: IConfigurationRoot) =
+    configRoot.GetChildren()
+    |> Seq.map (fun section -> section.Key.ToLowerInvariant())
+    |> Set.ofSeq
+
+let mergeConfigs (overlayKeys: string Set) (overlay: Config) (base': Config) =
+    let fields = Microsoft.FSharp.Reflection.FSharpType.GetRecordFields(typeof<Config>)
+    let baseValues = Microsoft.FSharp.Reflection.FSharpValue.GetRecordFields(base')
+    let overlayValues = Microsoft.FSharp.Reflection.FSharpValue.GetRecordFields(overlay)
+    let merged =
+        Array.map3 (fun (fi: Reflection.PropertyInfo) baseVal overlayVal ->
+            if overlayKeys |> Set.contains (fi.Name.ToLowerInvariant()) then overlayVal
+            else baseVal
+        ) fields baseValues overlayValues
+    Microsoft.FSharp.Reflection.FSharpValue.MakeRecord(typeof<Config>, merged) :?> Config
+
+let private parseConfigFromRoot (configRoot: IConfigurationRoot) =
     let parseKvps section keyName valueName map =
         configRoot.GetSection(section).GetChildren()
             |> Seq.choose (fun section ->
@@ -239,7 +261,6 @@ let parseConfig fileName =
         |> Seq.mapOrFail AuthorizedProduct.fromConfig
     match AppConfig(configRoot).Get<Config>() with
     | Ok config ->
-        // FsConfig doesn't support list of records so handle it manually
         let processes = parseProcesses "processes"
         let shutdownProcesses = parseProcesses "shutdownProcesses"
         let filterOverrides =
@@ -250,6 +271,23 @@ let parseConfig fileName =
         | Ok additionalProducts -> { config with Processes = processes; ShutdownProcesses = shutdownProcesses; FilterOverrides = filterOverrides; AdditionalProducts = additionalProducts } |> ConfigParseResult.Ok
         | Error msg -> BadValue ("additionalProducts", msg) |> Error
     | Error error -> Error error
+
+let parseConfig (baseFile: string) (overlayFile: string option) =
+    let baseRoot = ConfigurationBuilder().AddJsonFile(baseFile, false).Build()
+    match parseConfigFromRoot baseRoot with
+    | Error e -> Error e
+    | Ok baseConfig ->
+        match overlayFile with
+        | None -> Ok baseConfig
+        | Some path ->
+            if not (File.Exists(path)) then
+                BadValue ("settings", $"Overlay settings file not found: %s{path}") |> Error
+            else
+                let overlayRoot = ConfigurationBuilder().AddJsonFile(path, false).Build()
+                let keys = presentKeys overlayRoot
+                match parseConfigFromRoot overlayRoot with
+                | Error e -> Error e
+                | Ok overlayConfig -> mergeConfigs keys overlayConfig baseConfig |> Ok
    
 let private mapProcessConfig p =
     let pInfo = ProcessStartInfo()

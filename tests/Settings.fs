@@ -3,10 +3,125 @@ module MinEdLauncher.Tests.Settings
 open System
 open System.IO
 open Expecto
+open FsConfig
 open MinEdLauncher
 open MinEdLauncher.Settings
 open MinEdLauncher.Types
 open MinEdLauncher.Tests.Extensions
+
+let private defaultConfig : Config =
+    { ApiUri = "https://api.zaonce.net"
+      WatchForCrashes = false
+      GameLocation = None
+      Language = None
+      AutoUpdate = true
+      CheckForLauncherUpdates = true
+      MaxConcurrentDownloads = 4
+      ForceUpdate = []
+      Processes = []
+      ShutdownProcesses = []
+      FilterOverrides = []
+      AdditionalProducts = []
+      ShutdownTimeout = 10
+      CacheDir = None
+      GameStartDelay = 0
+      ShutdownDelay = 0 }
+
+[<Tests>]
+let mergeConfigTests =
+    testList "Merge configs" [
+        test "Overlay key present overrides base" {
+            let base' = { defaultConfig with ShutdownTimeout = 10 }
+            let overlay = { defaultConfig with ShutdownTimeout = 30 }
+            let keys = Set.ofList [ "shutdowntimeout" ]
+            let merged = mergeConfigs keys overlay base'
+            Expect.equal merged.ShutdownTimeout 30 ""
+        }
+        test "Absent overlay key preserves base" {
+            let base' = { defaultConfig with ShutdownTimeout = 10; AutoUpdate = false }
+            let overlay = { defaultConfig with ShutdownTimeout = 30 }
+            let keys = Set.ofList [ "shutdowntimeout" ]
+            let merged = mergeConfigs keys overlay base'
+            Expect.equal merged.ShutdownTimeout 30 ""
+            Expect.equal merged.AutoUpdate false ""
+        }
+        test "Empty overlay list replaces base list" {
+            let base' = { defaultConfig with Processes = [ { FileName = "app.exe"; Arguments = None; RestartOnRelaunch = false; KeepOpen = false } ] }
+            let overlay = { defaultConfig with Processes = [] }
+            let keys = Set.ofList [ "processes" ]
+            let merged = mergeConfigs keys overlay base'
+            Expect.isEmpty merged.Processes ""
+        }
+        test "Empty overlay keys returns base unchanged" {
+            let base' = { defaultConfig with ShutdownTimeout = 42; AutoUpdate = false }
+            let overlay = defaultConfig
+            let keys = Set.empty
+            let merged = mergeConfigs keys overlay base'
+            Expect.equal merged base' ""
+        }
+    ]
+
+[<Tests>]
+let parseConfigTests =
+    let writeJsonFile dir name content =
+        let path = Path.Combine(dir, name)
+        File.WriteAllText(path, content)
+        path
+
+    testList "Parse config with overlay" [
+        test "Non-existent overlay file returns error" {
+            let dir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString())
+            Directory.CreateDirectory(dir) |> ignore
+            try
+                let basePath = writeJsonFile dir "settings.json" """{ "apiUri": "https://api.zaonce.net" }"""
+                let result = parseConfig basePath (Some "/nonexistent/overlay.json")
+                match result with
+                | Error (BadValue (key, _)) -> Expect.equal key "settings" ""
+                | other -> failtest $"Expected BadValue error for missing overlay file but got: %A{other}"
+            finally
+                Directory.Delete(dir, true)
+        }
+        test "Overlay merges on top of base" {
+            let dir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString())
+            Directory.CreateDirectory(dir) |> ignore
+            try
+                let basePath = writeJsonFile dir "settings.json" """{ "apiUri": "https://api.zaonce.net", "shutdownTimeout": 10 }"""
+                let overlayPath = writeJsonFile dir "overlay.json" """{ "shutdownTimeout": 30 }"""
+                match parseConfig basePath (Some overlayPath) with
+                | Ok config ->
+                    Expect.equal config.ShutdownTimeout 30 "Overlay should override shutdownTimeout"
+                    Expect.equal config.ApiUri "https://api.zaonce.net" "Base apiUri should be preserved"
+                | Error e -> failtest $"Expected Ok but got Error: %A{e}"
+            finally
+                Directory.Delete(dir, true)
+        }
+        test "No overlay returns base config" {
+            let dir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString())
+            Directory.CreateDirectory(dir) |> ignore
+            try
+                let basePath = writeJsonFile dir "settings.json" """{ "apiUri": "https://api.zaonce.net", "shutdownTimeout": 15 }"""
+                match parseConfig basePath None with
+                | Ok config ->
+                    Expect.equal config.ShutdownTimeout 15 ""
+                    Expect.equal config.ApiUri "https://api.zaonce.net" ""
+                | Error e -> failtest $"Expected Ok but got Error: %A{e}"
+            finally
+                Directory.Delete(dir, true)
+        }
+        test "Overlay with empty processes replaces base processes" {
+            let dir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString())
+            Directory.CreateDirectory(dir) |> ignore
+            try
+                let basePath = writeJsonFile dir "settings.json" """{ "apiUri": "https://api.zaonce.net", "processes": [{ "fileName": "app.exe" }] }"""
+                let overlayPath = writeJsonFile dir "overlay.json" """{ "processes": [] }"""
+                match parseConfig basePath (Some overlayPath) with
+                | Ok config ->
+                    Expect.isEmpty config.Processes "Overlay empty processes should replace base"
+                | Error e -> failtest $"Expected Ok but got Error: %A{e}"
+            finally
+                Directory.Delete(dir, true)
+        }
+    ]
 
 [<Tests>]
 let tests =
@@ -191,10 +306,21 @@ let tests =
             Expect.equal settings.CbLauncherDir expectedDir ""
         }
         test "Known flag shouldn't be treated as whitelist filter" {
-            let knownFlags = [| "/steamid"; "/steam"; "/epic"; "/frontier"; "profile"; "/oculus"; "nonce"; "/restart"; "1"; "/vr"; "/novr"; "/autorun"; "/autoquit"; "/forcelocal" |]
-            
+            let knownFlags = [| "/steamid"; "/steam"; "/epic"; "/frontier"; "profile"; "/oculus"; "nonce"; "/restart"; "1"; "/vr"; "/novr"; "/autorun"; "/autoquit"; "/forcelocal"; "/settings"; "somefile.json" |]
+
             let settings = parse knownFlags
-            
+
+            Expect.isEmpty settings.ProductWhitelist ""
+        }
+        test "/settings arg and its value are skipped" {
+            let settings = parse [| "/settings"; "/home/user/overlay.json" |]
+            Expect.equal settings.Platform Settings.defaults.Platform ""
+            Expect.isEmpty settings.ProductWhitelist ""
+        }
+        test "/settings with absolute path doesn't add to whitelist" {
+            let settings = parse [| "/autorun"; "/settings"; "/tmp/overlay.json"; "/autoquit" |]
+            Expect.equal settings.AutoRun true ""
+            Expect.equal settings.QuitMode Immediate ""
             Expect.isEmpty settings.ProductWhitelist ""
         }
         yield! [
