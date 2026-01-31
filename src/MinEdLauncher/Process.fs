@@ -29,6 +29,12 @@ let launchProcesses printOutput (processes:LauncherProcess list) =
             Log.exn e $"Unable to start process %s{l.Name}"
             None)
 
+let launchProcessesDelayed (delay: TimeSpan) (processes: LauncherProcess list) = task {
+    if delay > TimeSpan.Zero then
+        do! Threading.Tasks.Task.Delay(delay)
+    return launchProcesses false processes
+}
+
 let stopProcesses (timeout: TimeSpan) (processes: (Process * LauncherProcess) list) =
     processes
     |> List.iter (fun (p, l) ->
