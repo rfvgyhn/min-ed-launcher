@@ -7,6 +7,7 @@ open System.IO
 open System.Diagnostics
 open FsConfig
 open Microsoft.Extensions.Configuration
+open System.Text.Json
 
 let defaults =
     { Platform = Dev
@@ -142,10 +143,17 @@ let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (arg
             | true, v when v >= 0. -> Some v
             | _ -> None)
     
+    let settingsArgIndex =
+        args |> Array.tryFindIndex (fun a -> a <> null && a.Equals("/settingsOverlay", StringComparison.OrdinalIgnoreCase))
+    let skipIndices =
+        match settingsArgIndex with
+        | Some i -> Set.ofList [ i; i + 1 ]
+        | None -> Set.empty
+
     let settings =
         args
         |> Array.mapi (fun index value -> index, value)
-        |> Array.filter (fun (_, arg) -> not (String.IsNullOrEmpty(arg)))
+        |> Array.filter (fun (i, arg) -> not (String.IsNullOrEmpty(arg)) && not (skipIndices.Contains i))
         |> Array.fold (fun s (i, arg) ->
             let epicArg arg = applyEpicArg s.Platform (Some arg)
             match getArg arg i with
@@ -186,7 +194,9 @@ type ProcessConfig =
       KeepOpen: bool }
 [<CLIMutable>]
 type Config =
-    { ApiUri: string
+    { [<DefaultValue("https://api.zaonce.net")>]
+      ApiUri: string
+      [<DefaultValue("true")>]
       WatchForCrashes: bool
       GameLocation: string option
       Language: string option
@@ -259,11 +269,37 @@ let private parseForceUpdate (configRoot: IConfigurationRoot) (config: Config) =
         { config with ForceUpdate = values }
     else
         config
+let private writeJsonMerged (writer: Utf8JsonWriter) (baseEl: JsonElement) (overlayEl: JsonElement) =
+    let rec merge (b: JsonElement) (o: JsonElement) =
+        match b.ValueKind, o.ValueKind with
+        | JsonValueKind.Object, JsonValueKind.Object ->
+            writer.WriteStartObject()
+            for baseProp in b.EnumerateObject() do
+                let mutable overlayVal = Unchecked.defaultof<JsonElement>
+                if o.TryGetProperty(baseProp.Name, &overlayVal) then
+                    writer.WritePropertyName(baseProp.Name)
+                    merge baseProp.Value overlayVal
+                else
+                    baseProp.WriteTo(writer)
+            for overlayProp in o.EnumerateObject() do
+                let mutable existing = Unchecked.defaultof<JsonElement>
+                if not (b.TryGetProperty(overlayProp.Name, &existing)) then
+                    overlayProp.WriteTo(writer)
+            writer.WriteEndObject()
+        | _ -> o.WriteTo(writer)
+    merge baseEl overlayEl
 
-let parseConfig fileName =
-    let configRoot = ConfigurationBuilder()
-                        .AddJsonFile(fileName, false)
-                        .Build()
+let private mergeJsonFiles (baseFile: string) (overlayFile: string) =
+    use baseDoc = JsonDocument.Parse(File.ReadAllText(baseFile))
+    use overlayDoc = JsonDocument.Parse(File.ReadAllText(overlayFile))
+    let ms = new MemoryStream()
+    use writer = new Utf8JsonWriter(ms)
+    writeJsonMerged writer baseDoc.RootElement overlayDoc.RootElement
+    writer.Flush()
+    ms.Position <- 0L
+    ms
+
+let private parseConfigFromRoot (configRoot: IConfigurationRoot) =
     warnUnknownKeys configRoot
     let parseKvps section keyName valueName map =
         configRoot.GetSection(section).GetChildren()
@@ -292,7 +328,6 @@ let parseConfig fileName =
         |> Seq.mapOrFail AuthorizedProduct.fromConfig
     match AppConfig(configRoot).Get<Config>() with
     | Ok config ->
-        // FsConfig doesn't support list of records so handle it manually
         let config = parseForceUpdate configRoot config
         let processes = parseProcesses "processes"
         let shutdownProcesses = parseProcesses "shutdownProcesses"
@@ -304,6 +339,20 @@ let parseConfig fileName =
         | Ok additionalProducts -> { config with Processes = processes; ShutdownProcesses = shutdownProcesses; FilterOverrides = filterOverrides; AdditionalProducts = additionalProducts } |> ConfigParseResult.Ok
         | Error msg -> BadValue ("additionalProducts", msg) |> Error
     | Error error -> Error error
+
+let parseConfig (baseFile: string) (overlayFile: string option) =
+    match overlayFile with
+    | Some path when not (File.Exists(path)) ->
+        BadValue ("settings", $"Overlay settings file not found: %s{path}") |> Error
+    | _ ->
+        let configRoot =
+            match overlayFile with
+            | None ->
+                ConfigurationBuilder().AddJsonFile(baseFile, false).Build()
+            | Some path ->
+                use mergedStream = mergeJsonFiles baseFile path
+                ConfigurationBuilder().AddJsonStream(mergedStream).Build()
+        parseConfigFromRoot configRoot
    
 let private mapProcessConfig p =
     let pInfo = ProcessStartInfo()
