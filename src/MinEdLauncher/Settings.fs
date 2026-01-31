@@ -183,7 +183,9 @@ type ProcessConfig =
     { FileName: string
       Arguments: string option
       RestartOnRelaunch: bool
-      KeepOpen: bool }
+      KeepOpen: bool
+      Delay: int
+      DelayReference: string option }
 [<CLIMutable>]
 type Config =
     { ApiUri: string
@@ -282,10 +284,12 @@ let parseConfig fileName =
                 let args = section.GetValue<string>("arguments")
                 let restart = section.GetValue<bool>("restartOnRelaunch")
                 let keepOpen = section.GetValue<bool>("keepOpen")
+                let delay = section.GetValue<int>("delay")
+                let delayReference = section.GetValue<string>("delayReference") |> Option.ofObj
                 if String.IsNullOrWhiteSpace(fileName) then
                     None
                 else
-                    Some { FileName = fileName; Arguments = Option.ofObj args; RestartOnRelaunch = restart; KeepOpen = keepOpen })
+                    Some { FileName = fileName; Arguments = Option.ofObj args; RestartOnRelaunch = restart; KeepOpen = keepOpen; Delay = delay; DelayReference = delayReference })
             |> Seq.toList
     let parseAdditionalProducts() =
         configRoot.GetSection("additionalProducts").GetChildren()
@@ -305,6 +309,15 @@ let parseConfig fileName =
         | Error msg -> BadValue ("additionalProducts", msg) |> Error
     | Error error -> Error error
    
+let parseDelayReference (value: string option) =
+    match value |> Option.map (fun s -> s.ToLowerInvariant()) with
+    | None | Some "processstart" -> ProcessStart
+    | Some "gamelaunch" -> GameLaunch
+    | Some "gamerunning" -> GameRunning
+    | Some unknown ->
+        Log.warn $"Unknown delay reference '%s{unknown}', defaulting to processStart"
+        ProcessStart
+
 let private mapProcessConfig p =
     let pInfo = ProcessStartInfo()
     pInfo.FileName <- p.FileName
@@ -335,7 +348,7 @@ let getSettings args appDir fileConfig = task {
             | None -> Error "Failed to find Elite Dangerous install directory"
             | Some dir -> Ok dir
     let apiUri = Uri(fileConfig.ApiUri)
-    let processes = fileConfig.Processes |> List.map (fun p -> {| Info = mapProcessConfig p; RestartOnRelaunch = p.RestartOnRelaunch; KeepOpen = p.KeepOpen |}) 
+    let processes = fileConfig.Processes |> List.map (fun p -> {| Info = mapProcessConfig p; RestartOnRelaunch = p.RestartOnRelaunch; KeepOpen = p.KeepOpen; Delay = { Seconds = p.Delay; Reference = parseDelayReference p.DelayReference } |})
     let shutdownProcesses = fileConfig.ShutdownProcesses |> List.map mapProcessConfig
     let filterOverrides = fileConfig.FilterOverrides |> Seq.map (fun o -> o.Sku, o.Filter) |> OrdinalIgnoreCaseMap.ofSeq
     let fallbackDirs platform =
