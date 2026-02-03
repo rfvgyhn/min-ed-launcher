@@ -109,8 +109,8 @@ type AuthorizedProduct =
       Sku: string
       TestApi: bool }
 type DelayReference = ProcessStart | GameLaunch | GameRunning
-type ProcessDelay = { Seconds: int; Reference: DelayReference }
-    with static member Default = { Seconds = 0; Reference = ProcessStart }
+type ProcessDelay = { Amount: TimeSpan; Reference: DelayReference }
+    with static member Default = { Amount = TimeSpan.Zero; Reference = ProcessStart }
 
 type LauncherProcess = Host of ProcessStartInfo | Flatpak of appId: string * startInfo: ProcessStartInfo with
     member this.Name = match this with Host startInfo -> startInfo.FileName | Flatpak (appId, _) -> appId
@@ -145,7 +145,8 @@ type LauncherSettings =
       ShutdownTimeout: TimeSpan
       CacheDir: string
       GameStartDelay: TimeSpan
-      ShutdownDelay: TimeSpan }
+      ShutdownDelay: TimeSpan
+      JournalDir: string option }
 type ProductMode = Online | Offline
 type VersionInfo =
     { Name: string

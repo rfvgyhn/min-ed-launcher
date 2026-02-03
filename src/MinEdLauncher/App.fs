@@ -12,23 +12,30 @@ open System.Threading.Tasks
 open MinEdLauncher.Types
 open FsToolkit.ErrorHandling
 
-let private findJournalDir () =
-    let home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
-    let candidates =
-        if RuntimeInformation.IsOSPlatform(OSPlatform.Windows) then
-            [ Path.Combine(home, "Saved Games", "Frontier Developments", "Elite Dangerous") ]
-        else
-            [ Path.Combine(home, ".local", "share", "Frontier Developments", "Elite Dangerous")
-              Path.Combine(home, ".steam", "steam", "steamapps", "compatdata", "359320", "pfx", "drive_c", "users", "steamuser", "Saved Games", "Frontier Developments", "Elite Dangerous")
-              Path.Combine(home, ".local", "share", "Steam", "steamapps", "compatdata", "359320", "pfx", "drive_c", "users", "steamuser", "Saved Games", "Frontier Developments", "Elite Dangerous") ]
-    candidates |> List.tryFind Directory.Exists
+let private findJournalDir (configuredDir: string option) =
+    match configuredDir with
+    | Some dir when Directory.Exists(dir) -> Some dir
+    | Some dir ->
+        Log.warn $"Configured journal directory does not exist: %s{dir}"
+        None
+    | None ->
+        let home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+        let candidates =
+            if RuntimeInformation.IsOSPlatform(OSPlatform.Windows) then
+                [ Path.Combine(home, "Saved Games", "Frontier Developments", "Elite Dangerous") ]
+            else
+                [ Path.Combine(home, ".local", "share", "Frontier Developments", "Elite Dangerous")
+                  Path.Combine(home, ".steam", "steam", "steamapps", "compatdata", "359320", "pfx", "drive_c", "users", "steamuser", "Saved Games", "Frontier Developments", "Elite Dangerous")
+                  Path.Combine(home, ".local", "share", "Steam", "steamapps", "compatdata", "359320", "pfx", "drive_c", "users", "steamuser", "Saved Games", "Frontier Developments", "Elite Dangerous") ]
+        candidates |> List.tryFind Directory.Exists
 
-let private createJournalSignal (dirPath: string) =
-    let tcs = TaskCompletionSource<unit>()
+let private createJournalSignal (dirPath: string) (cts: CancellationTokenSource) =
+    let tcs = TaskCompletionSource<bool>()
     let watcher = new FileSystemWatcher(dirPath, "Journal.*.log")
     watcher.NotifyFilter <- NotifyFilters.LastWrite ||| NotifyFilters.FileName
-    watcher.Created.Add(fun _ -> tcs.TrySetResult() |> ignore)
-    watcher.Changed.Add(fun _ -> tcs.TrySetResult() |> ignore)
+    watcher.Created.Add(fun _ -> tcs.TrySetResult(true) |> ignore)
+    watcher.Changed.Add(fun _ -> tcs.TrySetResult(true) |> ignore)
+    cts.Token.Register(fun () -> tcs.TrySetResult(false) |> ignore) |> ignore
     watcher.EnableRaisingEvents <- true
     tcs.Task, (watcher :> IDisposable)
 
@@ -315,7 +322,7 @@ let private renewEpicTokenIfNeeded platform token =
     | _ -> Ok () |> Task.fromResult
     |> TaskResult.mapError InvalidSession
 
-let rec private launchLoop initialLaunch settings playableProducts (session: EdSession) persistentRunning relaunchRunning (journalSignal: Task<unit> option) cancellationToken processArgs = taskResult {
+let rec private launchLoop initialLaunch settings playableProducts (session: EdSession) persistentRunning relaunchRunning (journalSignal: Task<bool> option) (journalCts: CancellationTokenSource option) cancellationToken processArgs = taskResult {
     let! selectedProduct =
         if settings.AutoRun && initialLaunch then
             playableProducts
@@ -367,8 +374,8 @@ let rec private launchLoop initialLaunch settings playableProducts (session: EdS
             match persistentRunning with
             | Some _ -> persistentStartInfos, []
             | None ->
-                let immediate = processStartProcs |> List.filter (fun p -> p.Delay.Seconds = 0 && not p.RestartOnRelaunch) |> List.map _.Info
-                let delayed = processStartProcs |> List.filter (fun p -> p.Delay.Seconds > 0 && not p.RestartOnRelaunch)
+                let immediate = processStartProcs |> List.filter (fun p -> p.Delay.Amount = TimeSpan.Zero && not p.RestartOnRelaunch) |> List.map _.Info
+                let delayed = processStartProcs |> List.filter (fun p -> p.Delay.Amount > TimeSpan.Zero && not p.RestartOnRelaunch)
                 immediate, delayed
 
         let persistentProcesses = persistentRunning |> Option.defaultWith (fun () -> Process.launchProcesses false immediateStartInfos)
@@ -377,62 +384,73 @@ let rec private launchLoop initialLaunch settings playableProducts (session: EdS
         let delayedTasks = ResizeArray<Task<(Process * LauncherProcess) list>>()
 
         for proc in delayedProcessStart do
-            let delay = TimeSpan.FromSeconds(float proc.Delay.Seconds)
-            Log.info $"Process %s{proc.Info.Name} will start after %.0f{delay.TotalSeconds}s"
-            delayedTasks.Add(Process.launchProcessesDelayed delay [proc.Info])
+            Log.info $"Process %s{proc.Info.Name} will start after %.0f{proc.Delay.Amount.TotalSeconds}s"
+            delayedTasks.Add(Process.launchProcessesDelayed proc.Delay.Amount [proc.Info])
 
         let gameLaunchSignal = TaskCompletionSource<unit>()
 
         for proc in gameLaunchProcs do
-            let delaySec = proc.Delay.Seconds
+            let delay = proc.Delay.Amount
             let t = task {
-                if delaySec < 0 then
+                if delay < TimeSpan.Zero then
                     ()
                 else
                     do! gameLaunchSignal.Task
-                    if delaySec > 0 then
-                        Log.info $"Process %s{proc.Info.Name} will start %d{delaySec}s after game launch"
-                        do! Task.Delay(TimeSpan.FromSeconds(float delaySec))
+                    if delay > TimeSpan.Zero then
+                        Log.info $"Process %s{proc.Info.Name} will start %.0f{delay.TotalSeconds}s after game launch"
+                        do! Task.Delay(delay)
                 return Process.launchProcesses false [proc.Info]
             }
             delayedTasks.Add(t)
 
         let preGameTasks =
             gameLaunchProcs
-            |> List.filter (fun p -> p.Delay.Seconds < 0)
+            |> List.filter (fun p -> p.Delay.Amount < TimeSpan.Zero)
             |> List.map (fun proc ->
-                let delaySec = abs proc.Delay.Seconds
-                Log.info $"Process %s{proc.Info.Name} will start %d{delaySec}s before game launch"
-                Process.launchProcessesDelayed TimeSpan.Zero [proc.Info], delaySec)
+                let delay = proc.Delay.Amount.Negate()
+                Log.info $"Process %s{proc.Info.Name} will start %.0f{delay.TotalSeconds}s before game launch"
+                Process.launchProcessesDelayed TimeSpan.Zero [proc.Info], delay)
 
+        let journalTimeout = TimeSpan.FromMinutes(5.)
         match journalSignal with
         | Some signal ->
             for proc in gameRunningProcs do
-                let delaySec = proc.Delay.Seconds
+                let delay = proc.Delay.Amount
                 let t = task {
-                    do! signal
-                    if delaySec > 0 then
-                        Log.info $"Process %s{proc.Info.Name} will start %d{delaySec}s after journal change"
-                        do! Task.Delay(TimeSpan.FromSeconds(float delaySec))
+                    let timeoutTask = Task.Delay(journalTimeout)
+                    let! completed = Task.WhenAny(signal, timeoutTask)
+                    if completed = timeoutTask then
+                        Log.warn $"Process %s{proc.Info.Name} not started (timed out waiting for journal activity)"
+                        return []
                     else
-                        Log.info $"Process %s{proc.Info.Name} starting on journal change"
-                    return Process.launchProcesses false [proc.Info]
+                        let! signaled = signal
+                        if signaled then
+                            if delay > TimeSpan.Zero then
+                                Log.info $"Process %s{proc.Info.Name} will start %.0f{delay.TotalSeconds}s after journal activity"
+                                do! Task.Delay(delay)
+                            else
+                                Log.info $"Process %s{proc.Info.Name} starting on journal activity"
+                            return Process.launchProcesses false [proc.Info]
+                        else
+                            Log.warn $"Process %s{proc.Info.Name} not started (game exited before journal activity detected)"
+                            return []
                 }
                 delayedTasks.Add(t)
         | None ->
             if not gameRunningProcs.IsEmpty then
-                Log.warn "Journal directory not found; journalChange-delayed processes will start immediately"
+                Log.warn "Journal directory not found; gameRunning-delayed processes will start immediately"
                 for proc in gameRunningProcs do
-                    delayedTasks.Add(Process.launchProcessesDelayed (TimeSpan.FromSeconds(float proc.Delay.Seconds |> max 0.)) [proc.Info])
+                    let delay = if proc.Delay.Amount > TimeSpan.Zero then proc.Delay.Amount else TimeSpan.Zero
+                    delayedTasks.Add(Process.launchProcessesDelayed delay [proc.Info])
 
         if initialLaunch && settings.GameStartDelay > TimeSpan.Zero then
             Log.info $"Delaying game launch for %.2f{settings.GameStartDelay.TotalSeconds} seconds"
             do! Task.Delay settings.GameStartDelay
 
-        let maxPreGameDelay = preGameTasks |> List.map snd |> List.fold max 0
-        if maxPreGameDelay > 0 then
-            Log.info $"Waiting %d{maxPreGameDelay}s for pre-game processes"
-            do! Task.Delay(TimeSpan.FromSeconds(float maxPreGameDelay))
+        let maxPreGameDelay = preGameTasks |> List.map snd |> List.fold max TimeSpan.Zero
+        if maxPreGameDelay > TimeSpan.Zero then
+            Log.info $"Waiting %.0f{maxPreGameDelay.TotalSeconds}s for pre-game processes"
+            do! Task.Delay(maxPreGameDelay)
 
         let waitForEdExit =
             settings.QuitMode = WaitForExit
@@ -445,6 +463,7 @@ let rec private launchLoop initialLaunch settings playableProducts (session: EdS
         launchProduct settings.DryRun settings.CompatTool pArgs selectedProduct.Name waitForEdExit p
 
         if not waitForEdExit then
+            // Wait for ED Process to start before exiting
             let maxTries = 30
             let mutable tries = 0
             while tries < maxTries do
@@ -466,6 +485,9 @@ let rec private launchLoop initialLaunch settings playableProducts (session: EdS
 
                 launchProduct settings.DryRun settings.CompatTool pArgs selectedProduct.Name true p
 
+            // Cancel journal signal since game has exited
+            journalCts |> Option.iter _.Cancel()
+
             let! delayedProcesses =
                 if delayedTasks.Count > 0 then
                     task {
@@ -482,7 +504,7 @@ let rec private launchLoop initialLaunch settings playableProducts (session: EdS
             let allProcesses = persistentProcesses @ relaunchProcesses @ delayedProcesses @ preGameProcesses
 
             if settings.QuitMode = WaitForInput then
-                return! launchLoop false settings playableProducts session (Some allProcesses) (Some relaunchProcesses) journalSignal cancellationToken processArgs
+                return! launchLoop false settings playableProducts session (Some allProcesses) (Some relaunchProcesses) journalSignal journalCts cancellationToken processArgs
             else
                 return allProcesses, didLoop
 }
@@ -684,20 +706,22 @@ let run settings launcherVersion cancellationToken = taskResult {
     let gameLanguage = Cobra.getGameLang settings.CbLauncherDir settings.PreferredLanguage
     let processArgs = Product.createArgString settings.DisplayMode gameLanguage connection.Session machineId (getRunningTime()) settings.WatchForCrashes settings.Platform SHA1.hashFile
     
-    let journalDir = findJournalDir()
+    let journalDir = findJournalDir settings.JournalDir
+    let journalCts = new CancellationTokenSource()
     let journalSignal, journalWatcher =
         match journalDir with
         | Some dir ->
             Log.debug $"Watching journal directory: %s{dir}"
-            let signal, watcher = createJournalSignal dir
+            let signal, watcher = createJournalSignal dir journalCts
             Some signal, Some watcher
         | None ->
             Log.debug "Journal directory not found"
             None, None
 
-    let! runningProcesses, didLoop = launchLoop true settings playableProducts connection.Session None None journalSignal cancellationToken processArgs
+    let! runningProcesses, didLoop = launchLoop true settings playableProducts connection.Session None None journalSignal (Some journalCts) cancellationToken processArgs
 
     journalWatcher |> Option.iter _.Dispose()
+    journalCts.Dispose()
     
     if settings.ShutdownDelay > TimeSpan.Zero then
         Log.info $"Delaying shutdown for %.2f{settings.ShutdownDelay.TotalSeconds} seconds"

@@ -386,7 +386,7 @@ let tests =
 
 [<Tests>]
 let configTests =
-    let parseConfigWithProcesses (processJson: string) =
+    let parseConfigWithProcesses (processJson: string) : ProcessConfig list =
         let json = $"""{{
             "apiUri": "https://api.zaonce.net",
             "watchForCrashes": false,
@@ -398,7 +398,7 @@ let configTests =
         let path = Path.GetTempFileName()
         try
             File.WriteAllText(path, json)
-            match parseConfig path with
+            match parseConfig path None with
             | Ok config -> config.Processes
             | Error _ -> failwith "Failed to parse config"
         finally
