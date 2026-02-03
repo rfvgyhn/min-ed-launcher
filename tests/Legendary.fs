@@ -80,7 +80,7 @@ let tests =
                 Expect.isError token ""
             
             test "Fails if access token is expired" {
-                let now = DateTimeOffset(DateTime(2024, 1, 1), TimeSpan.Zero)
+                let now = DateTimeOffset(DateTime(2000, 1, 1), TimeSpan.Zero)
                 let time = FakeTimeProvider()
                 time.SetUtcNow(now)
                 let json = defaultJson.Deserialize<JsonObject>()

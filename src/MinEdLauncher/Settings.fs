@@ -34,7 +34,8 @@ let defaults =
       ShutdownTimeout = TimeSpan.FromSeconds(10)
       CacheDir = ""
       GameStartDelay = TimeSpan.Zero
-      ShutdownDelay = TimeSpan.Zero }
+      ShutdownDelay = TimeSpan.Zero
+      JournalDir = None }
     
 [<RequireQualifiedAccess>]
 type FrontierCredResult = Found of string * string * string option | NotFound of string | UnexpectedFormat of string | Error of string
@@ -209,7 +210,8 @@ type Config =
       [<DefaultValue("0")>]
       GameStartDelay: int
       [<DefaultValue("0")>]
-      ShutdownDelay: int }
+      ShutdownDelay: int
+      JournalDir: string option }
 let private levenshteinDistance (a: string) (b: string) =
     let a = a.ToLowerInvariant()
     let b = b.ToLowerInvariant()
@@ -227,7 +229,7 @@ let private knownConfigKeys =
     [ "apiUri"; "watchForCrashes"; "gameLocation"; "language"; "autoUpdate"
       "checkForLauncherUpdates"; "maxConcurrentDownloads"; "forceUpdate"
       "processes"; "shutdownProcesses"; "filterOverrides"; "additionalProducts"
-      "shutdownTimeout"; "cacheDir"; "gameStartDelay"; "shutdownDelay" ]
+      "shutdownTimeout"; "cacheDir"; "gameStartDelay"; "shutdownDelay"; "journalDir" ]
     |> OrdinalIgnoreCaseSet.ofSeq
 
 let private warnUnknownKeys (configRoot: IConfigurationRoot) =
@@ -261,7 +263,6 @@ let private parseForceUpdate (configRoot: IConfigurationRoot) (config: Config) =
         { config with ForceUpdate = values }
     else
         config
-
 let parseConfig fileName =
     let configRoot = ConfigurationBuilder()
                         .AddJsonFile(fileName, false)
@@ -348,7 +349,7 @@ let getSettings args appDir fileConfig = task {
             | None -> Error "Failed to find Elite Dangerous install directory"
             | Some dir -> Ok dir
     let apiUri = Uri(fileConfig.ApiUri)
-    let processes = fileConfig.Processes |> List.map (fun p -> {| Info = mapProcessConfig p; RestartOnRelaunch = p.RestartOnRelaunch; KeepOpen = p.KeepOpen; Delay = { Seconds = p.Delay; Reference = parseDelayReference p.DelayReference } |})
+    let processes = fileConfig.Processes |> List.map (fun p -> {| Info = mapProcessConfig p; RestartOnRelaunch = p.RestartOnRelaunch; KeepOpen = p.KeepOpen; Delay = { Amount = TimeSpan.FromSeconds(p.Delay); Reference = parseDelayReference p.DelayReference } |})
     let shutdownProcesses = fileConfig.ShutdownProcesses |> List.map mapProcessConfig
     let filterOverrides = fileConfig.FilterOverrides |> Seq.map (fun o -> o.Sku, o.Filter) |> OrdinalIgnoreCaseMap.ofSeq
     let fallbackDirs platform =
@@ -380,6 +381,7 @@ let getSettings args appDir fileConfig = task {
                                                           ShutdownTimeout = TimeSpan.FromSeconds(fileConfig.ShutdownTimeout)
                                                           CacheDir = fileConfig.CacheDir |> Option.defaultValue Environment.cacheDir
                                                           GameStartDelay = TimeSpan.FromSeconds(fileConfig.GameStartDelay)
-                                                          ShutdownDelay = TimeSpan.FromSeconds(fileConfig.ShutdownDelay) 
+                                                          ShutdownDelay = TimeSpan.FromSeconds(fileConfig.ShutdownDelay)
+                                                          JournalDir = fileConfig.JournalDir
                                            })
 }
