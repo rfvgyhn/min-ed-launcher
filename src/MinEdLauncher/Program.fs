@@ -29,17 +29,21 @@ let getSettings (assembly: Assembly) args =
             settings.CopyTo(file)
         |> ignore
 
-        Settings.parseConfig settingsPath overlayPath
-        |> Result.mapError (fun e ->
-            match e with
-            | BadValue (key, value) -> $"Bad Value: %s{key} - %s{value}"
-            | ConfigParseError.NotFound key -> $"Key not found: %s{key}"
-            | NotSupported key -> $"Key not supported: %s{key}")
-        |> function
-            | Ok c -> task {
-                let! settings = Settings.getSettings args AppContext.BaseDirectory c
-                return settings }
-            | Error msg -> Error msg |> Task.fromResult
+        match overlayPath with
+        | Some path when not (File.Exists(path)) ->
+            Error $"Overlay settings file not found: %s{path}" |> Task.fromResult
+        | _ ->
+            Settings.parseConfig settingsPath overlayPath
+            |> Result.mapError (fun e ->
+                match e with
+                | BadValue (key, value) -> $"Bad Value: %s{key} - %s{value}"
+                | ConfigParseError.NotFound key -> $"Key not found: %s{key}"
+                | NotSupported key -> $"Key not supported: %s{key}")
+            |> function
+                | Ok c -> task {
+                    let! settings = Settings.getSettings args AppContext.BaseDirectory c
+                    return settings }
+                | Error msg -> Error msg |> Task.fromResult
 
 let logRuntimeInfo version args =
     Log.info $"Elite Dangerous: Minimal Launcher - v{version}"

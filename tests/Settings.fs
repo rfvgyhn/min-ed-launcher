@@ -28,13 +28,13 @@ let private minimalJson = """{
 }"""
 
 [<Tests>]
-let parseConfigTests =
+let parseConfigFileTests =
     testList "Parsing config file" [
         test "Unknown key with close match suggests correction" {
             let json = minimalJson.Replace("\"forceUpdate\"", "\"forceUdate\"")
             let path = writeJsonToTempFile json
             try
-                let result = parseConfig path
+                let result = parseConfig path None
                 Expect.isOk result "Config should still parse with unknown keys"
             finally
                 File.Delete(path)
@@ -43,7 +43,7 @@ let parseConfigTests =
             let json = minimalJson.Replace("\"forceUpdate\": \"\"", "\"forceUpdate\": \"a, b , c\"")
             let path = writeJsonToTempFile json
             try
-                let config = Expect.wantOk (parseConfig path) ""
+                let config = Expect.wantOk (parseConfig path None) ""
                 Expect.equal config.ForceUpdate ["a"; "b"; "c"] ""
             finally
                 File.Delete(path)
@@ -52,7 +52,7 @@ let parseConfigTests =
             let json = minimalJson.Replace("\"forceUpdate\": \"\"", "\"forceUpdate\": [\"x\", \"y\"]")
             let path = writeJsonToTempFile json
             try
-                let config = Expect.wantOk (parseConfig path) ""
+                let config = Expect.wantOk (parseConfig path None) ""
                 Expect.equal config.ForceUpdate ["x"; "y"] ""
             finally
                 File.Delete(path)
@@ -60,7 +60,7 @@ let parseConfigTests =
         test "forceUpdate as empty string yields empty list" {
             let path = writeJsonToTempFile minimalJson
             try
-                let config = Expect.wantOk (parseConfig path) ""
+                let config = Expect.wantOk (parseConfig path None) ""
                 Expect.isEmpty config.ForceUpdate ""
             finally
                 File.Delete(path)
@@ -69,7 +69,7 @@ let parseConfigTests =
             let json = minimalJson.Replace("\"forceUpdate\": \"\"", "\"forceUpdate\": []")
             let path = writeJsonToTempFile json
             try
-                let config = Expect.wantOk (parseConfig path) ""
+                let config = Expect.wantOk (parseConfig path None) ""
                 Expect.isEmpty config.ForceUpdate ""
             finally
                 File.Delete(path)
@@ -84,29 +84,17 @@ let parseConfigTests =
         path
 
     testList "Parse config with overlay" [
-        test "Non-existent overlay file returns error" {
-            let dir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString())
-            Directory.CreateDirectory(dir) |> ignore
-            try
-                let basePath = writeJsonFile dir "settings.json" """{ "apiUri": "https://api.zaonce.net" }"""
-                let result = parseConfig basePath (Some "/nonexistent/overlay.json")
-                match result with
-                | Error (BadValue (key, _)) -> Expect.equal key "settings" ""
-                | other -> failtest $"Expected BadValue error for missing overlay file but got: %A{other}"
-            finally
-                Directory.Delete(dir, true)
-        }
+        // Note: Overlay file existence is checked in Program.fs, matching base file logic
         test "Overlay merges on top of base" {
             let dir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString())
             Directory.CreateDirectory(dir) |> ignore
             try
-                let basePath = writeJsonFile dir "settings.json" """{ "apiUri": "https://api.zaonce.net", "shutdownTimeout": 10 }"""
+                let basePath = writeJsonFile dir "settings.json" """{ "apiUri": "https://api.zaonce.net", "watchForCrashes": false, "shutdownTimeout": 10 }"""
                 let overlayPath = writeJsonFile dir "overlay.json" """{ "shutdownTimeout": 30 }"""
-                match parseConfig basePath (Some overlayPath) with
-                | Ok config ->
-                    Expect.equal config.ShutdownTimeout 30 "Overlay should override shutdownTimeout"
-                    Expect.equal config.ApiUri "https://api.zaonce.net" "Base apiUri should be preserved"
-                | Error e -> failtest $"Expected Ok but got Error: %A{e}"
+                let result = parseConfig basePath (Some overlayPath)
+                let config = Expect.wantOk result ""
+                Expect.equal config.ShutdownTimeout 30 "Overlay should override shutdownTimeout"
+                Expect.equal config.ApiUri "https://api.zaonce.net" "Base apiUri should be preserved"
             finally
                 Directory.Delete(dir, true)
         }
@@ -114,12 +102,11 @@ let parseConfigTests =
             let dir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString())
             Directory.CreateDirectory(dir) |> ignore
             try
-                let basePath = writeJsonFile dir "settings.json" """{ "apiUri": "https://api.zaonce.net", "shutdownTimeout": 15 }"""
-                match parseConfig basePath None with
-                | Ok config ->
-                    Expect.equal config.ShutdownTimeout 15 ""
-                    Expect.equal config.ApiUri "https://api.zaonce.net" ""
-                | Error e -> failtest $"Expected Ok but got Error: %A{e}"
+                let basePath = writeJsonFile dir "settings.json" """{ "apiUri": "https://api.zaonce.net", "watchForCrashes": false, "shutdownTimeout": 15 }"""
+                let result = parseConfig basePath None
+                let config = Expect.wantOk result ""
+                Expect.equal config.ShutdownTimeout 15 ""
+                Expect.equal config.ApiUri "https://api.zaonce.net" ""
             finally
                 Directory.Delete(dir, true)
         }
@@ -127,12 +114,11 @@ let parseConfigTests =
             let dir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString())
             Directory.CreateDirectory(dir) |> ignore
             try
-                let basePath = writeJsonFile dir "settings.json" """{ "apiUri": "https://api.zaonce.net", "processes": [{ "fileName": "app.exe" }] }"""
+                let basePath = writeJsonFile dir "settings.json" """{ "apiUri": "https://api.zaonce.net", "watchForCrashes": false, "processes": [{ "fileName": "app.exe" }] }"""
                 let overlayPath = writeJsonFile dir "overlay.json" """{ "processes": [] }"""
-                match parseConfig basePath (Some overlayPath) with
-                | Ok config ->
-                    Expect.isEmpty config.Processes "Overlay empty processes should replace base"
-                | Error e -> failtest $"Expected Ok but got Error: %A{e}"
+                let result = parseConfig basePath (Some overlayPath)
+                let config = Expect.wantOk result ""
+                Expect.isEmpty config.Processes "Overlay empty processes should replace base"
             finally
                 Directory.Delete(dir, true)
         }

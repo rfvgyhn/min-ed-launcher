@@ -196,7 +196,6 @@ type ProcessConfig =
 type Config =
     { [<DefaultValue("https://api.zaonce.net")>]
       ApiUri: string
-      [<DefaultValue("true")>]
       WatchForCrashes: bool
       GameLocation: string option
       Language: string option
@@ -328,6 +327,7 @@ let private parseConfigFromRoot (configRoot: IConfigurationRoot) =
         |> Seq.mapOrFail AuthorizedProduct.fromConfig
     match AppConfig(configRoot).Get<Config>() with
     | Ok config ->
+        // FsConfig doesn't support list of records so handle it manually
         let config = parseForceUpdate configRoot config
         let processes = parseProcesses "processes"
         let shutdownProcesses = parseProcesses "shutdownProcesses"
@@ -341,18 +341,14 @@ let private parseConfigFromRoot (configRoot: IConfigurationRoot) =
     | Error error -> Error error
 
 let parseConfig (baseFile: string) (overlayFile: string option) =
-    match overlayFile with
-    | Some path when not (File.Exists(path)) ->
-        BadValue ("settings", $"Overlay settings file not found: %s{path}") |> Error
-    | _ ->
-        let configRoot =
-            match overlayFile with
-            | None ->
-                ConfigurationBuilder().AddJsonFile(baseFile, false).Build()
-            | Some path ->
-                use mergedStream = mergeJsonFiles baseFile path
-                ConfigurationBuilder().AddJsonStream(mergedStream).Build()
-        parseConfigFromRoot configRoot
+    let configRoot =
+        match overlayFile with
+        | None ->
+            ConfigurationBuilder().AddJsonFile(baseFile, false).Build()
+        | Some path ->
+            use mergedStream = mergeJsonFiles baseFile path
+            ConfigurationBuilder().AddJsonStream(mergedStream).Build()
+    parseConfigFromRoot configRoot
    
 let private mapProcessConfig p =
     let pInfo = ProcessStartInfo()
