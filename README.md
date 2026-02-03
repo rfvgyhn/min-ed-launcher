@@ -208,33 +208,33 @@ Windows: `%LOCALAPPDATA%\min-ed-launcher\settings.json`
 
 Linux: `$XDG_CONFIG_HOME/min-ed-launcher/settings.json` (`~/.config` if `$XDG_CONFIG_HOME` isn't set)
 
-| Key | Type | Default | Description |
-|-----|------|---------|-------------|
-| `apiUri` | string | `"https://api.zaonce.net"` | FDev API base URI |
-| `watchForCrashes` | bool | `false` | Launch game via `WatchDog64.exe` |
-| `gameLocation` | string | *null* | Path to game install folder. Auto-detected if omitted |
-| `language` | string | *null* | Game language (`en`, or a language folder name) |
-| `autoUpdate` | bool | `true` | Auto-update out-of-date games |
-| `checkForLauncherUpdates` | bool | `true` | Check for new min-ed-launcher versions |
-| `maxConcurrentDownloads` | int | `4` | Max simultaneous update downloads |
-| `forceUpdate` | string/array | `""` | SKUs to force-update via FDev servers (comma-separated string or JSON array) |
-| `processes` | array | `[]` | Programs to launch before the game. See [process fields](#process-fields) below |
-| `shutdownProcesses` | array | `[]` | Programs to launch after game shutdown. Same fields as `processes` |
-| `shutdownTimeout` | int | `10` | Seconds to wait before force-killing processes |
-| `filterOverrides` | array | `[]` | Override product filters for launch flags (e.g. `/edo`, `/edh`) |
-| `additionalProducts` | array | `[]` | Extra products for the authorized list |
-| `cacheDir` | string | *(OS default)* | Directory for update downloads. See [cache] section for default location |
-| `gameStartDelay` | int | `0` | Seconds to wait after starting processes but before launching the game |
-| `shutdownDelay` | int | `0` | Seconds to wait before closing processes |
+| Key                       | Type   | Default                      | Description                                                                     |
+|---------------------------|--------|------------------------------|---------------------------------------------------------------------------------|
+| `apiUri`                  | string | `"https://api.zaonce.net"`   | FDev API base URI                                                               |
+| `watchForCrashes`         | bool   | `false`                      | Launch game via `WatchDog64.exe`                                                |
+| `gameLocation`            | string | *null*                       | Path to game install folder. Auto-detected if omitted                           |
+| `language`                | string | *null*                       | Game language (`en`, or a language folder name)                                 |
+| `autoUpdate`              | bool   | `true`                       | Auto-update out-of-date games                                                   |
+| `checkForLauncherUpdates` | bool   | `true`                       | Check for new min-ed-launcher versions                                          |
+| `maxConcurrentDownloads`  | int    | `4`                          | Max simultaneous update downloads                                               |
+| `forceUpdate`             | array  | `[]`                         | SKUs to force-update via FDev servers                                           |
+| `processes`               | array  | `[]`                         | Programs to launch before the game. See [process fields](#process-fields) below |
+| `shutdownProcesses`       | array  | `[]`                         | Programs to launch after game shutdown. Same fields as `processes`              |
+| `shutdownTimeout`         | int    | `10`                         | Seconds to wait before force-killing processes                                  |
+| `filterOverrides`         | array  | `[]`                         | Override product filters for launch flags (e.g. `/edo`, `/edh`)                 |
+| `additionalProducts`      | array  | `[]`                         | Extra products for the authorized list                                          |
+| `cacheDir`                | string | *(OS default)*               | Directory for update downloads. See [cache] section for default location        |
+| `gameStartDelay`          | int    | `0`                          | Seconds to wait after starting processes but before launching the game          |
+| `shutdownDelay`           | int    | `0`                          | Seconds to wait before closing processes                                        |
 
 #### Process fields
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `fileName` | string | *(required)* | Path to executable |
-| `arguments` | string | *null* | Command-line arguments |
-| `restartOnRelaunch` | bool | `false` | Restart the process when the game restarts via `/restart` |
-| `keepOpen` | bool | `false` | Don't stop this process when the launcher exits |
+| Field               | Type   | Default      | Description                                              |
+|---------------------|--------|--------------|----------------------------------------------------------|
+| `fileName`          | string | *(required)* | Path to executable                                       |
+| `arguments`         | string | *null*       | Command-line arguments                                   |
+| `restartOnRelaunch` | bool   | `false`      | Restart the process when the game restarts via `/restart` |
+| `keepOpen`          | bool   | `false`      | Don't stop this process when the launcher exits          |
 
 > [!NOTE]
 > When specifying a path for `gameLocation`, `cacheDir` or `processes.fileName` on Windows, it's required to escape backslashes. Make sure to use a
@@ -256,7 +256,7 @@ double backslash (`\\`) instead of a single backslash (`\`).
   "autoUpdate": true,
   "checkForLauncherUpdates": true,
   "maxConcurrentDownloads": 4,
-  "forceUpdate": "PUBLIC_TEST_SERVER_OD",
+  "forceUpdate": ["PUBLIC_TEST_SERVER_OD"],
   "cacheDir": "C:\\path\\to\\dir",
   "gameStartDelay": 0,
   "shutdownDelay": 0,

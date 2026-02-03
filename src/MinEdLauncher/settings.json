@@ -5,7 +5,7 @@
     "autoUpdate": true,
     "checkForLauncherUpdates": true,
     "maxConcurrentDownloads": 4,
-    "forceUpdate": "",
+    "forceUpdate": [],
     "processes": [],
     "shutdownProcesses": [],
     "filterOverrides": [

@@ -42,10 +42,8 @@ let parseConfigTests =
             let json = minimalJson.Replace("\"forceUpdate\": \"\"", "\"forceUpdate\": \"a, b , c\"")
             let path = writeJsonToTempFile json
             try
-                match parseConfig path with
-                | Ok config ->
-                    Expect.equal config.ForceUpdate ["a"; "b"; "c"] ""
-                | Error e -> failtest $"Parse failed: %A{e}"
+                let config = Expect.wantOk (parseConfig path) ""
+                Expect.equal config.ForceUpdate ["a"; "b"; "c"] ""
             finally
                 File.Delete(path)
         }
@@ -53,20 +51,16 @@ let parseConfigTests =
             let json = minimalJson.Replace("\"forceUpdate\": \"\"", "\"forceUpdate\": [\"x\", \"y\"]")
             let path = writeJsonToTempFile json
             try
-                match parseConfig path with
-                | Ok config ->
-                    Expect.equal config.ForceUpdate ["x"; "y"] ""
-                | Error e -> failtest $"Parse failed: %A{e}"
+                let config = Expect.wantOk (parseConfig path) ""
+                Expect.equal config.ForceUpdate ["x"; "y"] ""
             finally
                 File.Delete(path)
         }
         test "forceUpdate as empty string yields empty list" {
             let path = writeJsonToTempFile minimalJson
             try
-                match parseConfig path with
-                | Ok config ->
-                    Expect.isEmpty config.ForceUpdate ""
-                | Error e -> failtest $"Parse failed: %A{e}"
+                let config = Expect.wantOk (parseConfig path) ""
+                Expect.isEmpty config.ForceUpdate ""
             finally
                 File.Delete(path)
         }
@@ -74,10 +68,8 @@ let parseConfigTests =
             let json = minimalJson.Replace("\"forceUpdate\": \"\"", "\"forceUpdate\": []")
             let path = writeJsonToTempFile json
             try
-                match parseConfig path with
-                | Ok config ->
-                    Expect.isEmpty config.ForceUpdate ""
-                | Error e -> failtest $"Parse failed: %A{e}"
+                let config = Expect.wantOk (parseConfig path) ""
+                Expect.isEmpty config.ForceUpdate ""
             finally
                 File.Delete(path)
         }
