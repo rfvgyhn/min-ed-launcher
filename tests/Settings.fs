@@ -284,6 +284,83 @@ let tests =
                 // /* args are considered whitelist args and not unknown
                 let args = args |> Array.filter (fun arg -> arg = null || (arg.StartsWith('/') && arg.Length < 2))
                 let settings = parse args
-                
+
                 settings = Settings.defaults
+    ]
+
+[<Tests>]
+let configTests =
+    let parseConfigWithProcesses (processJson: string) =
+        let json = $"""{{
+            "apiUri": "https://api.zaonce.net",
+            "watchForCrashes": false,
+            "processes": [%s{processJson}],
+            "shutdownProcesses": [],
+            "filterOverrides": [],
+            "additionalProducts": []
+        }}"""
+        let path = Path.GetTempFileName()
+        try
+            File.WriteAllText(path, json)
+            match parseConfig path with
+            | Ok config -> config.Processes
+            | Error _ -> failwith "Failed to parse config"
+        finally
+            File.Delete(path)
+
+    testList "Parsing process delay config" [
+        test "No delay fields defaults to 0 seconds and processStart" {
+            let procs = parseConfigWithProcesses """{ "fileName": "/usr/bin/test" }"""
+            Expect.hasLength procs 1 ""
+            Expect.equal procs.[0].Delay 0 ""
+            Expect.equal procs.[0].DelayReference None ""
+        }
+        test "delay only defaults to processStart reference" {
+            let procs = parseConfigWithProcesses """{ "fileName": "/usr/bin/test", "delay": 10 }"""
+            Expect.equal procs.[0].Delay 10 ""
+            Expect.equal procs.[0].DelayReference None ""
+        }
+        test "delay with gameLaunch reference" {
+            let procs = parseConfigWithProcesses """{ "fileName": "/usr/bin/test", "delay": 5, "delayReference": "gameLaunch" }"""
+            Expect.equal procs.[0].Delay 5 ""
+            Expect.equal procs.[0].DelayReference (Some "gameLaunch") ""
+        }
+        test "delay with gameRunning reference" {
+            let procs = parseConfigWithProcesses """{ "fileName": "/usr/bin/test", "delay": 0, "delayReference": "gameRunning" }"""
+            Expect.equal procs.[0].Delay 0 ""
+            Expect.equal procs.[0].DelayReference (Some "gameRunning") ""
+        }
+        test "Negative delay is preserved" {
+            let procs = parseConfigWithProcesses """{ "fileName": "/usr/bin/test", "delay": -5, "delayReference": "gameLaunch" }"""
+            Expect.equal procs.[0].Delay -5 ""
+        }
+    ]
+
+[<Tests>]
+let delayReferenceTests =
+    testList "Parsing delay reference values" [
+        test "None defaults to ProcessStart" {
+            let result = Settings.parseDelayReference None
+            Expect.equal result ProcessStart ""
+        }
+        test "processStart maps to ProcessStart" {
+            let result = Settings.parseDelayReference (Some "processStart")
+            Expect.equal result ProcessStart ""
+        }
+        test "gameLaunch maps to GameLaunch" {
+            let result = Settings.parseDelayReference (Some "gameLaunch")
+            Expect.equal result GameLaunch ""
+        }
+        test "gameRunning maps to GameRunning" {
+            let result = Settings.parseDelayReference (Some "gameRunning")
+            Expect.equal result GameRunning ""
+        }
+        test "Unknown value defaults to ProcessStart" {
+            let result = Settings.parseDelayReference (Some "bogus")
+            Expect.equal result ProcessStart ""
+        }
+        test "Case insensitive matching" {
+            let result = Settings.parseDelayReference (Some "GAMELAUNCH")
+            Expect.equal result GameLaunch ""
+        }
     ]

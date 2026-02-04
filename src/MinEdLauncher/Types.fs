@@ -108,6 +108,10 @@ type AuthorizedProduct =
       SortKey: int
       Sku: string
       TestApi: bool }
+type DelayReference = ProcessStart | GameLaunch | GameRunning
+type ProcessDelay = { Amount: TimeSpan; Reference: DelayReference }
+    with static member Default = { Amount = TimeSpan.Zero; Reference = ProcessStart }
+
 type LauncherProcess = Host of ProcessStartInfo | Flatpak of appId: string * startInfo: ProcessStartInfo with
     member this.Name = match this with Host startInfo -> startInfo.FileName | Flatpak (appId, _) -> appId
     member this.StartInfo = match this with Host startInfo -> startInfo | Flatpak (_, startInfo) -> startInfo
@@ -133,7 +137,7 @@ type LauncherSettings =
       CheckForLauncherUpdates: bool
       MaxConcurrentDownloads: int
       ForceUpdate: string Set
-      Processes: {| Info: LauncherProcess; RestartOnRelaunch: bool; KeepOpen: bool |} list
+      Processes: {| Info: LauncherProcess; RestartOnRelaunch: bool; KeepOpen: bool; Delay: ProcessDelay |} list
       ShutdownProcesses: LauncherProcess list
       FilterOverrides: OrdinalIgnoreCaseMap<string>
       AdditionalProducts: AuthorizedProduct list
@@ -141,7 +145,8 @@ type LauncherSettings =
       ShutdownTimeout: TimeSpan
       CacheDir: string
       GameStartDelay: TimeSpan
-      ShutdownDelay: TimeSpan }
+      ShutdownDelay: TimeSpan
+      JournalDir: string option }
 type ProductMode = Online | Offline
 type VersionInfo =
     { Name: string
