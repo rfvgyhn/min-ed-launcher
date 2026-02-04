@@ -186,6 +186,7 @@ The following arguments are in addition to the above:
 | /restart delay         | Restart the game after it has closed with _delay_ being the number of seconds given to cancel the restart (i.e `/restart 3`)                                                                            |
 | /dryrun                | Prints output without launching any processes                                                                                                                                                           |
 | /skipInstallPrompt     | Skips the prompt to install uninstalled products when `/autorun` is not specified                                                                                                                       |
+| /settingsOverlay path  | Load a partial settings overlay file on top of the default `settings.json`. See [Settings Overlay] below                                                                                               |
 
 ##### Epic accounts and the /restart feature
 The restart feature requires either [Legendary] or [Heroic] to work with Epic accounts.
@@ -293,6 +294,25 @@ double backslash (`\\`) instead of a single backslash (`\`).
   }]
 }
 ```
+
+#### Settings Overlay
+
+The `/settingsOverlay <path>` flag loads a partial JSON file on top of the default `settings.json`. The overlay only needs to contain the keys you want to override — all other settings are inherited from the base file.
+
+For example, to suppress all auto-launched processes for a specific profile, create a file like:
+
+```json
+{
+  "processes": []
+}
+```
+
+Then use it with: `./MinEdLauncher /frontier alice /settingsOverlay ~/.config/min-ed-launcher/alice.json /autorun`
+
+Merge rules:
+- Scalar values (bool, int, string) — overlay wins if the key is present
+- Lists (processes, shutdownProcesses, etc.) — overlay **replaces** the base list if the key is present, even if empty
+- Keys not present in the overlay inherit their value from the base `settings.json`
 
 ### Multi-Account
 #### Frontier account via Steam or Epic
@@ -414,6 +434,7 @@ Note that the bootstrap project specifically targets Windows and won't publish o
 
 [preview-gif]: https://rfvgyhn.blob.core.windows.net/elite-dangerous/min-ed-launcher-demo.gif
 [Settings]: #settings
+[Settings Overlay]: #settings-overlay
 [flag]: #arguments
 [setup]: #setup
 [Elite Log Agent]: https://github.com/DarkWanderer/Elite-Log-Agent

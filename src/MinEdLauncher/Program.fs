@@ -9,30 +9,41 @@ open System.Threading
 open FsConfig
 open FsToolkit.ErrorHandling
 
+let private findSettingsOverlay (args: string[]) =
+    args
+    |> Array.tryFindIndex (fun a -> a <> null && a.Equals("/settingsOverlay", StringComparison.OrdinalIgnoreCase))
+    |> Option.bind (fun i -> if i + 1 < args.Length then Some args[i + 1] else None)
+
 let getSettings (assembly: Assembly) args =
     let path = Environment.configDir
     match FileIO.ensureDirExists path with
     | Error msg -> Error $"Unable to find/create configuration directory at %s{path} - %s{msg}" |> Task.fromResult
     | Ok settingsDir ->
         let settingsPath = Path.Combine(settingsDir, "settings.json")
+        let overlayPath = findSettingsOverlay args
         Log.debug $"Reading settings from '%s{settingsPath}'"
+        overlayPath |> Option.iter (fun p -> Log.debug $"Using settings overlay from '%s{p}'")
         if not (File.Exists(settingsPath)) then
             use settings = assembly.GetManifestResourceStream("MinEdLauncher.settings.json")
             use file = File.OpenWrite(settingsPath)
             settings.CopyTo(file)
         |> ignore
-            
-        Settings.parseConfig settingsPath
-        |> Result.mapError (fun e ->
-            match e with
-            | BadValue (key, value) -> $"Bad Value: %s{key} - %s{value}"
-            | ConfigParseError.NotFound key -> $"Key not found: %s{key}"
-            | NotSupported key -> $"Key not supported: %s{key}")
-        |> function
-            | Ok c -> task {
-                let! settings = Settings.getSettings args AppContext.BaseDirectory c
-                return settings }
-            | Error msg -> Error msg |> Task.fromResult
+
+        match overlayPath with
+        | Some path when not (File.Exists(path)) ->
+            Error $"Overlay settings file not found: %s{path}" |> Task.fromResult
+        | _ ->
+            Settings.parseConfig settingsPath overlayPath
+            |> Result.mapError (fun e ->
+                match e with
+                | BadValue (key, value) -> $"Bad Value: %s{key} - %s{value}"
+                | ConfigParseError.NotFound key -> $"Key not found: %s{key}"
+                | NotSupported key -> $"Key not supported: %s{key}")
+            |> function
+                | Ok c -> task {
+                    let! settings = Settings.getSettings args AppContext.BaseDirectory c
+                    return settings }
+                | Error msg -> Error msg |> Task.fromResult
 
 let logRuntimeInfo version args =
     Log.info $"Elite Dangerous: Minimal Launcher - v{version}"
