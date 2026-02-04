@@ -208,27 +208,33 @@ Windows: `%LOCALAPPDATA%\min-ed-launcher\settings.json`
 
 Linux: `$XDG_CONFIG_HOME/min-ed-launcher/settings.json` (`~/.config` if `$XDG_CONFIG_HOME` isn't set)
 
-| Settings                    | Effect                                                                                                                                                                                                                                                                              |
-|-----------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| apiUri                      | FDev API base URI. Should only be changed if you are doing local development                                                                                                                                                                                                        |
-| watchForCrashes             | Determines if the game should be launched by `WatchDog64.exe` or not                                                                                                                                                                                                                |
-| gameLocation                | Path to game's install folder. Specify this if the launcher can't figure it out by itself                                                                                                                                                                                           |
-| language                    | Sets the game's language. Supported values are _en_ and the names of the language folders in Elite's install directory                                                                                                                                                              |
-| autoUpdate                  | Automatically update games that are out of date                                                                                                                                                                                                                                     |
-| checkForLauncherUpdates     | Check if there is a newer version of min-ed-launcher                                                                                                                                                                                                                                |
-| maxConcurrentDownloads      | Maximum number of simultaneous downloads when downloading updates                                                                                                                                                                                                                   |
-| forceUpdate                 | By default, Steam and Epic updates are handled by their respective platform. In cases like the Odyssey alpha, FDev doesn't provide updates through Steam or Epic. This allows the launcher to force updates to be done via FDev servers by providing a comma delimited list of SKUs |
-| processes                   | Additional applications to launch before launching the game                                                                                                                                                                                                                         |
-| processes.arguments         | Optional arguments for the process                                                                                                                                                                                                                                                  |
-| processes.restartOnRelaunch | Will shutdown and restart the application when the `/restart` flag is specified before restarting the game                                                                                                                                                                          |
-| processes.keepOpen          | Keep application open after launcher exits                                                                                                                                                                                                                                          |
-| shutdownProcesses           | Additional applications to launch after game has shutdown                                                                                                                                                                                                                           |
-| shutdownTimeout             | Time, in seconds, to wait for additional applications to shutdown before forcefully terminating them                                                                                                                                                                                |
-| filterOverrides             | Manually override a product's filter for use with launch options filter flag (e.g. /edo, /edh, etc...)                                                                                                                                                                              |
-| additionalProducts          | Provide extra products to the authorized product list. Useful for launching Horizons 4.0 when you own the Odyssey DLC                                                                                                                                                               |
-| cacheDir                    | Path to directory used for downloading game updates. See [cache] section for default location                                                                                                                                                                                       |
-| gameStartDelay              | Time to delay after starting processes but before starting ED. Defaults to zero                                                                                                                                                                                                     |
-| shutdownDelay               | Time to delay before closing processes. Defaults to zero                                                                                                                                                                                                                            |
+| Key                       | Type   | Default                      | Description                                                                     |
+|---------------------------|--------|------------------------------|---------------------------------------------------------------------------------|
+| `apiUri`                  | string | `"https://api.zaonce.net"`   | FDev API base URI                                                               |
+| `watchForCrashes`         | bool   | `false`                      | Launch game via `WatchDog64.exe`                                                |
+| `gameLocation`            | string | *null*                       | Path to game install folder. Auto-detected if omitted                           |
+| `language`                | string | *null*                       | Game language (`en`, or a language folder name)                                 |
+| `autoUpdate`              | bool   | `true`                       | Auto-update out-of-date games                                                   |
+| `checkForLauncherUpdates` | bool   | `true`                       | Check for new min-ed-launcher versions                                          |
+| `maxConcurrentDownloads`  | int    | `4`                          | Max simultaneous update downloads                                               |
+| `forceUpdate`             | array  | `[]`                         | SKUs to force-update via FDev servers                                           |
+| `processes`               | array  | `[]`                         | Programs to launch before the game. See [process fields](#process-fields) below |
+| `shutdownProcesses`       | array  | `[]`                         | Programs to launch after game shutdown. Same fields as `processes`              |
+| `shutdownTimeout`         | int    | `10`                         | Seconds to wait before force-killing processes                                  |
+| `filterOverrides`         | array  | `[]`                         | Override product filters for launch flags (e.g. `/edo`, `/edh`)                 |
+| `additionalProducts`      | array  | `[]`                         | Extra products for the authorized list                                          |
+| `cacheDir`                | string | *(OS default)*               | Directory for update downloads. See [cache] section for default location        |
+| `gameStartDelay`          | int    | `0`                          | Seconds to wait after starting processes but before launching the game          |
+| `shutdownDelay`           | int    | `0`                          | Seconds to wait before closing processes                                        |
+
+#### Process fields
+
+| Field               | Type   | Default      | Description                                              |
+|---------------------|--------|--------------|----------------------------------------------------------|
+| `fileName`          | string | *(required)* | Path to executable                                       |
+| `arguments`         | string | *null*       | Command-line arguments                                   |
+| `restartOnRelaunch` | bool   | `false`      | Restart the process when the game restarts via `/restart` |
+| `keepOpen`          | bool   | `false`      | Don't stop this process when the launcher exits          |
 
 > [!NOTE]
 > When specifying a path for `gameLocation`, `cacheDir` or `processes.fileName` on Windows, it's required to escape backslashes. Make sure to use a
@@ -250,7 +256,7 @@ double backslash (`\\`) instead of a single backslash (`\`).
   "autoUpdate": true,
   "checkForLauncherUpdates": true,
   "maxConcurrentDownloads": 4,
-  "forceUpdate": "PUBLIC_TEST_SERVER_OD",
+  "forceUpdate": ["PUBLIC_TEST_SERVER_OD"],
   "cacheDir": "C:\\path\\to\\dir",
   "gameStartDelay": 0,
   "shutdownDelay": 0,

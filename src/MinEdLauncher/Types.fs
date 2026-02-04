@@ -15,7 +15,7 @@ type OrdinalIgnoreCaseSet = FSharpx.Collections.Tagged.Set<string, OrdinalIgnore
 module OrdinalIgnoreCaseSet =
     let intersect set2 set1 = OrdinalIgnoreCaseSet.Intersection(set1, set2)
     let any (set: OrdinalIgnoreCaseSet) = not set.IsEmpty
-    let ofSeq (items: string[]) = OrdinalIgnoreCaseSet.Create(OrdinalIgnoreCaseComparer(), items)
+    let ofSeq (items: string seq) = OrdinalIgnoreCaseSet.Create(OrdinalIgnoreCaseComparer(), items)
     let empty = OrdinalIgnoreCaseSet.Empty(OrdinalIgnoreCaseComparer())
     
 type OrdinalIgnoreCaseMap<'Value> = FSharpx.Collections.Tagged.Map<string, 'Value, OrdinalIgnoreCaseComparer>
