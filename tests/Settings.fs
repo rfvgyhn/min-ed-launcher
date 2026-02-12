@@ -122,6 +122,42 @@ let parseConfigTests =
             finally
                 Directory.Delete(dir, true)
         }
+        test "Overlay allows trailing commas in JSON" {
+            let dir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString())
+            Directory.CreateDirectory(dir) |> ignore
+            try
+                let basePath = writeJsonFile dir "settings.json" """{ "apiUri": "https://api.zaonce.net", }"""
+                let overlayPath = writeJsonFile dir "overlay.json" """{ "watchForCrashes": false, }"""
+                let result = parseConfig basePath (Some overlayPath)
+                
+                Expect.wantOk result "" |> ignore
+            finally
+                Directory.Delete(dir, true)
+        }
+        test "Overlay allows comments in JSON" {
+            let dir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString())
+            Directory.CreateDirectory(dir) |> ignore
+            try
+                let basePath = writeJsonFile dir "settings.json"
+                                   """
+                                   {
+                                     // comment
+                                     "apiUri": "https://api.zaonce.net"
+                                   }
+                                   """
+                let overlayPath = writeJsonFile dir "overlay.json"
+                                      """
+                                      { 
+                                        // comment
+                                        "watchForCrashes": false
+                                      }
+                                      """
+                let result = parseConfig basePath (Some overlayPath)
+                
+                Expect.wantOk result "" |> ignore
+            finally
+                Directory.Delete(dir, true)
+        }
     ]
 
 [<Tests>]

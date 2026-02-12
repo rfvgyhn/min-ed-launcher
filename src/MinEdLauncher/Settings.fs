@@ -289,8 +289,10 @@ let private writeJsonMerged (writer: Utf8JsonWriter) (baseEl: JsonElement) (over
     merge baseEl overlayEl
 
 let private mergeJsonFiles (baseFile: string) (overlayFile: string) =
-    use baseDoc = JsonDocument.Parse(File.ReadAllText(baseFile))
-    use overlayDoc = JsonDocument.Parse(File.ReadAllText(overlayFile))
+    // Mimic options of ConfigurationBuilder.AddJsonFile()
+    let options = JsonDocumentOptions(AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip)
+    use baseDoc = JsonDocument.Parse(File.ReadAllText(baseFile), options)
+    use overlayDoc = JsonDocument.Parse(File.ReadAllText(overlayFile), options)
     let ms = new MemoryStream()
     use writer = new Utf8JsonWriter(ms)
     writeJsonMerged writer baseDoc.RootElement overlayDoc.RootElement
