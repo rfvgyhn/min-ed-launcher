@@ -421,10 +421,10 @@ let configTests =
             Expect.equal procs.[0].Delay 5 ""
             Expect.equal procs.[0].DelayReference (Some "gameLaunch") ""
         }
-        test "delay with gameRunning reference" {
-            let procs = parseConfigWithProcesses """{ "fileName": "/usr/bin/test", "delay": 0, "delayReference": "gameRunning" }"""
+        test "delay with journalActive reference" {
+            let procs = parseConfigWithProcesses """{ "fileName": "/usr/bin/test", "delay": 0, "delayReference": "journalActive" }"""
             Expect.equal procs.[0].Delay 0 ""
-            Expect.equal procs.[0].DelayReference (Some "gameRunning") ""
+            Expect.equal procs.[0].DelayReference (Some "journalActive") ""
         }
         test "Negative delay is preserved" {
             let procs = parseConfigWithProcesses """{ "fileName": "/usr/bin/test", "delay": -5, "delayReference": "gameLaunch" }"""
@@ -447,9 +447,13 @@ let delayReferenceTests =
             let result = Settings.parseDelayReference (Some "gameLaunch")
             Expect.equal result GameLaunch ""
         }
-        test "gameRunning maps to GameRunning" {
+        test "journalActive maps to JournalActive" {
+            let result = Settings.parseDelayReference (Some "journalActive")
+            Expect.equal result JournalActive ""
+        }
+        test "gameRunning is accepted as deprecated alias for JournalActive" {
             let result = Settings.parseDelayReference (Some "gameRunning")
-            Expect.equal result GameRunning ""
+            Expect.equal result JournalActive ""
         }
         test "Unknown value defaults to ProcessStart" {
             let result = Settings.parseDelayReference (Some "bogus")

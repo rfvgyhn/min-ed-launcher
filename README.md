@@ -227,15 +227,28 @@ Linux: `$XDG_CONFIG_HOME/min-ed-launcher/settings.json` (`~/.config` if `$XDG_CO
 | `cacheDir`                | string | *(OS default)*               | Directory for update downloads. See [cache] section for default location        |
 | `gameStartDelay`          | int    | `0`                          | Seconds to wait after starting processes but before launching the game          |
 | `shutdownDelay`           | int    | `0`                          | Seconds to wait before closing processes                                        |
+| `journalDir`              | string | *(auto-detected)*            | Path to the Elite Dangerous journal directory (only needed when auto-detection fails) |
 
 #### Process fields
 
-| Field               | Type   | Default      | Description                                              |
-|---------------------|--------|--------------|----------------------------------------------------------|
-| `fileName`          | string | *(required)* | Path to executable                                       |
-| `arguments`         | string | *null*       | Command-line arguments                                   |
-| `restartOnRelaunch` | bool   | `false`      | Restart the process when the game restarts via `/restart` |
-| `keepOpen`          | bool   | `false`      | Don't stop this process when the launcher exits          |
+| Field               | Type   | Default         | Description                                                                           |
+|---------------------|--------|-----------------|---------------------------------------------------------------------------------------|
+| `fileName`          | string | *(required)*    | Path to executable                                                                    |
+| `arguments`         | string | *null*          | Command-line arguments                                                                |
+| `restartOnRelaunch` | bool   | `false`         | Restart the process when the game restarts via `/restart`                             |
+| `keepOpen`          | bool   | `false`         | Don't stop this process when the launcher exits                                       |
+| `delay`             | int    | `0`             | Seconds to delay before launching this process. See [delay reference](#delay-reference) below |
+| `delayReference`    | string | `"processStart"` | When the delay is measured from. See [delay reference](#delay-reference) below        |
+
+##### Delay reference
+
+`delayReference` controls what event `delay` is measured from:
+
+- `processStart` (default) — delay is measured from when min-ed-launcher starts the pre-game processes. Equivalent to the previous behaviour with no delay settings.
+- `gameLaunch` — delay is measured from when the game binary is launched. Supports negative values, in which case the process starts `|delay|` seconds **before** the game (min-ed-launcher will wait that long before launching the game).
+- `journalActive` — process starts when Elite Dangerous begins writing to its journal log (i.e. once you're actually past the main menu). An optional `delay` can be added on top. Falls back to starting immediately if the journal directory can't be found. Times out after five minutes of waiting.
+
+Processes with `restartOnRelaunch: true` re-fire against the new game launch / journal activity on each `/restart` cycle.
 
 > [!NOTE]
 > When specifying a path for `gameLocation`, `cacheDir` or `processes.fileName` on Windows, it's required to escape backslashes. Make sure to use a

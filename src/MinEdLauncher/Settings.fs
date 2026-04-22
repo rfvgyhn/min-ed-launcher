@@ -362,7 +362,10 @@ let parseDelayReference (value: string option) =
     match value |> Option.map (fun s -> s.ToLowerInvariant()) with
     | None | Some "processstart" -> ProcessStart
     | Some "gamelaunch" -> GameLaunch
-    | Some "gamerunning" -> GameRunning
+    | Some "journalactive" -> JournalActive
+    | Some "gamerunning" ->
+        Log.warn "delayReference 'gameRunning' is deprecated; use 'journalActive' instead"
+        JournalActive
     | Some unknown ->
         Log.warn $"Unknown delay reference '%s{unknown}', defaulting to processStart"
         ProcessStart

@@ -108,7 +108,7 @@ type AuthorizedProduct =
       SortKey: int
       Sku: string
       TestApi: bool }
-type DelayReference = ProcessStart | GameLaunch | GameRunning
+type DelayReference = ProcessStart | GameLaunch | JournalActive
 type ProcessDelay = { Amount: TimeSpan; Reference: DelayReference }
     with static member Default = { Amount = TimeSpan.Zero; Reference = ProcessStart }
 
