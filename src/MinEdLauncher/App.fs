@@ -389,16 +389,15 @@ let rec private launchLoop initialLaunch settings playableProducts (session: EdS
 
         let gameLaunchSignal = TaskCompletionSource<unit>()
 
-        for proc in gameLaunchProcs do
+        // Processes with non-negative game-launch delays start on or after the game-launch signal.
+        // Negative delays are handled separately via preGameTasks so we don't launch them twice.
+        for proc in gameLaunchProcs |> List.filter (fun p -> p.Delay.Amount >= TimeSpan.Zero) do
             let delay = proc.Delay.Amount
             let t = task {
-                if delay < TimeSpan.Zero then
-                    ()
-                else
-                    do! gameLaunchSignal.Task
-                    if delay > TimeSpan.Zero then
-                        Log.info $"Process %s{proc.Info.Name} will start %.0f{delay.TotalSeconds}s after game launch"
-                        do! Task.Delay(delay)
+                do! gameLaunchSignal.Task
+                if delay > TimeSpan.Zero then
+                    Log.info $"Process %s{proc.Info.Name} will start %.0f{delay.TotalSeconds}s after game launch"
+                    do! Task.Delay(delay)
                 return Process.launchProcesses false [proc.Info]
             }
             delayedTasks.Add(t)
