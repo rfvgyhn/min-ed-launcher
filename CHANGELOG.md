@@ -27,6 +27,10 @@
   LD_LIBRARY_PATH="" konsole -e env MEL_LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./MinEdLauncher %command% /autorun /autoquit
   ```
 
+### Changes
+- Remove "Elite Runtime" output from console (still writes to debug log file) since _Products Dir_ could contain a 
+  username ([#205])
+
 ### Bug Fixes
 - Fix flatpaks not being shutdown properly ([#196])
 - Fix not ignoring pre-releases when checking for launcher updates
@@ -474,3 +478,4 @@ Initial release
 [#173]: https://github.com/rfvgyhn/min-ed-launcher/issues/173
 [#177]: https://github.com/rfvgyhn/min-ed-launcher/issues/177
 [#196]: https://github.com/rfvgyhn/min-ed-launcher/issues/196
+[#205]: https://github.com/rfvgyhn/min-ed-launcher/issues/205

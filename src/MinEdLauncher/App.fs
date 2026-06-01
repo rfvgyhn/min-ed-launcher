@@ -71,7 +71,7 @@ let login launcherVersion runningTime httpClient machineId (platform: Platform) 
         | Error msg -> return Failure msg |> Error }
 
 let printInfo (platform: Platform) productsDir cobraVersion =
-    Log.info $"""Elite Runtime
+    Log.debug $"""Elite Runtime
     Platform: %s{platform.Name}
     CobraBay Version: %s{cobraVersion}
     Products Dir: %s{productsDir}"""
