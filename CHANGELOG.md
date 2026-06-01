@@ -13,6 +13,13 @@
     "fid1234": ""
   }
   ```
+- Add `/settingsOverlay` flag for per-profile settings.
+  Load a partial JSON overlay on top of the default settings.json. Only keys present in the overlay override the base 
+  config, allowing multi-account users to customize settings per profile. ([#199] - [@Teal Bauer])
+
+  See [settings overlay] section for details
+- Warn on unknown top-level keys in settings.json, with typo suggestions. (e.g. `forceUdate` → "Did you mean 'forceUpdate'?")
+  ([#198] - [@Teal Bauer])
 ### Enhancements
 - Log when using the fallback products directory in cases when user doesn't have permissions to write to default 
   products directory ([#177]) 
@@ -466,6 +473,7 @@ Initial release
 [legendary]: https://github.com/derrod/legendary
 [heroic]: https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher
 [settings file]: README.md#settings
+[settings overlay]: README.md#settings-overlay
 [log file]: README.md#troubleshooting
 [EDDiscovery]: https://github.com/EDDiscovery/EDDiscovery
 [EDOMH]: https://github.com/jixxed/ed-odyssey-materials-helper
@@ -478,4 +486,7 @@ Initial release
 [#173]: https://github.com/rfvgyhn/min-ed-launcher/issues/173
 [#177]: https://github.com/rfvgyhn/min-ed-launcher/issues/177
 [#196]: https://github.com/rfvgyhn/min-ed-launcher/issues/196
+[#198]: https://github.com/rfvgyhn/min-ed-launcher/issues/198
+[#199]: https://github.com/rfvgyhn/min-ed-launcher/issues/199
 [#205]: https://github.com/rfvgyhn/min-ed-launcher/issues/205
+[@Teal Bauer]: https://github.com/teal-bauer
