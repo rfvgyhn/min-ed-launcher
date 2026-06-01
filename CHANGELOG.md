@@ -1,6 +1,6 @@
 # Changelog
 
-## [unreleased]
+## [0.13.0] - 2026-06-01
 
 ### New Features
 - Add support for account name aliases. Allows changing/hiding the name that appears in the output. Useful for when the 
@@ -425,7 +425,8 @@ legendary launch --dry-run 9c203b6ed35846e8a4a9ff1e314f6593 2> >(grep "Launch pa
 
 Initial release
 
-[unreleased]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.12.2...HEAD
+[unreleased]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.12.2...v0.13.0
 [0.12.2]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.11.3...v0.12.0
