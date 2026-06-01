@@ -141,7 +141,8 @@ type LauncherSettings =
       ShutdownTimeout: TimeSpan
       CacheDir: string
       GameStartDelay: TimeSpan
-      ShutdownDelay: TimeSpan }
+      ShutdownDelay: TimeSpan
+      AccountAliases: Map<string, string> }
 type ProductMode = Online | Offline
 type VersionInfo =
     { Name: string

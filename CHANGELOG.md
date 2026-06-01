@@ -2,6 +2,17 @@
 
 ## [unreleased]
 
+### New Features
+- Add support for account name aliases. Allows changing/hiding the name that appears in the output. Useful for when the 
+  launcher may be seen by others (streaming, video capture, etc...) and you don't want to expose your account name. ([#205])
+
+  Set the new `accountAliases` property in your [settings file].
+  ```json
+  "accountAliases": {
+    "Dwight Schrute": "CMDR Recyclops",
+    "fid1234": ""
+  }
+  ```
 ### Enhancements
 - Log when using the fallback products directory in cases when user doesn't have permissions to write to default 
   products directory ([#177]) 

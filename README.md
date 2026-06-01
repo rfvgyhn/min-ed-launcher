@@ -209,24 +209,34 @@ Windows: `%LOCALAPPDATA%\min-ed-launcher\settings.json`
 
 Linux: `$XDG_CONFIG_HOME/min-ed-launcher/settings.json` (`~/.config` if `$XDG_CONFIG_HOME` isn't set)
 
-| Key                       | Type   | Default                      | Description                                                                     |
-|---------------------------|--------|------------------------------|---------------------------------------------------------------------------------|
-| `apiUri`                  | string | `"https://api.zaonce.net"`   | FDev API base URI                                                               |
-| `watchForCrashes`         | bool   | `false`                      | Launch game via `WatchDog64.exe`                                                |
-| `gameLocation`            | string | *null*                       | Path to game install folder. Auto-detected if omitted                           |
-| `language`                | string | *null*                       | Game language (`en`, or a language folder name)                                 |
-| `autoUpdate`              | bool   | `true`                       | Auto-update out-of-date games                                                   |
-| `checkForLauncherUpdates` | bool   | `true`                       | Check for new min-ed-launcher versions                                          |
-| `maxConcurrentDownloads`  | int    | `4`                          | Max simultaneous update downloads                                               |
-| `forceUpdate`             | array  | `[]`                         | SKUs to force-update via FDev servers                                           |
-| `processes`               | array  | `[]`                         | Programs to launch before the game. See [process fields](#process-fields) below |
-| `shutdownProcesses`       | array  | `[]`                         | Programs to launch after game shutdown. Same fields as `processes`              |
-| `shutdownTimeout`         | int    | `10`                         | Seconds to wait before force-killing processes                                  |
-| `filterOverrides`         | array  | `[]`                         | Override product filters for launch flags (e.g. `/edo`, `/edh`)                 |
-| `additionalProducts`      | array  | `[]`                         | Extra products for the authorized list                                          |
-| `cacheDir`                | string | *(OS default)*               | Directory for update downloads. See [cache] section for default location        |
-| `gameStartDelay`          | int    | `0`                          | Seconds to wait after starting processes but before launching the game          |
-| `shutdownDelay`           | int    | `0`                          | Seconds to wait before closing processes                                        |
+| Key                       | Type   | Default                    | Description                                                                     |
+|---------------------------|--------|----------------------------|---------------------------------------------------------------------------------|
+| `apiUri`                  | string | `"https://api.zaonce.net"` | FDev API base URI                                                               |
+| `watchForCrashes`         | bool   | `false`                    | Launch game via `WatchDog64.exe`                                                |
+| `gameLocation`            | string | *null*                     | Path to game install folder. Auto-detected if omitted                           |
+| `language`                | string | *null*                     | Game language (`en`, or a language folder name)                                 |
+| `autoUpdate`              | bool   | `true`                     | Auto-update out-of-date games                                                   |
+| `checkForLauncherUpdates` | bool   | `true`                     | Check for new min-ed-launcher versions                                          |
+| `maxConcurrentDownloads`  | int    | `4`                        | Max simultaneous update downloads                                               |
+| `forceUpdate`             | array  | `[]`                       | SKUs to force-update via FDev servers                                           |
+| `processes`               | array  | `[]`                       | Programs to launch before the game. See [process fields](#process-fields) below |
+| `shutdownProcesses`       | array  | `[]`                       | Programs to launch after game shutdown. Same fields as `processes`              |
+| `shutdownTimeout`         | int    | `10`                       | Seconds to wait before force-killing processes                                  |
+| `filterOverrides`         | array  | `[]`                       | Override product filters for launch flags (e.g. `/edo`, `/edh`)                 |
+| `additionalProducts`      | array  | `[]`                       | Extra products for the authorized list                                          |
+| `cacheDir`                | string | *(OS default)*             | Directory for update downloads. See [cache] section for default location        |
+| `gameStartDelay`          | int    | `0`                        | Seconds to wait after starting processes but before launching the game          |
+| `shutdownDelay`           | int    | `0`                        | Seconds to wait before closing processes                                        |
+| `accountAliases`          | object | `{}`                       | Aliases for account names/ids                                                   |
+
+#### Account Aliases
+The `accountAliases` field allows you to specify aliases for account names and ids. Useful for when the launcher may be
+seen by others (streaming, video capture, etc...) and you don't want to expose your account name.
+
+Each key is either your Frontier account's registered name or Frontier ID. Keys are case-sensitive. The value is the
+alias you want to use. Use an empty string (`""`) if you want to hide it completely.
+
+Your ID and name can be viewed at https://user.frontierstore.net/user/info
 
 #### Process fields
 
@@ -291,7 +301,11 @@ double backslash (`\\`) instead of a single backslash (`\`).
     "sortkey": "04",
     "product_name": "Elite Dangerous: Horizons (4.0)",
     "product_sku": "FORC-FDEV-DO-38-IN-40"
-  }]
+  }],
+  "accountAliases": {
+      "Dwight Schrute": "CMDR Recyclops",
+      "fid1234": "CMDR Other Name"
+  }
 }
 ```
 

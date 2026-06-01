@@ -35,7 +35,8 @@ let defaults =
       ShutdownTimeout = TimeSpan.FromSeconds(10)
       CacheDir = ""
       GameStartDelay = TimeSpan.Zero
-      ShutdownDelay = TimeSpan.Zero }
+      ShutdownDelay = TimeSpan.Zero
+      AccountAliases = Map.empty }
     
 [<RequireQualifiedAccess>]
 type FrontierCredResult = Found of string * string * string option | NotFound of string | UnexpectedFormat of string | Error of string
@@ -216,7 +217,8 @@ type Config =
       [<DefaultValue("0")>]
       GameStartDelay: int
       [<DefaultValue("0")>]
-      ShutdownDelay: int }
+      ShutdownDelay: int
+      AccountAliases: (string * string) list }
 let private levenshteinDistance (a: string) (b: string) =
     let a = a.ToLowerInvariant()
     let b = b.ToLowerInvariant()
@@ -234,7 +236,8 @@ let private knownConfigKeys =
     [ "apiUri"; "watchForCrashes"; "gameLocation"; "language"; "autoUpdate"
       "checkForLauncherUpdates"; "maxConcurrentDownloads"; "forceUpdate"
       "processes"; "shutdownProcesses"; "filterOverrides"; "additionalProducts"
-      "shutdownTimeout"; "cacheDir"; "gameStartDelay"; "shutdownDelay" ]
+      "shutdownTimeout"; "cacheDir"; "gameStartDelay"; "shutdownDelay"
+      "accountAliases" ]
     |> OrdinalIgnoreCaseSet.ofSeq
 
 let private warnUnknownKeys (configRoot: IConfigurationRoot) =
@@ -324,6 +327,10 @@ let private parseConfigFromRoot (configRoot: IConfigurationRoot) =
                 else
                     Some { FileName = fileName; Arguments = Option.ofObj args; RestartOnRelaunch = restart; KeepOpen = keepOpen })
             |> Seq.toList
+    let parseAliases() =
+        configRoot.GetSection("accountAliases").GetChildren()
+        |> Seq.map (fun section -> section.Key, section.Value)
+        |> Seq.toList
     let parseAdditionalProducts() =
         configRoot.GetSection("additionalProducts").GetChildren()
         |> Seq.mapOrFail AuthorizedProduct.fromConfig
@@ -338,7 +345,13 @@ let private parseConfigFromRoot (configRoot: IConfigurationRoot) =
                 if String.IsNullOrWhiteSpace(value) then None
                 else Some { Sku = key; Filter = value })
         match parseAdditionalProducts() with
-        | Ok additionalProducts -> { config with Processes = processes; ShutdownProcesses = shutdownProcesses; FilterOverrides = filterOverrides; AdditionalProducts = additionalProducts } |> ConfigParseResult.Ok
+        | Ok additionalProducts ->
+            { config with Processes = processes
+                          ShutdownProcesses = shutdownProcesses
+                          FilterOverrides = filterOverrides
+                          AccountAliases = parseAliases()
+                          AdditionalProducts = additionalProducts }
+            |> ConfigParseResult.Ok
         | Error msg -> BadValue ("additionalProducts", msg) |> Error
     | Error error -> Error error
 
@@ -414,6 +427,7 @@ let getSettings args appDir fileConfig = task {
                                                           ShutdownTimeout = TimeSpan.FromSeconds(fileConfig.ShutdownTimeout)
                                                           CacheDir = fileConfig.CacheDir |> Option.defaultValue Environment.cacheDir
                                                           GameStartDelay = TimeSpan.FromSeconds(fileConfig.GameStartDelay)
-                                                          ShutdownDelay = TimeSpan.FromSeconds(fileConfig.ShutdownDelay) 
+                                                          ShutdownDelay = TimeSpan.FromSeconds(fileConfig.ShutdownDelay)
+                                                          AccountAliases = fileConfig.AccountAliases |> Map.ofList
                                            })
 }

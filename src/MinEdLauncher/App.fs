@@ -16,11 +16,11 @@ type LoginError =
 | ActionRequired of string
 | CouldntConfirmOwnership of Platform
 | Failure of string
-let login launcherVersion runningTime httpClient machineId (platform: Platform) lang =
+let login launcherVersion runningTime httpClient machineId (platform: Platform) lang aliases =
     let authenticate disposable = function
         | Ok authToken -> task {
             Log.debug $"Authenticating via %s{platform.Name}"
-            match! Api.authenticate runningTime authToken platform machineId lang httpClient with
+            match! Api.authenticate runningTime authToken platform machineId lang aliases httpClient with
             | Api.Authorized connection ->
                 Log.debug "Successfully authenticated"
                 let connection = disposable |> Option.map connection.WithResource |> Option.defaultValue connection
@@ -407,8 +407,12 @@ let run settings launcherVersion cancellationToken = taskResult {
     
     Log.info("Logging in")
     let! getRunningTime = createGetRunningTime httpClient
-    use! connection = login launcherVersion getRunningTime httpClient machineId settings.Platform lang |> TaskResult.mapError Login
-    Log.info $"Logged in via %s{settings.Platform.Name} as: %s{connection.Session.Name}"
+    use! connection = login launcherVersion getRunningTime httpClient machineId settings.Platform lang settings.AccountAliases |> TaskResult.mapError Login
+    
+    if String.IsNullOrWhiteSpace(connection.Session.Name) then
+        Log.info $"Logged in via %s{settings.Platform.Name}"
+    else
+        Log.info $"Logged in via %s{settings.Platform.Name} as %s{connection.Session.Name}"
     
     Log.debug "Getting authorized products"    
     let applyFixes = AuthorizedProduct.fixDirectoryName productsDir settings.Platform Directory.Exists File.Exists

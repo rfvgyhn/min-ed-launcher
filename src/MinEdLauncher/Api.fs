@@ -141,7 +141,13 @@ let rec login request =
         |> TaskResult.map (fun token -> (cred.Username, cred.Password, token))
     | Some cred, Some authToken -> (cred.Username, cred.Password, authToken) |> Ok |> Task.fromResult
 
-let authenticate (runningTime: unit -> double) (token: AuthToken) platform machineId lang (httpClient:HttpClient) = task {
+let getAccountName (aliases: Map<string, string>) fId registeredName =
+    fId
+    |> Option.bind aliases.TryFind
+    |> Option.orElseWith (fun () -> registeredName |> Option.bind aliases.TryFind)
+    |> Option.orElse registeredName
+
+let authenticate (runningTime: unit -> double) (token: AuthToken) platform machineId lang aliases (httpClient:HttpClient) = task {
     let info =
         let queryParams other =
             [ "machineId", machineId
@@ -207,16 +213,18 @@ let authenticate (runningTime: unit -> double) (token: AuthToken) platform machi
                 | code when int code < 300 ->
                     let fdevAuthToken = content >>= Json.parseProp "authToken" >>= Json.toString
                     let machineToken = parseMachineToken content
-                    let registeredName = content >>= Json.parseProp "registeredName"
-                                             >>= Json.toString
-                                             |> Result.defaultValue $"%s{platform.Name} User"
+                    let fid = content >>= Json.parseProp "fid" >>= Json.toString |> Result.toOption
+                    let registeredName = content >>= Json.parseProp "registeredName" >>= Json.toString |> Result.toOption
                     let errorValue = content >>= Json.parseEitherProp "error_enum" "errorCode" >>= Json.toString
                     let errorMessage = content >>= Json.parseProp "message" >>= Json.toString
                     
                     match fdevAuthToken, machineToken, errorValue, errorMessage with
                     | Error _, Error _, Ok value, Ok msg -> Failed $"%s{value} - %s{msg}"
                     | Ok fdevToken, Ok machineToken, _, _ ->
-                        let session = { Token = fdevToken; PlatformToken = token; Name = registeredName; MachineToken = machineToken }
+                        let name =
+                            getAccountName aliases fid registeredName
+                            |> Option.defaultValue $"%s{platform.Name} User"
+                        let session = { Token = fdevToken; PlatformToken = token; Name = name; MachineToken = machineToken }
                         Authorized <| new Connection(httpClient, session, runningTime)
                     | Error msg, _, _, _
                     | _, Error msg, _, _ -> Failed msg
