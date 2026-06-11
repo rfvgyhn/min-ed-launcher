@@ -386,7 +386,7 @@ let private mapProcessConfig p =
         Host pInfo
 let getSettings args appDir fileConfig = task {
     let findCbLaunchDir paths =
-        appDir :: paths
+        Directory.GetCurrentDirectory() :: appDir :: paths
         |> List.map Some
         |> List.append [ fileConfig.GameLocation ]
         |> List.choose id
