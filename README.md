@@ -87,13 +87,16 @@ Frontier's website. Linking is only required if you purchased the game via Steam
     4. **Windows users** - Set the value to `cmd /c "MinEdLauncher.exe %command% /autorun /autoquit"`
 
        **Linux users** - The command will depend on which terminal emulator you use. Examples for
-       [alacritty], [gnome-terminal] (Gnome), [konsole] (KDE/Steam Deck) and [Ptyxis] (Bazzite) are below.
+       [alacritty], [gnome-terminal] (Gnome), [xfce4-terminal] (Xfce4), [konsole] (KDE/Steam Deck) and [Ptyxis] (Bazzite) are below.
 
        ```sh alacritty
        alacritty -e ./MinEdLauncher %command% /autorun /autoquit
        ```  
        ```sh gnome-terminal
        gnome-terminal -- ./MinEdLauncher %command% /autorun /autoquit
+       ```
+       ```sh xfce4-terminal
+       xfce4-terminal --disable-server -x ./MinEdLauncher %command% /autorun /autoquit
        ```
        ```sh konsole
        LD_LIBRARY_PATH="" konsole -e env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./MinEdLauncher %command% /autorun /autoquit
@@ -459,6 +462,7 @@ Note that the bootstrap project specifically targets Windows and won't publish o
 [new issue]: https://github.com/Rfvgyhn/min-ed-launcher/issues
 [alacritty]: https://github.com/alacritty/alacritty
 [gnome-terminal]: https://wiki.gnome.org/Apps/Terminal
+[xfce4-terminal]: https://docs.xfce.org/apps/terminal/start
 [konsole]: https://konsole.kde.org/
 [Ptyxis]: https://gitlab.gnome.org/chergert/ptyxis
 [.Net SDK]: https://dotnet.microsoft.com/download/dotnet
