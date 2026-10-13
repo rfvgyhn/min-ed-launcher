@@ -11,8 +11,9 @@ open FsToolkit.ErrorHandling
 open MinEdLauncher.Token
 open Types
 open Rop
+open RunningTime
 
-type Connection(httpClient: HttpClient, session: EdSession, runningTime: unit -> double) =
+type Connection(httpClient: HttpClient, session: EdSession, runningTime: unit -> RunningTime) =
     let mutable disposableResource : IDisposable option = None
     
     member this.HttpClient = httpClient
@@ -99,7 +100,7 @@ let getTime (now:DateTime) (httpClient: HttpClient) = task {
         return Error (localTimestamp, $"%i{int response.StatusCode}: %s{response.ReasonPhrase}")
 }
 
-let firstTimeSignin (runningTime: unit -> double) (httpClient:HttpClient) details machineId lang =
+let firstTimeSignin (runningTime: unit -> RunningTime) (httpClient:HttpClient) details machineId lang =
     Cobra.decrypt details.Password
     |> Result.map Encoding.UTF8.GetBytes
     |> Result.map Hex.toString
@@ -119,7 +120,7 @@ let requestMachineToken (httpClient:HttpClient) machineId lang twoFactorToken tw
     |> postSingle httpClient "/3.0/user/frontier/token" "machineToken" "error_num"
 
 type LoginRequest =
-    { RunningTime: unit -> double
+    { RunningTime: unit -> RunningTime
       HttpClient: HttpClient
       Details: FrontierDetails
       MachineId: string
@@ -147,7 +148,7 @@ let getAccountName (aliases: Map<string, string>) fId registeredName =
     |> Option.orElseWith (fun () -> registeredName |> Option.bind aliases.TryFind)
     |> Option.orElse registeredName
 
-let authenticate (runningTime: unit -> double) (token: AuthToken) platform machineId lang aliases (httpClient:HttpClient) = task {
+let authenticate (runningTime: unit -> RunningTime) (token: AuthToken) platform machineId lang aliases (httpClient:HttpClient) = task {
     let info =
         let queryParams other =
             [ "machineId", machineId

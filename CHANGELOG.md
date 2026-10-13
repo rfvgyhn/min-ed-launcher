@@ -1,5 +1,10 @@
 # Changelog
 
+## [unreleased]
+
+### Misc
+- Update `fTime` query param formatting in Frontier API calls to match changes in default launcher
+
 ## [0.13.0] - 2026-06-01
 
 ### New Features

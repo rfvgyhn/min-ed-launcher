@@ -51,6 +51,7 @@
     <Compile Include="Log.fs" />
     <Compile Include="Token.fs" />
     <Compile Include="Types.fs" />
+    <Compile Include="RunningTime.fs" />
     <Compile Include="Http.fs" />
     <Compile Include="Github.fs" />
     <Compile Include="Process.fs" />
