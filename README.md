@@ -90,19 +90,19 @@ Frontier's website. Linking is only required if you purchased the game via Steam
        [alacritty], [gnome-terminal] (Gnome), [xfce4-terminal] (Xfce4), [konsole] (KDE/Steam Deck) and [Ptyxis] (Bazzite) are below.
 
        ```sh alacritty
-       alacritty -e ./MinEdLauncher %command% /autorun /autoquit
+       alacritty -e ./MinEdLauncher %command% /autorun /autoquit waitForExit
        ```  
        ```sh gnome-terminal
-       gnome-terminal -- ./MinEdLauncher %command% /autorun /autoquit
+       gnome-terminal -- ./MinEdLauncher %command% /autorun /autoquit waitForExit
        ```
        ```sh xfce4-terminal
-       xfce4-terminal --disable-server -x ./MinEdLauncher %command% /autorun /autoquit
+       xfce4-terminal --disable-server -x ./MinEdLauncher %command% /autorun /autoquit waitForExit
        ```
        ```sh konsole
-       LD_LIBRARY_PATH="" konsole -e env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./MinEdLauncher %command% /autorun /autoquit
+       LD_LIBRARY_PATH="" konsole -e env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./MinEdLauncher %command% /autorun /autoquit waitForExit
        ```
        ```sh ptyxis
-       LD_LIBRARY_PATH="" ptyxis -- env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./MinEdLauncher %command% /autorun /autoquit
+       LD_LIBRARY_PATH="" ptyxis -- env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./MinEdLauncher %command% /autorun /autoquit waitForExit
        ```
        > [!NOTE]  
        > Konsole and Ptyxis don't launch when started from the Steam runtime environment. Unsetting LD_LIBRARY_PATH allows them to launch but also causes Proton to run using system libraries causing undefined behavior. Resetting LD_LIBRARY_PATH inside the terminal emulator window solves this.
@@ -176,6 +176,10 @@ you to select a version of the game.
 | /eda           | Select Elite Dangerous Arena as the startup product       |
 | /vr            | Tell the game that you want to play in VR mode            |
 | -auth_password | Epic exchange code. Used for authenticating with Epic     |
+
+> [!NOTE]
+> There is currently an issue ([see #204]) when using `/autorun` on Linux with Steam that prevents the game from starting. 
+> Use `/autoquit waitForExit` instead.
 
 #### Min Launcher Specific
 The following arguments are in addition to the above:
@@ -258,7 +262,7 @@ double backslash (`\\`) instead of a single backslash (`\`).
 > Launching Flatpaks via `processes` through Steam requires resetting the LD_LIBRARY_PATH env var and setting 
 > MEL_LD_LIBRARY_PATH to the host's LD_LIBRARY_PATH.
 > ```sh
-> LD_LIBRARY_PATH="" konsole -e env MEL_LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./MinEdLauncher %command% /autorun /autoquit
+> LD_LIBRARY_PATH="" konsole -e env MEL_LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./MinEdLauncher %command% /autorun /autoquit waitForExit
 > ```
 
 ```json
@@ -338,7 +342,7 @@ single game installation. Your launch command might look like the following
 
 Windows: `cmd /c "MinEdLauncher.exe %command% /frontier profile-name /autorun /autoquit"`
 
-Linux: `alacritty -e ./MinEdLauncher %command% /frontier profile-name /autorun /autoquit`
+Linux: `alacritty -e ./MinEdLauncher %command% /frontier profile-name /autorun /autoquit waitForExit`
 
 See the [setup] section above for how you might run this on your platform.
 
@@ -398,8 +402,8 @@ Example _Target_ field for a shortcut that launches Odyssey:
    desktop file. e.g. `update-desktop-database ~/.local/share/applications/`
 3. Set the WM_CLASS/Application Id property in your launch options. How you do this will depend on your terminal 
    emulator. Examples are below:
-   * Alacritty - `alacritty --class min-ed-launcher -e ./MinEdLauncher %command% /autorun /autoquit`
-   * kitty - `kitty --class min-ed-launcher ./MinEdLauncher %command% /autorun /autoquit`
+   * Alacritty - `alacritty --class min-ed-launcher -e ./MinEdLauncher %command% /autorun /autoquit waitForExit`
+   * kitty - `kitty --class min-ed-launcher ./MinEdLauncher %command% /autorun /autoquit waitForExit`
 
 ### Troubleshooting
 Debug logging is placed in the standard log location for your operating system:
@@ -494,3 +498,4 @@ Note that the bootstrap project specifically targets Windows and won't publish o
 [GitHub Downloads (all assets, all releases)]: https://img.shields.io/github/downloads/rfvgyhn/min-ed-launcher/total
 [GitHub Downloads (all assets, latest release)]: https://img.shields.io/github/downloads/rfvgyhn/min-ed-launcher/latest/total
 [Epic-PS-Shortcut]: https://private-user-images.githubusercontent.com/731861/451544289-7ede1c3d-90f0-4fd7-b12f-221771a626d4.png?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3NTM3NDUyMzMsIm5iZiI6MTc1Mzc0NDkzMywicGF0aCI6Ii83MzE4NjEvNDUxNTQ0Mjg5LTdlZGUxYzNkLTkwZjAtNGZkNy1iMTJmLTIyMTc3MWE2MjZkNC5wbmc_WC1BbXotQWxnb3JpdGhtPUFXUzQtSE1BQy1TSEEyNTYmWC1BbXotQ3JlZGVudGlhbD1BS0lBVkNPRFlMU0E1M1BRSzRaQSUyRjIwMjUwNzI4JTJGdXMtZWFzdC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmWC1BbXotRGF0ZT0yMDI1MDcyOFQyMzIyMTNaJlgtQW16LUV4cGlyZXM9MzAwJlgtQW16LVNpZ25hdHVyZT0zMjQ4MDE4MzFiMTRjYzYzYjRiMmE5OTNmZjI0YjI1NDZjYzliMDBmMGQzYmE0MDVjODBhNDRhYzg2YjlkZDNkJlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCJ9.4GWg6I-VBf_ChkifnZN4TGUyp7EE36GQjmS1QGrocB4
+[see #204]: https://github.com/rfvgyhn/min-ed-launcher/issues/204
