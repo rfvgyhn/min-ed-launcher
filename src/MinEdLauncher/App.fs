@@ -353,7 +353,7 @@ let rec private launchLoop initialLaunch settings playableProducts (session: EdS
             let mutable tries = 0
             while tries < maxTries do
                 if not (Product.isRunning p) then
-                    do! Task.Delay(TimeSpan.FromSeconds(1))
+                    do! Task.Delay(TimeSpan.FromSeconds(1L))
                     tries <- tries + 1
                 else
                     tries <- maxTries

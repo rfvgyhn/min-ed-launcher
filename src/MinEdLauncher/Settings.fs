@@ -1,6 +1,7 @@
 module MinEdLauncher.Settings
 
 open FsToolkit.ErrorHandling
+open Microsoft.Extensions.Configuration.Json
 open Types
 open System
 open System.IO
@@ -32,7 +33,7 @@ let defaults =
       FilterOverrides = OrdinalIgnoreCaseMap.empty
       AdditionalProducts = List.empty
       DryRun = false
-      ShutdownTimeout = TimeSpan.FromSeconds(10)
+      ShutdownTimeout = TimeSpan.FromSeconds(10L)
       CacheDir = ""
       GameStartDelay = TimeSpan.Zero
       ShutdownDelay = TimeSpan.Zero
@@ -303,7 +304,26 @@ let private mergeJsonFiles (baseFile: string) (overlayFile: string) =
     ms.Position <- 0L
     ms
 
+// dotnet 10 changed how JsonConfigurationProvider handles empty arrays from representing them as null to empty string.
+// FsConfig doesn't account for that, so revert the values back to null
+// https://github.com/dotnet/runtime/pull/116677/changes#diff-162070a90aadb0087a56fb2d8ea784a6f642397b6baac9938f0339fc362544a0L70
+let private fixForFsConfig (configRoot: IConfigurationRoot) =
+     let jsonArrays = [ "processes"; "shutdownProcesses"; "filterOverrides"; "accountAliases"; "additionalProducts"; "forceUpdate" ]
+     configRoot.Providers
+     |> Seq.iter (fun provider ->
+         match provider with
+         | :? JsonConfigurationProvider
+         | :? JsonStreamConfigurationProvider ->
+            jsonArrays
+            |> List.iter (fun key ->
+                let found, value = provider.TryGet(key)
+                if found && value = "" then
+                    provider.Set(key, null)
+                )
+         | _ -> ())
+
 let private parseConfigFromRoot (configRoot: IConfigurationRoot) =
+    fixForFsConfig configRoot
     warnUnknownKeys configRoot
     let parseKvps section keyName valueName map =
         configRoot.GetSection(section).GetChildren()
@@ -424,10 +444,10 @@ let getSettings args appDir fileConfig = task {
                                                           FilterOverrides = filterOverrides
                                                           WatchForCrashes = fileConfig.WatchForCrashes
                                                           AdditionalProducts = fileConfig.AdditionalProducts
-                                                          ShutdownTimeout = TimeSpan.FromSeconds(fileConfig.ShutdownTimeout)
+                                                          ShutdownTimeout = TimeSpan.FromSeconds(int64 fileConfig.ShutdownTimeout)
                                                           CacheDir = fileConfig.CacheDir |> Option.defaultValue Environment.cacheDir
-                                                          GameStartDelay = TimeSpan.FromSeconds(fileConfig.GameStartDelay)
-                                                          ShutdownDelay = TimeSpan.FromSeconds(fileConfig.ShutdownDelay)
+                                                          GameStartDelay = TimeSpan.FromSeconds(int64 fileConfig.GameStartDelay)
+                                                          ShutdownDelay = TimeSpan.FromSeconds(int64 fileConfig.ShutdownDelay)
                                                           AccountAliases = fileConfig.AccountAliases |> Map.ofList
                                            })
 }

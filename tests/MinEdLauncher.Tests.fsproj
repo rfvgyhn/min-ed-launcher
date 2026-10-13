@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <GenerateProgramFile>false</GenerateProgramFile>
     <Configurations>Debug;Release;ReleaseWindows</Configurations>
     <Platforms>AnyCPU</Platforms>
@@ -33,12 +33,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Expecto" Version="10.2.1" />
-    <PackageReference Include="Expecto.FsCheck" Version="10.2.1" />
-    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Version="8.5.0" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
-    <PackageReference Include="YoloDev.Expecto.TestSdk" Version="0.14.3" />
-    <PackageReference Update="FSharp.Core" Version="8.0.200" />
+    <PackageReference Include="Expecto" Version="11.1.1" />
+    <PackageReference Include="Expecto.FsCheck" Version="11.1.1" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.10.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
+    <PackageReference Include="YoloDev.Expecto.TestSdk" Version="0.16.1" />
+    <PackageReference Update="FSharp.Core" Version="10.1.402" />
   </ItemGroup>
 
   <ItemGroup>

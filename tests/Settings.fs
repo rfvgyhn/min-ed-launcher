@@ -65,20 +65,29 @@ let parseConfigFileTests =
             finally
                 File.Delete(path)
         }
-        test "forceUpdate as empty array yields empty list" {
-            let json = minimalJson.Replace("\"forceUpdate\": \"\"", "\"forceUpdate\": []")
-            let path = writeJsonToTempFile json
-            try
-                let config = Expect.wantOk (parseConfig path None) ""
-                Expect.isEmpty config.ForceUpdate ""
-            finally
-                File.Delete(path)
-        }
+        yield! [
+            "processes", fun (c: Config) -> c.Processes |> Seq.cast<obj>
+            "shutdownProcesses", fun (c: Config) -> c.ShutdownProcesses |> Seq.cast<obj> 
+            "filterOverrides", fun (c: Config) -> c.ShutdownProcesses |> Seq.cast<obj> 
+            "accountAliases", fun (c: Config) -> c.ShutdownProcesses |> Seq.cast<obj> 
+            "additionalProducts", fun (c: Config) -> c.ShutdownProcesses |> Seq.cast<obj> 
+            "forceUpdate", fun (c: Config) -> c.ShutdownProcesses |> Seq.cast<obj> 
+        ] |> List.map(fun (name, value) ->
+            test $"{name} empty array yields empty list" {
+                let json = minimalJson.Replace($"\"{name}\": \"\"", $"\"{name}\": []")
+                let path = writeJsonToTempFile json
+                try
+                    let config = Expect.wantOk (parseConfig path None) ""
+                    Expect.isEmpty (value(config)) ""
+                finally
+                    File.Delete(path)
+            }
+        )
     ]
 
 [<Tests>]
 let parseConfigTests =
-    let writeJsonFile dir name content =
+    let writeJsonFile dir name (content: string) =
         let path = Path.Combine(dir, name)
         File.WriteAllText(path, content)
         path

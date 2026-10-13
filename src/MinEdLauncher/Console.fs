@@ -171,4 +171,4 @@ let productHashIndicator barLength maxDigits totalFiles (p: int) =
     
 [<RequireQualifiedAccess>]
 type Progress<'T>(handler: 'T -> unit) =
-    inherit SampledProgress<'T>(TimeSpan.FromMilliseconds(500), handler, fun () -> Console.WriteLine())
+    inherit SampledProgress<'T>(TimeSpan.FromMilliseconds(500L), handler, fun () -> Console.WriteLine())

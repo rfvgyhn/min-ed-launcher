@@ -369,7 +369,7 @@ module FileIO =
         | e -> return Error e.Message
     }
     
-    let writeAllText path text = task {
+    let writeAllText path (text: string) = task {
         try
             let! result = File.WriteAllTextAsync(path, text) 
             return Ok result

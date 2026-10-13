@@ -84,7 +84,7 @@ let tests =
                 let time = FakeTimeProvider()
                 time.SetUtcNow(now)
                 let json = defaultJson.Deserialize<JsonObject>()
-                json["expires_at"] <- now.Subtract(TimeSpan.FromSeconds(1)).ToString("o", CultureInfo.InvariantCulture)
+                json["expires_at"] <- now.Subtract(TimeSpan.FromSeconds(1L)).ToString("o", CultureInfo.InvariantCulture)
                 let json = json.Deserialize<JsonDocument>()
                 
                 let token = Legendary.parseAccessToken time json

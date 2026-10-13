@@ -59,7 +59,7 @@ let releasesSince version (releases: ReleaseJson list) =
         if r.ReleaseNotes.Contains("### Security") then
             let cves =
                 try
-                    [ for m in Regex.Matches(r.ReleaseNotes, "CVE[- ](\d{4}-\d+)", RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1)) do
+                    [ for m in Regex.Matches(r.ReleaseNotes, "CVE[- ](\d{4}-\d+)", RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1L)) do
                         yield! m.Groups |> Seq.skip 1 |> Seq.map (fun g -> g.Value) ]
                 with
                     | :? RegexMatchTimeoutException -> []
