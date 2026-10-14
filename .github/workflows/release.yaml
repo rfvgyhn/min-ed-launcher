@@ -1,10 +1,5 @@
 name: Publish
 
-permissions:
-  id-token: write
-  contents: write
-  attestations: write
-
 on:
   push:
     tags:
@@ -57,6 +52,10 @@ jobs:
 
   publish:
     name: Publish
+    permissions:
+      id-token: write
+      contents: read
+      attestations: write
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -77,15 +76,20 @@ jobs:
 
       - name: Generate artifact attestation
         id: attest
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest@v4
         with:
           subject-checksums: artifacts/shasum.txt
+          
+      - name: Prepare attestation bundle
+        run: cp "${{ steps.attest.outputs.bundle-path }}" artifacts/attestation.sigstore.json
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: artifacts-shasum
-          path: artifacts/shasum.txt
+          name: artifacts-publish
+          path: |
+            artifacts/shasum.txt
+            artifacts/attestation.sigstore.json
           retention-days: 1
           if-no-files-found: error
 
@@ -98,26 +102,11 @@ jobs:
       attestation_url: ${{ steps.attest.outputs.attestation-url }}
       checksum_url: ${{ steps.job-info.outputs.checksum_url }}
       job_id: ${{ steps.job-info.outputs.job_id }}
-  
-  archive-job-log:
-    name: Archive Job Log
-    needs: publish
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Archive
-        id: archive
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: ci/archive-job-log.sh ${{ needs.publish.outputs.job_id }} >> $GITHUB_OUTPUT
-    outputs:
-      archived_job_url: ${{ steps.archive.outputs.archived_url }}
       
   release:
     name: Release
-    needs: [ publish, archive-job-log ]
-    if: needs.publish.result == 'success' && needs.archive-job-log.result != 'cancelled'
+    needs: [ publish ]
+    if: needs.publish.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -132,7 +121,6 @@ jobs:
         env:
           ATTESTATION_URL: ${{ needs.publish.outputs.attestation_url }}
           CHECKSUM_URL: ${{ needs.publish.outputs.checksum_url }}
-          ARCHIVED_JOB_URL: ${{ needs.archive-job-log.outputs.archived_job_url }}
         run: ci/release-notes.sh > release-notes.md
 
       - name: Release
@@ -142,6 +130,7 @@ jobs:
           body_path: release-notes.md
           files: |
             artifacts/min-ed-launcher*
-            artifacts/shasum.txt          
+            artifacts/shasum.txt
+            artifacts/attestation.sigstore.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
