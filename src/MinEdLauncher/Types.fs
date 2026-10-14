@@ -108,9 +108,14 @@ type AuthorizedProduct =
       SortKey: int
       Sku: string
       TestApi: bool }
-type LauncherProcess = Host of ProcessStartInfo | Flatpak of appId: string * startInfo: ProcessStartInfo with
-    member this.Name = match this with Host startInfo -> startInfo.FileName | Flatpak (appId, _) -> appId
-    member this.StartInfo = match this with Host startInfo -> startInfo | Flatpak (_, startInfo) -> startInfo
+type LauncherProcess =
+    | Host of name: string option * startInfo: ProcessStartInfo
+    | Flatpak of appId: string * startInfo: ProcessStartInfo with
+    member this.Name =
+        match this with
+        | Host (name, startInfo) -> name |> Option.defaultValue startInfo.FileName
+        | Flatpak (appId, _) -> appId
+    member this.StartInfo = match this with Host (_, startInfo) -> startInfo | Flatpak (_, startInfo) -> startInfo
     member this.ShutdownCommand =
         match this with
         | Host _ -> None

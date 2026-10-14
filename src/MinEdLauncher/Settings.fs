@@ -192,6 +192,7 @@ let parseArgs defaults (findCbLaunchDir: Platform -> Result<string,string>) (arg
 type ProcessConfig =
     { FileName: string
       Arguments: string option
+      Alias: string option
       RestartOnRelaunch: bool
       KeepOpen: bool }
 [<CLIMutable>]
@@ -340,12 +341,19 @@ let private parseConfigFromRoot (configRoot: IConfigurationRoot) =
             |> Seq.choose (fun section ->
                 let fileName = section.GetValue<string>("fileName")
                 let args = section.GetValue<string>("arguments")
+                let alias = section.GetValue<string>("alias")
                 let restart = section.GetValue<bool>("restartOnRelaunch")
                 let keepOpen = section.GetValue<bool>("keepOpen")
                 if String.IsNullOrWhiteSpace(fileName) then
                     None
                 else
-                    Some { FileName = fileName; Arguments = Option.ofObj args; RestartOnRelaunch = restart; KeepOpen = keepOpen })
+                    Some {
+                        FileName = fileName
+                        Arguments = Option.ofObj args
+                        Alias = Option.ofObj alias
+                        RestartOnRelaunch = restart
+                        KeepOpen = keepOpen
+                    })
             |> Seq.toList
     let parseAliases() =
         configRoot.GetSection("accountAliases").GetChildren()
@@ -400,10 +408,10 @@ let private mapProcessConfig p =
             |> Seq.skipWhile _.StartsWith('-')
             |> Seq.tryHead
             |> Option.map (fun appId -> Flatpak (appId, pInfo))
-            |> Option.defaultWith (fun () -> (Host pInfo))
-        | _ -> (Host pInfo)
+            |> Option.defaultWith (fun () -> (Host (p.Alias, pInfo)))
+        | _ -> (Host (p.Alias, pInfo))
     else
-        Host pInfo
+        Host (p.Alias, pInfo)
 let getSettings args appDir fileConfig = task {
     let findCbLaunchDir paths =
         Directory.GetCurrentDirectory() :: appDir :: paths

@@ -2,6 +2,17 @@
 
 ## [unreleased]
 
+### New Features
+- Add support for process name aliases. Allows changing/hiding the name that appears in the output. ([#217])
+  
+  Set the new `alias` property in your [process configuration].
+  ```json
+  "processes": [{
+    "fileName": "C:\\path\\to\\app.exe",
+    "alias": "App Name"
+  }]
+  ```
+
 ### Misc
 - Update `fTime` query param formatting in Frontier API calls to match changes in default launcher
 
@@ -480,6 +491,7 @@ Initial release
 [heroic]: https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher
 [settings file]: README.md#settings
 [settings overlay]: README.md#settings-overlay
+[process configuration]: README.md#process-fields
 [log file]: README.md#troubleshooting
 [EDDiscovery]: https://github.com/EDDiscovery/EDDiscovery
 [EDOMH]: https://github.com/jixxed/ed-odyssey-materials-helper
@@ -495,4 +507,5 @@ Initial release
 [#198]: https://github.com/rfvgyhn/min-ed-launcher/issues/198
 [#199]: https://github.com/rfvgyhn/min-ed-launcher/issues/199
 [#205]: https://github.com/rfvgyhn/min-ed-launcher/issues/205
+[#217]: https://github.com/rfvgyhn/min-ed-launcher/issues/217
 [@Teal Bauer]: https://github.com/teal-bauer

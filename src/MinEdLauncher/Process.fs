@@ -36,8 +36,17 @@ let stopProcesses (timeout: TimeSpan) (processes: (Process * LauncherProcess) li
         if p.HasExited then
             Log.debug $"Process %i{p.Id} already exited"            
         else
-            let name = match l with Host _ -> p.ProcessName | Flatpak _ -> l.Name
-            Log.debug $"Stopping process %s{name}"
+            let getName debug =
+                match l with
+                | Host (alias, _) ->
+                    if debug then
+                        alias |> Option.map (fun a -> $"{a} - {p.ProcessName}")
+                    else
+                        alias
+                    |> Option.defaultValue p.ProcessName
+                | Flatpak _ -> l.Name
+            let name = getName false
+            Log.debug $"Stopping process %s{getName true}"
             match l.ShutdownCommand with
             | Some startInfo ->
                 try

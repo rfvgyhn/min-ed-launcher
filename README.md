@@ -247,12 +247,13 @@ Your ID and name can be viewed at https://user.frontierstore.net/user/info
 
 #### Process fields
 
-| Field               | Type   | Default      | Description                                              |
-|---------------------|--------|--------------|----------------------------------------------------------|
-| `fileName`          | string | *(required)* | Path to executable                                       |
-| `arguments`         | string | *null*       | Command-line arguments                                   |
-| `restartOnRelaunch` | bool   | `false`      | Restart the process when the game restarts via `/restart` |
-| `keepOpen`          | bool   | `false`      | Don't stop this process when the launcher exits          |
+| Field               | Type   | Default      | Description                                                                   |
+|---------------------|--------|--------------|-------------------------------------------------------------------------------|
+| `fileName`          | string | *(required)* | Path to executable                                                            |
+| `arguments`         | string | *null*       | Command-line arguments                                                        |
+| `alias`             | string | *null*       | Changes CLI output string to specified value instead of outputting `fileName` |
+| `restartOnRelaunch` | bool   | `false`      | Restart the process when the game restarts via `/restart`                     |
+| `keepOpen`          | bool   | `false`      | Don't stop this process when the launcher exits                               |
 
 > [!NOTE]
 > When specifying a path for `gameLocation`, `cacheDir` or `processes.fileName` on Windows, it's required to escape backslashes. Make sure to use a
@@ -285,6 +286,7 @@ double backslash (`\\`) instead of a single backslash (`\`).
     {
       "fileName": "C:\\path\\to\\app2.exe",
       "arguments": "--arg1 --arg2",
+      "alias": "App Two",
       "restartOnRelaunch": true,
       "keepOpen": true
     }
