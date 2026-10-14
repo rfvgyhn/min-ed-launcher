@@ -12,6 +12,9 @@
     "alias": "App Name"
   }]
   ```
+  
+### Enhancements
+- Include the process' current working directory as a potential location for Elite install directory ([#211] - [@9ParsonsB]) 
 
 ### Misc
 - Update `fTime` query param formatting in Frontier API calls to match changes in default launcher
@@ -507,5 +510,7 @@ Initial release
 [#198]: https://github.com/rfvgyhn/min-ed-launcher/issues/198
 [#199]: https://github.com/rfvgyhn/min-ed-launcher/issues/199
 [#205]: https://github.com/rfvgyhn/min-ed-launcher/issues/205
+[#211]: https://github.com/rfvgyhn/min-ed-launcher/issues/211
 [#217]: https://github.com/rfvgyhn/min-ed-launcher/issues/217
+[@9ParsonsB]: https://github.com/9ParsonsB
 [@Teal Bauer]: https://github.com/teal-bauer
