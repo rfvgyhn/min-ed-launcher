@@ -1,6 +1,6 @@
 # Changelog
 
-## [unreleased]
+## [0.14.0] - 2026-06-14
 
 ### New Features
 - Add support for process name aliases. Allows changing/hiding the name that appears in the output. ([#217])
@@ -447,7 +447,8 @@ legendary launch --dry-run 9c203b6ed35846e8a4a9ff1e314f6593 2> >(grep "Launch pa
 
 Initial release
 
-[unreleased]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.13.0...HEAD
+[unreleased]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.13.0...HEAD
 [0.13.0]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.12.2...v0.13.0
 [0.12.2]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/rfvgyhn/min-ed-launcher/compare/v0.12.0...v0.12.1
