@@ -28,10 +28,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
           
       - name: Restore
         run: dotnet restore -r ${{ matrix.target }}
@@ -84,7 +84,7 @@ jobs:
           mv target/release/bootstrap.exe "artifacts/$release_name/MinEdLauncher.Boostrap.exe"
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: min-ed-launcher_${{ steps.version.outputs.version }}_${{ matrix.target }}
           path: "artifacts/*${{ matrix.target }}*/"
