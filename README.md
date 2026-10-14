@@ -178,7 +178,7 @@ you to select a version of the game.
 | -auth_password | Epic exchange code. Used for authenticating with Epic     |
 
 > [!NOTE]
-> There is currently an issue ([see #204]) when using `/autorun` on Linux with Steam that prevents the game from starting. 
+> There is currently an issue ([see #204]) when using `/autoquit` on Linux with Steam that prevents the game from starting. 
 > Use `/autoquit waitForExit` instead.
 
 #### Min Launcher Specific
