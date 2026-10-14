@@ -19,6 +19,9 @@
 ### Misc
 - Update `fTime` query param formatting in Frontier API calls to match changes in default launcher
 
+### Security
+- Address [CVE-2026-96225] and [CVE-2026-96231] by building with latest version of the dotnet SDK (>= 10.0.402)
+
 ## [0.13.0] - 2026-06-01
 
 ### New Features
@@ -490,6 +493,8 @@ Initial release
 [CVE-2024-30105]: https://github.com/dotnet/announcements/issues/315
 [CVE-2024-38095]: https://github.com/dotnet/announcements/issues/312
 [CVE-2025-30399]: https://github.com/dotnet/announcements/issues/362
+[CVE-2026-96225]: https://github.com/dotnet/announcements/issues/476
+[CVE-2026-96231]: https://github.com/dotnet/announcements/issues/479
 [legendary]: https://github.com/derrod/legendary
 [heroic]: https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher
 [settings file]: README.md#settings
