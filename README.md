@@ -87,7 +87,7 @@ Frontier's website. Linking is only required if you purchased the game via Steam
     4. **Windows users** - Set the value to `cmd /c "MinEdLauncher.exe %command% /autorun /autoquit"`
 
        **Linux users** - The command will depend on which terminal emulator you use. Examples for
-       [alacritty], [gnome-terminal] (Gnome), [xfce4-terminal] (Xfce4), [konsole] (KDE/Steam Deck) and [Ptyxis] (Bazzite) are below.
+       [alacritty], [gnome-terminal] (Gnome), [xfce4-terminal] (Xfce4), [konsole] (KDE/Steam Deck) and [Ptyxis] (Bazzite), or running headlessly with `sh`, are below.
 
        ```sh alacritty
        alacritty -e ./MinEdLauncher %command% /autorun /autoquit waitForExit
@@ -103,6 +103,9 @@ Frontier's website. Linking is only required if you purchased the game via Steam
        ```
        ```sh ptyxis
        LD_LIBRARY_PATH="" ptyxis -- env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./MinEdLauncher %command% /autorun /autoquit waitForExit
+       ```
+       ```sh sh (headless)
+       sh -c './MinEdLauncher "$@" /autorun /autoquit waitForExit' -- %command%
        ```
        > [!NOTE]  
        > Konsole and Ptyxis don't launch when started from the Steam runtime environment. Unsetting LD_LIBRARY_PATH allows them to launch but also causes Proton to run using system libraries causing undefined behavior. Resetting LD_LIBRARY_PATH inside the terminal emulator window solves this.
